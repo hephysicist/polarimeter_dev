@@ -1,0 +1,92 @@
+hist_fpath : '/storage/hist/' #Path to store mapped event histograms
+fitres_file : '/tmp/pol_fitres.txt'
+regex_line : '2021*'
+
+#Choose fit region (use physical coordinates and take in mind that each bin at the central region has length of 2 mm)
+xrange : [-30,20]
+n_files : 1
+need_blur : True
+fixQ : False
+fixV : False
+double_gauss: True
+
+initial_values:  
+    mx      : 0.
+    sx      : 5.
+    my      : 0.
+    sy      : 3.
+    mx2     : 0.
+    sx2     : 5.
+    my2     : 0.
+    sy2     : 3.
+    N_grel  : 0.
+    Ksi     : 0.5
+    phi_lin : -2.413
+    P       : 0.
+    V       : 1.
+    E       : 4500 #MeV
+    L       : 33000 #mm
+    NL      : 100
+    NR      : 100
+    alpha   : 0.
+    
+fix_par:
+    mx      : False
+    sx      : False
+    my      : False
+    sy      : False
+    mx2     : True
+    sx2     : False
+    my2     : True
+    sy2     : False
+    N_grel  : False
+    Ksi     : False
+    phi_lin : False
+    P       : False
+    V       : False
+    E       : True
+    L       : True
+    NL      : False
+    NR      : False
+    alpha   : True
+    
+par_err:  
+    mx      : 1.
+    sx      : 1.
+    my      : 1.
+    sy      : 1.
+    mx2     : 1.
+    sx2     : 1.
+    my2     : 1.
+    sy2     : 1.
+    N_grel  : 1.
+    Ksi     : 0.1
+    phi_lin : 0.1
+    P       : 0.1
+    V       : 0.1
+    E       : 1. #MeV
+    L       : 1.
+    NL      : 100 
+    NR      : 100 
+    alpha   : 0.1
+    
+par_lim:  
+    mx      : [-20,20]
+    sx      : [1.,8.]
+    my      : [-10,10]
+    sy      : [1.,5.]
+    mx2     : [-20,20]
+    sx2     : [1.,8.]
+    my2     : [-10,10]
+    sy2     : [1.,8.]
+    N_grel  : [0., 0.98]
+    Ksi     : [0.,1.]
+    phi_lin : [-20,20]
+    P       : [-100,100]
+    V       : [-1.,1]
+    E       : [0,10000]
+    L       : [0,100000]
+    NL      : [0,1000000]
+    NR      : [0,1000000]
+    alpha   : [0,1]
+
