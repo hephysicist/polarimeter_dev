@@ -1,4 +1,4 @@
-hist_fpath : '/storage/hist_test/' #Path to store mapped event histograms
+hist_fpath : '/storage/hist/' #Path to store mapped event histograms
 fitres_file : 'pol_fitres.txt'
 regex_line : '2021*'
 
