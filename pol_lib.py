@@ -141,6 +141,12 @@ def print_pol_stats(fitres):
     print('Q={:>6.2f} ± {:1.2f}'.format(fitres.values['Ksi'],fitres.errors['Ksi']))
     print('V={:>6.2f} ± {:1.2f}'.format(np.sqrt(1-fitres.values['Ksi']**2),fitres.errors['Ksi']/np.sqrt(1-fitres.values['Ksi']**2)))
 
+def print_pol_stats_nik(fitres):
+    print('*** Polarization ***')
+    print('P={:>6.2f} ± {:1.2f}'.format(fitres.values['P'],fitres.errors['P']))
+    print('Q={:>6.2f} ± {:1.2f}'.format(fitres.values['Q'],fitres.errors['Q']))
+    print('V={:>6.2f} ± {:1.2f}'.format(np.sqrt(1-fitres.values['Q']**2),fitres.errors['Q']/np.sqrt(1-fitres.values['Q']**2)))
+
 def load_hist(hist_fpath, fname):
     print('Reading histogram file: ', fname)
     h_dict = np.load(hist_fpath+fname, allow_pickle=True)
@@ -172,16 +178,6 @@ def add_statistics(h_dict1, h_dict2):
                 'xc': h_dict1['xc'],
                 'yc': h_dict1['yc']}
     return buf_dict
-
-def calc_all_moments(h_dict):
-    hc_l = h_dict['hc_l']
-    hc_r = h_dict['hc_r']
-    h_diff = np.absolute(hc_l-hc_r)
-    moments = np.sum(np.sum(h_diff))/np.sum(np.sum(hc_l+hc_r))
-    moments_err = 2./np.sqrt(np.sum(np.sum(hc_l+hc_r)))
-    print('*** GROSS MOMENTS ***')
-    print('M={:>1.4f} ± {:1.4f}'.format(moments,moments_err))
-
 
 
 def write2file(out_file, fname, fitres, stats):
@@ -231,22 +227,70 @@ def write2file(out_file, fname, fitres, stats):
             else:
                 the_file.write('{0:>6.6f}\t\t#{1:s}\n'.format(value, key))
                 
-def write2file_(the_file, fname, fitres, counter):
+def write2file_(the_file, fname, fitres, counter, moments):
     with open(the_file, 'a') as the_file:
+        if counter%10==0:
+            the_file.write('#{:>3s}\t{:>9s}\t'.format('cnt', 'utime'))
+            for i in ['P',          'P_err',    'Ksi',      'Ksi_err',
+                      'V',          'V_err',    'phi_lin',  'phi_lin_err',
+                      'dip_amp',    'dip_ang',  'quad_amp', 'quad_ang',
+                      'fft1_amp',   'fft1_ang', 'fft2_amp', 'fft2_ang',
+                      'gross_moments',          'gross_moments_err']:
+                the_file.write('{:>16s}\t'.format(i))
+            the_file.write('#{:20s}\n'.format('date'))
         the_file.write('{0:>3d}\t'.format(counter))
-        unix_time = time.mktime(datetime.strptime(fname[:19], "%Y-%m-%dT%H:%M:%S").timetuple())
-        the_file.write('\t{0:>.0f}\t'.format(unix_time))
+        unix_time = time.mktime(datetime.strptime(fname[:19], '%Y-%m-%dT%H:%M:%S').timetuple())
+        the_file.write('{0:>.0f}\t'.format(unix_time))
     # 		freq = float(Depol.get_frequency())
     # 		energy = 0
     # 		if freq!= 0:
     # 			energy = (9+freq/818924.)*440.648
     # 		the_file.write('\t{0:>10.3f}\t{1:>10.3f}\t'.format(freq,energy))
-        the_file.write('\t{0:>10.6f}\t{1:>10.6f}'.format(fitres.values['P'], fitres.errors['P']))
-        the_file.write('\t{0:>10.6f}\t{1:>10.6f}'.format(fitres.values['Ksi'], fitres.errors['Ksi']))
+        the_file.write('{0:>10.6f}\t{1:>10.6f}\t'.format(fitres.values['P'], fitres.errors['P']))
+        the_file.write('{0:>10.6f}\t{1:>10.6f}\t'.format(fitres.values['Ksi'], fitres.errors['Ksi']))
         V = np.sqrt(1.-fitres.values['Ksi']**2)
         V_err = fitres.errors['Ksi']/(np.sqrt(1.-fitres.values['Ksi']**2))
-        the_file.write('\t{0:>10.6f}\t{1:>10.6f}\t'.format(V, V_err))
-        the_file.write('\t{0:>10.6f}\t{1:>10.6f}\t'.format(fitres.values['phi_lin'], fitres.errors['phi_lin'] ))
+        the_file.write('{0:>10.6f}\t{1:>10.6f}\t'.format(V, V_err))
+        the_file.write('{0:>10.6f}\t{1:>10.6f}\t'.format(fitres.values['phi_lin'], fitres.errors['phi_lin'] ))
+  
+        for i in ['dip_amp',  'dip_ang',  'quad_amp', 'quad_ang',
+                  'fft1_amp', 'fft1_ang', 'fft2_amp', 'fft2_ang',
+                  'gross_moments', 'gross_moments_err']:
+            the_file.write('{:>10.6f}\t'.format(moments[i]))
+
+        the_file.write('#{0:20s}\n'.format(fname[:19]))
+        
+def write2file_nik(the_file, fname, fitres, counter, moments,normchi2):
+    with open(the_file, 'a') as the_file:
+        if counter%10==0:
+            the_file.write('#{:>3s}\t{:>9s}\t'.format('cnt', 'utime'))
+            for i in ['P',          'P_err',    'Q',      'Q_err',
+                      'V',          'V_err',    'beta',  'beta_err', 'chi2',
+                      'dip_amp',    'dip_ang',  'quad_amp', 'quad_ang',
+                      'fft1_amp',   'fft1_ang', 'fft2_amp', 'fft2_ang',
+                      'gross_moments',          'gross_moments_err']:
+                the_file.write('{:>16s}\t'.format(i))
+            the_file.write('#{:20s}\n'.format('date'))
+        the_file.write('{0:>3d}\t'.format(counter))
+        unix_time = time.mktime(datetime.strptime(fname[:19], '%Y-%m-%dT%H:%M:%S').timetuple())
+        the_file.write('{0:>.0f}\t'.format(unix_time))
+    # 		freq = float(Depol.get_frequency())
+    # 		energy = 0
+    # 		if freq!= 0:
+    # 			energy = (9+freq/818924.)*440.648
+    # 		the_file.write('\t{0:>10.3f}\t{1:>10.3f}\t'.format(freq,energy))
+        the_file.write('{0:>10.6f}\t{1:>10.6f}\t'.format(fitres.values['P'], fitres.errors['P']))
+        the_file.write('{0:>10.6f}\t{1:>10.6f}\t'.format(fitres.values['Q'], fitres.errors['Q']))
+        V = np.sqrt(1.-fitres.values['Q']**2)
+        V_err = fitres.errors['Q']/(np.sqrt(1.-fitres.values['Q']**2))
+        the_file.write('{0:>10.6f}\t{1:>10.6f}\t'.format(V, V_err))
+        the_file.write('{0:>10.6f}\t{1:>10.6f}\t'.format(fitres.values['beta'], fitres.errors['beta'] ))
+        the_file.write('{0:>10.6f}\t'.format(normchi2))
+  
+        for i in ['dip_amp',  'dip_ang',  'quad_amp', 'quad_ang',
+                  'fft1_amp', 'fft1_ang', 'fft2_amp', 'fft2_ang',
+                  'gross_moments', 'gross_moments_err']:
+            the_file.write('{:>10.6f}\t'.format(moments[i]))
 
         the_file.write('#{0:20s}\n'.format(fname[:19]))
         

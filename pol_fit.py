@@ -12,6 +12,7 @@ import yaml
 from pol_lib import *
 from pol_fit_lib import *
 from pol_plot_lib import *
+from moments import get_moments
 
 def transform(h_dict):
     h_l = h_dict['hc_l']
@@ -187,7 +188,7 @@ def make_fit(config, h_dict):
     ndf = np.shape(x_mid)[0]*np.shape(y_mid)[0]
 
     X = [x_mid,y_mid]
-    chi2_2d = Chi2_2d(get_fit_func_, X, h_l, h_r)
+    chi2_2d = Chi2(get_fit_func_, X, h_l, h_r)
     initial_values = config['initial_values']
     fix_par = config['fix_par']
     par_err = config['par_err']
@@ -199,19 +200,17 @@ def make_fit(config, h_dict):
         m2d.errors[p_key] = par_err[p_key]
         m2d.limits[p_key] = par_lim[p_key]
     
-    m2d.fixed['Ksi'] = config['fixQ']
-    m2d.fixed['V'] = config['fixV']
-    
-    use_double_gaus = config['double_gauss']
-    m2d.fixed['sx2']= use_double_gaus
-    m2d.fixed['sy2']= use_double_gaus
-    m2d.fixed['N_grel']= use_double_gaus
-
     m2d.print_level = 0
     m2d.errordef=1
     m2d.migrad()
     m2d.hesse()
     print(m2d)
+    if not m2d.valid:
+       for name in  ['sx', 'sy', 'alpha_x1', 'alpha_x2', 'alpha_y1', 'alpha_y2', 'nx1','nx2', 'ny1','ny2', 'phi', 'p1', 'p2', 'p3']:
+            m2d.fixed[name]=True
+       m2d.migrad()
+       m2d.hesse()
+       print(m2d)
     return m2d, ndf
 
 
@@ -219,7 +218,7 @@ def online_fit(config, regex_line):
     hist_fpath = config['hist_fpath']
     xrange = config['xrange']
     n_files = config['n_files']
-    need_blur = config['need_blur']
+    need_blur = config['need_blur'] and not NOBLUR
     fname = np.sort(np.array(glob.glob1(hist_fpath , regex_line)))[-2] #get 2nd last file
     fname_prev = fname
     file_count = 0
@@ -250,25 +249,27 @@ def online_fit(config, regex_line):
             if file_count == n_files:
                 #h_dict = mask_hist(config, h_dict)
                 if need_blur:
-                    h_dict = make_blur(h_dict)
+                    h_dict = make_blur_nik(h_dict)
                 fitres, ndf = make_fit(config, h_dict)
                 plot_fit(h_dict, fitres, xrange, fig1, ax1, diff=False, pol='l')
                 plot_fit(h_dict, fitres, xrange, fig2, ax2, diff=False, pol='r')
                 plot_fit(h_dict, fitres, xrange, fig3, ax3, diff=True)
                 plt.show(block=False)
                 plt.pause(1)
-                stats = get_raw_stats(h_dict)
+                #stats = get_raw_stats(h_dict)
+                #print_pol_stats(fitres)
+                #moments=get_moments(h_dict)
+                #calc_all_moments(h_dict)
                 chi2_normed = fitres.fval / (ndf - fitres.npar)
-                if chi2_normed < 50:
+                if chi2_normed < 1e100:
                     print('Chi2: {}'.format(chi2_normed))
-                    fitres_file = config['fitres_file']
-                    write2file_(fitres_file, fname, fitres, counter)
+                    #fitres_file = config['fitres_file']
+                    #write2file_(fitres_file, fname, fitres, counter,moments)
                 else:
                     print('Chi2 is to big: {}'.format(chi2_normed))
+               
                 del buf_dict
                 file_count = 0
-                print_pol_stats(fitres)
-                calc_all_moments(h_dict)
                 del h_dict
                 counter += 1
             fname = np.sort(np.array(glob.glob1(hist_fpath , regex_line)))[-2]
@@ -282,50 +283,63 @@ def offline_fit(config, regex_line):
     xrange = config['xrange']
     n_files = config['n_files']
     need_blur = config['need_blur']
+    blur_algo = config['blur']
     fname_list = np.sort(np.array(glob.glob1(hist_fpath , regex_line))) #get 2nd last file
     file_count = 0
-    fig0, ax0 = init_data_figure(label='Data')
-    fig1, ax1 = init_fit_figure(label = 'L')
-    fig2, ax2 = init_fit_figure(label = 'R')
-    fig3, ax3 = init_fit_figure(label = 'Diff')
+    if config['plot3d']:
+        fig0, ax0 = init_data_figure(label='Data')
+    fig1, ax1 = init_fit_figure(label = 'L', title='Left')
+    fig2, ax2 = init_fit_figure(label = 'R', title='Right')
+    fig3, ax3 = init_fit_figure(label = 'Diff', title='Diff')
     counter = 0
+    ymask = config['ymask']
+    for y in ymask[0]:
+        for x in range(config['xrange'][0], config['xrange'][1], 2):
+            config['mask'].append([y,x])
     try:
         for fname in fname_list:
             if file_count == 0:
                 h_dict = load_hist(hist_fpath, fname)
                 buf_dict = h_dict
                 fname_start = fname
-                calc_asymmetry(h_dict)
+            #    calc_asymmetry(h_dict)
             else:
                 buf_dict = load_hist(hist_fpath, fname)
                 h_dict = add_statistics(h_dict, buf_dict)
-                calc_asymmetry(h_dict)
+            #    calc_asymmetry(h_dict)
             file_count += 1
             attempt_count = 0
             fname_prev = fname
             if file_count == n_files:
-                #h_dict = mask_hist(config, h_dict)
+                h_dict = mask_hist(config, h_dict)
                 if need_blur:
-                    h_dict = make_blur(h_dict)
+                    print("Blur algo: ", blur_algo)
+                    if blur_algo == 'default':
+                        h_dict = make_blur(h_dict)
+                        print("Use default blur algo")
+                    if blur_algo == 'nik':
+                        h_dict = make_blur_nik(h_dict)
+                        print("Use nik blur algo")
                 fitres, ndf = make_fit(config, h_dict)
-                plot_data3d(h_dict,fitres , xrange, fig0, ax0, h_type='diff_l')
-                plot_data3d(h_dict, fitres, xrange, fig0, ax0, h_type='diff_r')
+                if config['plot3d']:
+                        plot_data3d(h_dict,fitres , xrange, fig0, ax0, h_type='diff_l')
+                        plot_data3d(h_dict, fitres, xrange, fig0, ax0, h_type='diff_r')
                 plot_fit(h_dict, fitres, xrange, fig1, ax1, diff=False, pol='l')
                 plot_fit(h_dict, fitres, xrange, fig2, ax2, diff=False, pol='r')
                 plot_fit(h_dict, fitres, xrange, fig3, ax3, diff=True)
                 plt.show(block=False)
                 plt.pause(1)
                 stats = get_raw_stats(h_dict)
+                print_pol_stats_nik(fitres)
+                moments=get_moments(h_dict)
                 chi2_normed = fitres.fval / (ndf - fitres.npar)
-                if chi2_normed < 50:
-                    print('Chi2: {}'.format(chi2_normed))
-                    fitres_file = config['fitres_file']
-                    write2file_(fitres_file, fname, fitres, counter)
+                if chi2_normed < 1e100:
+                     print('Chi2: {}'.format(chi2_normed))
+                     fitres_file = config['fitres_file']
+                     write2file_nik(fitres_file, fname, fitres, counter,moments, chi2_normed)
                 else:
-                    print('Chi2 is too big: {}'.format(chi2_normed))
+                     print('Chi2 is too big: {}'.format(chi2_normed))
                 file_count = 0
-                print_pol_stats(fitres)
-                calc_all_moments(h_dict)
                 counter += 1
                 del buf_dict
                 del h_dict
@@ -338,17 +352,26 @@ def offline_fit(config, regex_line):
 def main():
     np.set_printoptions(linewidth=360)
     parser = argparse.ArgumentParser("pol_fit.py")
-    parser.add_argument('config', nargs='?', help='Name of the config file')
-    parser.add_argument('regex_line', nargs='?', help='Name of the file to start offline  fit in regex format')
     parser.add_argument('--offline', help='Use this key to fit iteratively all, starting from regrex_line', default=False, action="store_true")
+    parser.add_argument('regex_line', nargs='?', help='Name of the file to start offline  fit in regex format')
     parser.add_argument('-i', help='Interactive mode', action='store_true')
+    parser.add_argument('--noblur', help='Disable blur', action='store_true')
+    #parser.add_argument('--blur', nargs='?', help='Blur algorithm', type=str, default='default')
+    parser.add_argument('--blur', help='Blur algorithm', type=str, default='default')
+    parser.add_argument('--plot3d', help='Plot 3D left right', action='store_true')
+    #parser.add_argument('--noblur', help='Disable blur')
+    
     args = parser.parse_args()
     global INTERACTIVE_MODE
     INTERACTIVE_MODE = args.i
     print("Interactive mode ", INTERACTIVE_MODE)
-    with open(os.getcwd()+'/'+args.config, 'r') as conf_file:
+    with open(os.getcwd()+'/pol_fit_config.yml', 'r') as conf_file:
         try:
             config = yaml.load(conf_file, Loader=yaml.Loader)
+            config['need_blur'] = config['need_blur'] and not args.noblur
+            config['blur']= args.blur
+            print("blur = ", args.blur)
+            config['plot3d']=args.plot3d
         except yaml.YAMLError as exc:
             print('Error opening pol_config.yaml file:')
             print(exc)

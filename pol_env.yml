@@ -1,7 +1,7 @@
 name: pol_env
 channels:
-  - defaults
   - conda-forge
+  - defaults
 dependencies:
   - python=3.8
   - pip=20.1

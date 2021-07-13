@@ -1,6 +1,7 @@
-bin_fpath :  '/opt/online/' #Path to binary files
+bin_fpath :  '/opt/online/2021-06-10/' #Path to binary files
 raw_fpath  : '/home/zakharov/polarimeter/raw_events/' #Path to store events dumped to .npz files 
-hist_fpath : '/storage/hist/' #Path to store mapped event histograms
+#hist_fpath : '/storage/hist/' #Path to store mapped event histograms
+hist_fpath : '/storage/hist_test/' #Path to store mapped event histograms
 regex_line : '2021*' #Specify regex line to choose files for preprocessing
 
 preprocess:
@@ -27,49 +28,50 @@ zone_id:
     sbl : -1
     sbr : -1
 mask:
-    - [-9,-10]
-    - [-5,-10]
-    - [-3,-8]
-    - [-7,-8]
-    - [-9,-6]
-    - [-5,-6]
-    - [-1,-6]
-    - [-3,-4]
-    - [-7,-4]
-    - [-1,-2]
-    
-    - [-2, 0]
-    - [-4, 2]
-    - [-8, 2]
-    - [-2, 4]
-    - [-6, 4]
-    - [-10, 4]
-    - [-4, 6]
-    - [-8, 6]
-    - [-6, 8]
-    - [-10, 8]
-    
-    - [8, 8]
-    - [5, 8]
-    - [2, 6]
-    - [6, 6]
-    - [8, 4]
-    - [4, 4]
-    - [0, 4]
-    - [2, 2]
-    - [6, 2]
-    - [0, 0]
-    
-    - [1, -2]
-    - [3, -4]
-    - [7, -4]
-    - [1, -6]
-    - [5, -6]
-    - [9, -6]
-    - [3, -8]
-    - [7, -8]
-    - [5, -10]
-    - [9, -10]
+    - [-10,-30]
+    #- [-9,-10]
+    #- [-5,-10]
+    #- [-3,-8]
+    #- [-7,-8]
+    #- [-9,-6]
+    #- [-5,-6]
+    #- [-1,-6]
+    #- [-3,-4]
+    #- [-7,-4]
+    #- [-1,-2]
+    #
+    #- [-2, 0]
+    #- [-4, 2]
+    #- [-8, 2]
+    #- [-2, 4]
+    #- [-6, 4]
+    #- [-10, 4]
+    #- [-4, 6]
+    #- [-8, 6]
+    #- [-6, 8]
+    #- [-10, 8]
+    #
+    #- [8, 8]
+    #- [5, 8]
+    #- [2, 6]
+    #- [6, 6]
+    #- [8, 4]
+    #- [4, 4]
+    #- [0, 4]
+    #- [2, 2]
+    #- [6, 2]
+    #- [0, 0]
+    #
+    #- [1, -2]
+    #- [3, -4]
+    #- [7, -4]
+    #- [1, -6]
+    #- [5, -6]
+    #- [9, -6]
+    #- [3, -8]
+    #- [7, -8]
+    #- [5, -10]
+    #- [9, -10]
     
 
 
