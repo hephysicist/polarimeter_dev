@@ -27,8 +27,9 @@ def init_monitor_figure():
     fig.set_size_inches(8,6)
     return fig, ax
 
-def init_fit_figure(label):
+def init_fit_figure(label, title):
     fig = plt.figure(figsize=(7, 5))
+    fig.canvas.set_window_title(title)
     fig.set_tight_layout(True)
     fig.tight_layout(rect=[0, 0, 1, 1])
     fig.suptitle(label)
@@ -130,8 +131,8 @@ def plot_data3d(h_dict, m_fitres, xrange, fig,  ax, h_type='l'):
 
     x = h_dict['xc']
     y = h_dict['yc']
-    NL = fit_pars[16]
-    NR = fit_pars[17]
+    NL = m_fitres.values['NL']
+    NR = m_fitres.values['NR']
 
     h_l, h_r, x = arrange_region(h_l, h_r ,x ,lim = xrange)
     xx, yy = np.meshgrid((x[1:]+x[:-1])/2,(y[1:]+y[:-1])/2)
@@ -175,8 +176,8 @@ def plot_data3d(h_dict, m_fitres, xrange, fig,  ax, h_type='l'):
 
 def plot_fit(h_dict, m_fitres, xrange, fig, ax, diff=True, pol='l'):
     fit_pars = np.array(m_fitres.values)
-    NL = fit_pars[16]
-    NR = fit_pars[17]
+    NL = m_fitres.values['NL']
+    NR = m_fitres.values['NR']
 
     h_l = h_dict['hc_l']/NL
     h_r = h_dict['hc_r']/NR
@@ -205,7 +206,7 @@ def plot_fit(h_dict, m_fitres, xrange, fig, ax, diff=True, pol='l'):
     
     if diff:
         h_data = h_l - h_r
-        h_fit = fit_l - fit_r
+        h_fit = fit_l-fit_r 
         h_data_x = h_lx-h_rx
         h_fit_x = fit_lx-fit_rx
         h_data_y = h_ly-h_ry
@@ -213,14 +214,14 @@ def plot_fit(h_dict, m_fitres, xrange, fig, ax, diff=True, pol='l'):
 
     elif pol == 'r' :
         h_data = h_r
-        h_fit = fit_r
+        h_fit = fit_r - h_r 
         h_data_x = h_rx
         h_fit_x = fit_rx
         h_data_y = h_ry
         h_fit_y = fit_ry
     elif pol == 'l' :
         h_data = h_l
-        h_fit = fit_l
+        h_fit = fit_l - h_l
         h_data_x = h_lx
         h_fit_x = fit_lx
         h_data_y = h_ly
@@ -279,7 +280,7 @@ def plot_fit(h_dict, m_fitres, xrange, fig, ax, diff=True, pol='l'):
     ax_px.set_xlabel(r'x [mm]')
     ax_px.legend()
     '''Draw  2d Fit histogram (bottom right)'''
-    im_fit = ax_fit.imshow(h_data - h_fit, 
+    im_fit = ax_fit.imshow(h_fit, 
                            cmap=plt.cm.viridis,
                            interpolation='none',
                            extent=[x[0],x[-1],y[0],y[-1]],

@@ -1,92 +1,169 @@
-hist_fpath : '/storage/hist/' #Path to store mapped event histograms
-fitres_file : '/tmp/pol_fitres.txt'
+hist_fpath : '/storage/hist_test/' #Path to store mapped event histograms
+fitres_file : 'pol_fitres.txt'
 regex_line : '2021*'
 
 #Choose fit region (use physical coordinates and take in mind that each bin at the central region has length of 2 mm)
-xrange : [-30,20]
-n_files : 1
+xrange : [-20,20]
+n_files : 12
 need_blur : True
 fixQ : False
-fixV : False
 double_gauss: True
 
+ymask:
+    - []
+
+mask:
+     - [-20,-30]
+#    - [-9,-10]
+#    - [-5,-10]
+#    - [-3,-8]
+#    - [-7,-8]
+#    - [-9,-6]
+#    - [-5,-6]
+#    - [-1,-6]
+#    - [-3,-4]
+#    - [-7,-4]
+#    - [-1,-2]
+#    
+#    - [-2, 0]
+#    - [-4, 2]
+#    - [-8, 2]
+#    - [-2, 4]
+#    - [-6, 4]
+#    - [-10, 4]
+#    - [-4, 6]
+#    - [-8, 6]
+#    - [-6, 8]
+#    - [-10, 8]
+#    
+#    - [8, 8]
+#    - [5, 8]
+#    - [2, 6]
+#    - [6, 6]
+#    - [8, 4]
+#    - [4, 4]
+#    - [0, 4]
+#    - [2, 2]
+#    - [6, 2]
+#    - [0, 0]
+#    
+#    - [1, -2]
+#    - [3, -4]
+#    - [7, -4]
+#    - [1, -6]
+#    - [5, -6]
+#    - [9, -6]
+#    - [3, -8]
+#    - [7, -8]
+#    - [5, -10]
+#    - [9, -10]
+    
 initial_values:  
-    mx      : 0.
-    sx      : 5.
-    my      : 0.
-    sy      : 3.
-    mx2     : 0.
-    sx2     : 5.
-    my2     : 0.
-    sy2     : 3.
-    N_grel  : 0.
-    Ksi     : 0.5
-    phi_lin : -2.413
+ #   E       : 4470 #MeV
+    E       : 4116 #MeV
+    L       : 33000 #mm
     P       : 0.
     V       : 1.
-    E       : 4500 #MeV
-    L       : 33000 #mm
-    NL      : 100
-    NR      : 100
-    alpha   : 0.
+    Q       : 0
+    beta    : -2.413
+    alpha_d : 0.
+    mx      : 0. #mm
+    my      : 0. #mm
+    sx      : 5. #mm
+    sy      : 3. #mm
+    alpha_x1 : 2.23
+    alpha_x2 : 0.
+    alpha_y1 : 2.23
+    alpha_y2 : 0.
+    nx1      : 1.23
+    nx2      : 1.23
+    ny1     : 1.0
+    ny2     : 1.0
+    phi     : 0.0
+    p1      : 0.0
+    p2      : 0.0
+    p3      : 0.0
+    NL      : 1000.0
+    NR      : 1000.0
     
 fix_par:
-    mx      : False
-    sx      : False
-    my      : False
-    sy      : False
-    mx2     : True
-    sx2     : False
-    my2     : True
-    sy2     : False
-    N_grel  : False
-    Ksi     : False
-    phi_lin : False
-    P       : False
-    V       : False
     E       : True
     L       : True
+    P       : False
+    V       : True
+    Q       : False
+    beta    : False
+    alpha_d : True
+    mx      : False
+    my      : False
+    sx      : False
+    sy      : False
+    alpha_x1 : False
+    alpha_x2 : False
+    alpha_y1 : False
+    alpha_y2 : False
+    nx1     : False
+    nx2     : False
+    ny1     : False
+    ny2     : False
+    phi     : False
     NL      : False
     NR      : False
-    alpha   : True
+    p1      : True
+    p2      : True
+    p3      : True
     
 par_err:  
-    mx      : 1.
-    sx      : 1.
-    my      : 1.
-    sy      : 1.
-    mx2     : 1.
-    sx2     : 1.
-    my2     : 1.
-    sy2     : 1.
-    N_grel  : 1.
-    Ksi     : 0.1
-    phi_lin : 0.1
-    P       : 0.1
+    E       : 0.
+    L       : 0.
+    P       : 0.5
     V       : 0.1
-    E       : 1. #MeV
-    L       : 1.
-    NL      : 100 
-    NR      : 100 
-    alpha   : 0.1
+    Q       : 0.5
+    beta    : 1.0
+    alpha_d : 0.1
+    mx      : 5.0
+    my      : 5.0
+    sx      : 5.0
+    sy      : 1.0
+    alpha_x1 : 1.0
+    alpha_x2 : 1.0
+    alpha_y1 : 1.0
+    alpha_y2 : 1.0
+    nx1     : 1.0
+    nx2     : 1.0
+    ny1     : 1.0
+    ny2     : 1.0
+    phi     : 1.0
+    NL      : 100.0
+    NR      : 100.0
+    p1      : 0.1
+    p2      : 0.1
+    p3      : 0.1
     
 par_lim:  
-    mx      : [-20,20]
-    sx      : [1.,8.]
-    my      : [-10,10]
-    sy      : [1.,5.]
-    mx2     : [-20,20]
-    sx2     : [1.,8.]
-    my2     : [-10,10]
-    sy2     : [1.,8.]
-    N_grel  : [0., 0.98]
-    Ksi     : [0.,1.]
-    phi_lin : [-20,20]
-    P       : [-100,100]
-    V       : [-1.,1]
-    E       : [0,10000]
-    L       : [0,100000]
-    NL      : [0,1000000]
-    NR      : [0,1000000]
-    alpha   : [0,1]
+    E       : [0.0, 10000]
+    L       : [0.0, 100000]
+    P       : [-10.0, 10.0]
+    V       : [-1.0, 1.0]
+    Q       : [-1.0, 1.0]
+    beta    : [-7.0, 7.0]
+    alpha_d : [-1.0, 1.0]
+    mx      : [-20.0, +20.0]
+    my      : [-10.0, +10.0]
+    sx      : [0.1, 10.0]
+    sy      : [0.1, 10.0]
+    alpha_x1 : [0.1, 10.]
+    alpha_x2 : [-10., 10.]
+    alpha_y1 : [0.1, 10.]
+    alpha_y2 : [-10., 10.]
+    nx1     : [0.1, 10.]
+    nx2     : [-10., 10.]
+    ny1     : [0.1, 10.]
+    ny2     : [-10., 10.]
+    phi     : [-3.14,+3.14]
+    p1     : [-100.,+100.]
+    p2     : [-100.,+100.]
+    p3     : [-100.,+100.]
+    NL      : [0., 100000]
+    NR      : [0., 100000]
 

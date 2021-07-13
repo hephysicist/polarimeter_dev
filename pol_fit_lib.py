@@ -1,5 +1,5 @@
 import numpy as np
-from math import pi, sqrt, exp
+from math import pi, sqrt, exp, cos, sin
 from iminuit.util import make_func_code
 from scipy import signal
 from scipy.ndimage import gaussian_filter, uniform_filter, median_filter, maximum_filter, generic_filter
@@ -16,13 +16,49 @@ def double_gausn2d3(x, y, sx, sy, mx2, sx2, my2, sy2, N):
     return (1./(2*pi*sx*sy) * np.exp(-np.power(x,2.)/(2.*sx**2.)-np.power(y,2.)/(2.*sy**2))+
             N/(2*pi*np.sqrt(sx**2+sx2**2)*np.sqrt(sy**2+sy2**2)) * np.exp(-np.power(x,2.)/(2.*(sx**2+sx2**2.))-np.power(y,2.)/(2.*(sy**2 +sy2**2))))/(1.+ N)
 
-#def crystall_ball(x, y, sx, sy, z0, n, N):
-#    z = np.sqrt(x*x/(sx*sx) + 1./(sy*sy)*y*y)
-#    if abs(z) < z0:
-#        return 1.0/(2*pi*sx*sy)* np.exp(- 0.5*z**2.);
-#    else:
-#        return (n/np.abs(z0))**n * exp(-0.5*z0*z0)*np.power( n/z0 - z0  - z/sx)
-#    return 
+#def crystall_ball(x, y, sx, sy, alpha, nx, ny):
+#    z = np.sqrt( x**2/sx**2 + y**2/sy**2)
+#    r2 = x**2+y**2;
+#    n = np.sqrt( ((nx*x)**2.   + (ny*y)**2. )/r2)
+#    na=n/alpha
+#    return np.where( z<alpha, np.exp(- z**2./2.), (na/(na-alpha+z))**n * np.exp(-alpha**2./2.))# / (2.*pi*sx*sy)
+#    #return np.where( z<alpha, np.exp(-z**2/2), 0) / (2*pi*sx*sy)
+#    #return  np.where( z<alpha, np.exp( -x**2./(2.*sx**2.) - y**2./(2.*sy**2.))/(2.*pi*sx*sy), (na/(na-alpha+z))**n * np.exp(-alpha**2/2))
+#
+#def crystall_ball_2d(x, y, sx, sy, alpha, n, phi):
+#    na=n/alpha
+#    X =  x/sx*cos(phi) + y/sy*sin(phi)
+#    Y = -x/sx*sin(phi) + y/sy*cos(phi)
+#    return np.where( X<alpha, np.exp(-0.5*X**2.), (na/(na-alpha+X))**n * np.exp(-0.5*alpha**2.)) * \
+#           np.exp(-0.5*Y**2.)    
+#
+#def crystall_ball_2d2(x, y, sx, sy, alpha_x, alpha_y, n_x, n_y, phi):
+#    n2ax=n_x/alpha_x
+#    n2ay=n_y/alpha_y
+#    X =  x/sx*cos(phi) + y/sy*sin(phi)
+#    Y = -x/sx*sin(phi) + y/sy*cos(phi)
+#    return np.where( X<alpha_x, np.exp(-0.5*X**2.), np.power((n2ax/(n2ax-alpha_x+X)), n_x) * np.exp(-0.5*alpha_x**2.)) * \
+#           np.where( Y<alpha_y, np.exp(-0.5*Y**2.), np.power((n2ay/(n2ay-alpha_y+Y)), n_y) * np.exp(-0.5*alpha_y**2.))       
+
+def crystall_ball_1d(x, alpha, n1, n2):
+    #helper params
+    na1 = n1/alpha
+    na2 = n2/alpha
+    return np.where( x < alpha, 
+                     np.where( x < -alpha,  
+                               np.power((na1/(na1+alpha-x)), n1) * np.exp(-0.5*alpha**2.),
+                               np.exp(-0.5*x**2.) ),
+                     np.power((na2/(na2-alpha+x)), n2) * np.exp(-0.5*alpha**2.))
+
+def crystall_ball_2d(x, y, sx,sy, alpha_x1,  alpha_x2, alpha_y1, alpha_y2, nx1, nx2, ny1, ny2, phi, p1, p2,p3):
+    X =  x/sx*cos(phi) + y/sy*sin(phi)
+    Y = -x/sx*sin(phi) + y/sy*cos(phi)
+    Z =  np.sqrt(X*X+Y*Y)
+    c = X/Z
+    s = Y/Z
+    n     = np.sqrt( np.power(nx1*c - nx2, 2.0) + np.power(ny1*s - ny2, 2.0) )
+    alpha = np.sqrt( np.power(alpha_x1*c -alpha_x2, 2.0) + np.power(alpha_y1*s- alpha_y2, 2.0) )
+    return crystall_ball_1d(Z, alpha, n, n)*(1.0 + p1*y + p2*y*y + p3*np.power(y,3.0))
 
 def wrap_array(x_mid, n_p):
     step = x_mid[1]-x_mid[0]
@@ -67,7 +103,7 @@ def get_xsec_xy(x,y, Ksi=0, phi_lin=0., P=0, V=0, E=4730, L=33000, alpha=0):
     return dsigma
 24 
 
-def get_fit_func_(X, mx, sx, my, sy, mx2, sx2, my2, sy2, N_grel, Ksi, phi_lin, P, V, E, L,alpha):
+def fit_func_gaus_(X, mx, sx, my, sy, mx2, sx2, my2, sy2, N_grel, Q, beta, P, V, E, L,alpha):
     x_mid = X[0]-mx
     y_mid = X[1]-my
 
@@ -78,32 +114,31 @@ def get_fit_func_(X, mx, sx, my, sy, mx2, sx2, my2, sy2, N_grel, Ksi, phi_lin, P
     y_wrapped = wrap_array(y_mid,n_sp_y)
     xx,yy = np.meshgrid(x_wrapped, y_wrapped)
 
-    x_sec = get_xsec_xy(xx, yy, Ksi, phi_lin, P, V, E, L,alpha)
+    x_sec = get_xsec_xy(xx, yy, Q, beta, P, V, E, L,alpha)
     core = double_gausn2d3(xx, yy,  sx,  sy, mx2, sx2, my2, sy2, N_grel)
     res = signal.fftconvolve(x_sec, core, mode = 'same')
     res = res[n_sp_y:-n_sp_y, n_sp_x:-n_sp_x]
     return res
 
-
-def get_fit_func(x, y, par, inverse_pol=False):
+def fit_func_gaus(x, y, par, inverse_pol=False):
 	x_mid = (x[1:] + x[:-1])/2
 	y_mid = (y[1:] + y[:-1])/2
 	if inverse_pol:
 		par[9] = - par[9]
 		par[12] = - par[12]
 	X = [x_mid,y_mid]
-	res = get_fit_func_(X, 
+	res = fit_func_gaus_(X, 
 						mx	   = par[0],
 						sx	   = par[1],
 						my	   = par[2],
 						sy	   = par[3],
-						mx2    = par[4],
-						sx2    = par[5],
-						my2    = par[6],
-						sy2    = par[7],
-						N_grel = par[8],
-						Ksi    = par[9],
-						phi_lin= par[10],
+						mx2        = par[4],
+						sx2        = par[5],
+						my2        = par[6],
+						sy2        = par[7],
+						N_grel     = par[8],
+						Q          = par[9],
+						beta       = par[10],
 						P	   = par[11],
 						V	   = par[12],
 						E	   = par[13],
@@ -111,100 +146,183 @@ def get_fit_func(x, y, par, inverse_pol=False):
                         alpha  = par[15])
 	return res
 
-# class Chi2_2d:
-# 	def __init__(self, model, x, z_l, z_r):
-# 		self.model = model	# model predicts z for given x()
-# 		self.x = x
-# 		self.z_l = z_l.flatten()
-# 		self.z_r = z_r.flatten()
-# 		self.z_l_err = np.where(self.z_l > 0, np.sqrt(np.abs(self.z_l)),-1)
-# 		self.z_r_err = np.where(self.z_r > 0, np.sqrt(np.abs(self.z_r)),-1)
-# 		self.func_code = make_func_code(fit_varnames)
+#def get_fit_func_cb_(X, mx, sx, my, sy, mx2, sx2, my2, sy2, N_grel, Ksi, phi_lin, P, V, E, L,alpha):
+#    x_mid = X[0]-mx
+#    y_mid = X[1]-my
+#
+#    n_sp_x = 12
+#    n_sp_y = 20
+#
+#    x_wrapped = wrap_array(x_mid,n_sp_x)
+#    y_wrapped = wrap_array(y_mid,n_sp_y)
+#    xx,yy = np.meshgrid(x_wrapped, y_wrapped)
+#
+#    x_sec = get_xsec_xy(xx, yy, Ksi, phi_lin, P, V, E, L,alpha)
+##PARAMETERS MUST BE RENAMED
+## sx - spread x
+## sy - spread  y
+## mx2 - z0
+## sx2 - nx
+## sy2 - ny
+#    #core = crystall_ball_2d2(xx, yy,  sx,  sy, mx2, sx, sy2)
+#    core = crystall_ball_2d2(xx, yy,  sx,  sy, mx2, my2, sx2, sy2, N_grel)
+#    res = signal.fftconvolve(x_sec, core, mode = 'same')
+#    res = res[n_sp_y:-n_sp_y, n_sp_x:-n_sp_x]
+#    return res
+#
+#def get_fit_func_cb(x, y, par, inverse_pol=False):
+#	x_mid = (x[1:] + x[:-1])/2
+#	y_mid = (y[1:] + y[:-1])/2
+#	if inverse_pol:
+#		par[9] = - par[9]
+#		par[12] = - par[12]
+#	X = [x_mid,y_mid]
+#	res = get_fit_func_cb_(X, 
+#						mx	   = par[0],
+#						sx	   = par[1],
+#						my	   = par[2],
+#						sy	   = par[3],
+#						mx2    = par[4],
+#						sx2    = par[5],
+#						my2    = par[6],
+#						sy2    = par[7],
+#						N_grel = par[8],
+#						Ksi    = par[9],
+#						phi_lin= par[10],
+#						P	   = par[11],
+#						V	   = par[12],
+#						E	   = par[13],
+#						L	   = par[14],
+#						alpha  = par[15])
+#	return res
 
-# 	def __call__(self, *par):  
-# 		par_l = np.array(par[:15])
-# 		#par_l[12] = np.sqrt(1.-par_l[9]**2)
-		
-# 		zm_l = par[15] * self.model(self.x, *par_l).flatten()
-		
-# 		par_r = np.array(par[:15])
-# 		par_r[9] = -par_r[9]
-# 		#par_r[12] = -np.sqrt(1.-par_r[9]**2)
-# 		par_r[12]= -par_r[12]
-		
-# 		zm_r = par[16] * self.model(self.x, *par_r).flatten()
-# 		#print(self.z_l[self.z_l>20000],self.z_r[self.z_r>20000])
-# 		chi2_l = np.sum(np.where(self.z_l > 0, 
-# 									  np.power((self.z_l-zm_l),2)/np.power(self.z_l_err,2),
-# 									  0))
-# 		chi2_r = np.sum(np.where(self.z_r > 0, 
-# 									  np.power((self.z_r-zm_r),2)/np.power(self.z_r_err,2),
-# 									  0))
-# 		print(chi2_l+chi2_r)
-# 		return chi2_l+chi2_r
+def get_fit_func_(X, E, L, P, V, Q, beta, alpha_d,  mx, my, sx, sy, alpha_x1,alpha_x2,  alpha_y1, alpha_y2, nx1,nx2,ny1, ny2, phi, p1,p2,p3):
+    x_mid = X[0]-mx
+    y_mid = X[1]-my
 
-# class Chi2_2d:
-# 	def __init__(self, model, x, z_l, z_r):
-# 		self.model = model	# model predicts z for given x()
-# 		self.x = x
-# 		self.z_ly = np.sum(z_l, axis = 1)
-# 		self.z_ry = np.sum(z_r, axis = 1)
-# 		self.z_lx = np.sum(z_l, axis = 0)
-# 		self.z_rx = np.sum(z_r, axis = 0)
-# 		self.func_code = make_func_code(fit_varnames)
+    n_sp_x = 12
+    n_sp_y = 20
 
-# 	def __call__(self, *par):  
-# 		par_l = np.array(par[:15])
-# 		#par_l[12] = np.sqrt(1.-par_l[9]**2)
-# 		par_r = np.array(par[:15])
-# 		par_r[9] = -par_r[9]
-# 		#par_r[12] = -np.sqrt(1.-par_r[9]**2)
-# 		par_r[12]= -par_r[12]
-		
-# 		zm_ly = par[15] * np.sum(self.model(self.x, *par_l), axis=1)
-# 		zm_ry = par[16] * np.sum(self.model(self.x, *par_r), axis=1)
-		
-# 		zm_lx = par[15] * np.sum(self.model(self.x, *par_l), axis=0)
-# 		zm_rx = par[16] * np.sum(self.model(self.x, *par_r), axis=0)
-		
-# 		diff2_lx = np.power((self.z_lx-zm_lx),2)/np.absolute(self.z_lx)
-# 		diff2_rx = np.power((self.z_rx-zm_rx),2)/np.absolute(self.z_rx)
-# 		#print(diff2_lx)
-# 		chi2_lx = np.sum(diff2_lx[self.z_lx>0])
-# 		chi2_rx = np.sum(diff2_rx[self.z_rx>0])
-		
-# 		#print(self.z_lx[self.z_lx>0]-zm_lx[self.z_lx>0])  
-# 		diff2_ly = np.power((self.z_ly-zm_ly),2)/self.z_ly
-# 		diff2_ry = np.power((self.z_ry-zm_ry),2)/self.z_ry
-# 		chi2_ly = np.sum(diff2_ly[self.z_ly>0])
-# 		chi2_ry = np.sum(diff2_ry[self.z_ry>0])
-# 		#print(chi2_lx+chi2_rx + chi2_ly+chi2_ry)
-# 		return chi2_lx+chi2_rx + chi2_ly+chi2_ry
+    x_wrapped = wrap_array(x_mid,n_sp_x)
+    y_wrapped = wrap_array(y_mid,n_sp_y)
+    xx,yy = np.meshgrid(x_wrapped, y_wrapped)
 
-#Try to fit the 2d differenece. Result is bad. Minuit unable to detetermine correct normalization.
-class Chi2_2d:
+    x_sec = get_xsec_xy(xx, yy, Q, beta, P, V, E, L,alpha_d)
+    core = crystall_ball_2d(xx, yy,  sx,  sy, alpha_x1, alpha_x2,  alpha_y1, alpha_y2, nx1, nx2, ny1, ny2, phi, p1,p2,p3)
+    res = signal.fftconvolve(x_sec, core, mode = 'same')
+    res = res[n_sp_y:-n_sp_y, n_sp_x:-n_sp_x]
+    return res
+
+def get_fit_func(x, y, par, inverse_pol=False):
+	x_mid = (x[1:] + x[:-1])/2
+	y_mid = (y[1:] + y[:-1])/2
+	X = [x_mid,y_mid]
+	res = get_fit_func_(X, 
+						E	    =  par[0],
+						L	    =  par[1],
+						P	    =  par[2],
+						V	    = -par[3] if inverse_pol else par[3], 
+						Q           = -par[4] if inverse_pol else par[4],
+						beta        =  par[5],                        
+						alpha_d     =  par[6],                        
+						mx	    =  par[7],
+						my	    =  par[8],
+						sx	    =  par[9],
+						sy	    =  par[10],
+						alpha_x1 =  par[11],
+						alpha_x2 =  par[12],
+						alpha_y1 =  par[13],
+						alpha_y2 =  par[14],
+						nx1      =  par[15],
+						nx2      =  par[16],
+						ny1      =  par[17],
+						ny2      =  par[18],
+						phi      =  par[19],
+						p1       =  par[20],
+						p2       =  par[21],
+						p3       =  par[22]
+)
+	return res
+
+#def get_fit_func(*args, **kwargs):
+#    return fit_func_cb(**args,**kwargs)
+#
+#def get_fit_func_(*args, **kwargs):
+#    return fit_func_cb_(**args,**kwargs)
+
+##Try to fit the 2d differenece. Result is bad. Minuit unable to detetermine correct normalization.
+#class Chi2_gaus:
+#    def __init__(self, model, x, z_l, z_r, tied_VQ = False):
+#        self.model = model	# model predicts z for given x()
+#        self.x = x
+#        self.z_l = z_l.flatten()
+#        self.z_r = z_r.flatten()
+#        fit_varnames = ['mx','sx','my','sy','mx2','sx2','my2','sy2','N_grel','Ksi','phi_lin','P','V','E','L','alpha','NL','NR']
+#        self.tied_VQ = tied_VQ
+#        self.func_code = make_func_code(fit_varnames)
+#
+#    def __call__(self, *par):  
+#        NL = par[16]
+#        NR = par[17]
+#        Q  = par[9]
+#        V  = np.sqrt(1-Q*Q) if self.tied_VQ else par[12]
+#        
+#        par_l = np.array(par[:16])
+#        par_l[9] = Q
+#        par_l[12] = V
+#
+#        par_r = np.array(par[:16])
+#        par_r[9] = -Q
+#        par_r[12]= -V
+#
+#        zm_l = self.model(self.x, *par_l).flatten()
+#        zm_r = self.model(self.x, *par_r).flatten()
+#        zm  = zm_l - zm_r
+#        zm0 = NL*zm_l + NR*zm_r
+#
+#        zd  = self.z_l/NL - self.z_r/NR
+#        zde = self.z_l/NL**2 + self.z_r/NR**2
+#
+#        zd0 = self.z_l + self.z_r
+#        zde0 = self.z_l + self.z_r
+#
+#        chi2_diff = np.sum(np.where(zde > 0,  np.power((zd-zm),2.)/zde, 0.))
+#        chi20     = np.sum(np.where(zde0 > 0, np.power((zd0-zm0),2.)/zde0, 0.))
+#        chi2 = chi20 + chi2_diff
+#        #print(chi2)
+#        #print(self.x)
+#        return chi2
+    
+class Chi2:
     def __init__(self, model, x, z_l, z_r, tied_VQ = False):
         self.model = model	# model predicts z for given x()
         self.x = x
         self.z_l = z_l.flatten()
         self.z_r = z_r.flatten()
-        fit_varnames = ['mx','sx','my','sy','mx2','sx2','my2','sy2','N_grel','Ksi','phi_lin','P','V','E','L','alpha','NL','NR']
+        fit_varnames  = list(model.__code__.co_varnames)[1:model.__code__.co_argcount]+['NL','NR']
+        #print(fit_varnames)
         self.tied_VQ = tied_VQ
         self.func_code = make_func_code(fit_varnames)
+        self.idxNL=fit_varnames.index('NL')
+        self.idxNR=fit_varnames.index('NR')
+        self.idxQ =fit_varnames.index('Q')
+        self.idxV =fit_varnames.index('V')
 
     def __call__(self, *par):  
-        NL = par[16]
-        NR = par[17]
-        Q  = par[9]
-        V  = np.sqrt(1-Q*Q) if self.tied_VQ else par[12]
+        NL = par[self.idxNL]
+        NR = par[self.idxNR]
+        Q  = par[self.idxQ]
+        V  = np.sqrt(1.-Q*Q) if self.tied_VQ else par[self.idxV]
+        #if self.tied_VQ:
+        #    V  = np.sqrt(1.-Q*Q)
         
-        par_l = np.array(par[:16])
-        par_l[9] = Q
-        par_l[12] = V
+        par_l = np.array(par[:self.idxNL])
+        par_l[self.idxQ] = Q
+        par_l[self.idxV] = V
 
-        par_r = np.array(par[:16])
-        par_r[9] = -Q
-        par_r[12]= -V
+        par_r = np.array(par[:self.idxNL])
+        par_r[self.idxQ] = -Q
+        par_r[self.idxV]= -V
 
         zm_l = self.model(self.x, *par_l).flatten()
         zm_r = self.model(self.x, *par_r).flatten()
@@ -223,7 +341,7 @@ class Chi2_2d:
         #print(chi2)
         #print(self.x)
         return chi2
-    
+
 def make_blur(h_dict):
     hc_l = np.array(h_dict['hc_l'])
     hc_r = np.array(h_dict['hc_r'])
@@ -256,8 +374,8 @@ def make_blur(h_dict):
             hc_l[y,x] = 0
             hc_r[y,x] = 0
     filter_ = gaussian_filter
-    hc_l = filter_(hc_l, sigma=0.8, mode='nearest')
-    hc_r = filter_(hc_r, sigma=0.8, mode='nearest')
+    hc_l = filter_(hc_l, sigma=0.5, mode='nearest')
+    hc_r = filter_(hc_r, sigma=0.5, mode='nearest')
     return {'hc_l': hc_l,
                 'hc_r': hc_r,
                 'hs_l': h_dict['hs_l'],
@@ -268,6 +386,7 @@ def make_blur(h_dict):
                 'yc': h_dict['yc']}
 
 
+#Make blur among only nonzero pixels
 def nik_blur(h,radius):
 	result = np.array(h)
 	Nx, Ny = h.shape
@@ -275,8 +394,6 @@ def nik_blur(h,radius):
 		for y in range(0, Ny):
 			if h[x,y] > 0: 
 				window = np.array(h[max(0,x-radius):min(x+radius+1, Nx), max(0,y-radius):min(y+radius+1, Ny)])
-				#nx,ny = window.shape
-				#result[x,y] = np.sum(window)/(nx*ny)
 				result[x,y] = np.sum(np.where(window>0, window, 0.))/np.sum(np.where(window>0, 1, 0.))
 			else:
 				result[x,y]=0
@@ -286,8 +403,6 @@ def nik_blur(h,radius):
 def make_blur_nik(h_dict):
 	hc_l = np.array(h_dict['hc_l'])
 	hc_r = np.array(h_dict['hc_r'])
-	#hc_l = mask_ch_map(hc_l, mask)
-	#hc_r = mask_ch_map(hc_r, mask)
 	hc_l = nik_blur(hc_l,1)
 	hc_r = nik_blur(hc_r,1)
 	return {'hc_l': hc_l,

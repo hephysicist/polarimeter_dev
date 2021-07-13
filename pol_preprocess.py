@@ -60,7 +60,8 @@ def map_events(evt_arr, zone_id):
             ch_id_c = get_center_ch_id(x,y, zone_id)
             hist_c_l[y,x] = ch_id_hist_l[ch_id_c]
             hist_c_r[y,x] = ch_id_hist_r[ch_id_c]
-    mask = np.array([[9,10], [7,16], [10,21], [18,1], [15,8]])
+    #mask = np.array([[9,10], [7,16], [10,21], [18,1], [15,8]])
+    mask = np.array([])
     hist_c_l = mask_ch_map(hist_c_l, mask)
     hist_c_r = mask_ch_map(hist_c_r, mask)
     return [hist_s_l, hist_s_r, hist_c_l, hist_c_r]
@@ -79,6 +80,26 @@ def save_mapped_hists(hist_fpath, h_list, fname):
     print('nl: ',sum(sum(h_list[2])), 'nr: ', sum(sum(h_list[3])))
     print('Saved mapped hist to the file: '+fname[:19]+'_hist.npz\n')
 
+def preprocess(config, fname, fig, ax ):
+        bin_fpath = config['bin_fpath']
+        raw_fpath = config['raw_fpath']
+        save_raw = config['preprocess']['save_raw_file']
+        amp_cut = config['preprocess']['amp_cut'] 
+        zone_id = config['zone_id'] 
+        hist_fpath = config['hist_fpath']
+        evt_arr = preprocess_bin_file(bin_fpath,raw_fpath, fname, amp_cut, save_raw)
+        if np.shape(evt_arr)[0] != 0:
+            h_list = map_events(evt_arr,zone_id) 
+            save_mapped_hists(hist_fpath, h_list, fname) 
+            h_dict = load_hist(hist_fpath, fname[:19]+'_hist.npz')
+            print_stats(get_raw_stats(h_dict))
+            if config['preprocess']['draw']:
+                plot_hitmap(fig, ax, h_dict, block=False, norm=False)
+            plot_hitmap(fig, ax, h_dict, block=False, norm=False)
+            fig.canvas.draw_idle()
+            plt.pause(0.1)
+
+
 def online_preprocess(config, regex_line):
     bin_fpath = config['bin_fpath']
     raw_fpath = config['raw_fpath']
@@ -94,16 +115,17 @@ def online_preprocess(config, regex_line):
     try:
         while True:
             if(fname_old != fname):
-                evt_arr = preprocess_bin_file(bin_fpath,raw_fpath, fname, amp_cut, save_raw) #extract events to numpy array with the following structure [[polarization, value, channel, frame],...]
-                if np.shape(evt_arr)[0] != 0:
-                    h_list = map_events(evt_arr,zone_id) #map raw events to 2d coordinate histogramms return 4 histogram side region l/r center region l/r
-                    save_mapped_hists(hist_fpath, h_list, fname) #save them to np.array[hs_l, hs_r, hc_l hc_r, xs, ys, xc, yc]
-                    h_dict = load_hist(hist_fpath, fname[:19]+'_hist.npz')
-                    #h_dict = make_blur(h_dict)
-                    print_stats(get_raw_stats(h_dict))
-                    plot_hitmap(fig, ax, h_dict, block=False, norm=False)
-                    fig.canvas.draw_idle()
-                    plt.pause(0.1)
+                preprocess(config, fname, fig, ax)
+#                evt_arr = preprocess_bin_file(bin_fpath,raw_fpath, fname, amp_cut, save_raw) #extract events to numpy array with the following structure [[polarization, value, channel, frame],...]
+#                if np.shape(evt_arr)[0] != 0:
+#                    h_list = map_events(evt_arr,zone_id) #map raw events to 2d coordinate histogramms return 4 histogram side region l/r center region l/r
+#                    save_mapped_hists(hist_fpath, h_list, fname) #save them to np.array[hs_l, hs_r, hc_l hc_r, xs, ys, xc, yc]
+#                    h_dict = load_hist(hist_fpath, fname[:19]+'_hist.npz')
+#                    #h_dict = make_blur(h_dict)
+#                    print_stats(get_raw_stats(h_dict))
+#                    plot_hitmap(fig, ax, h_dict, block=False, norm=False)
+#                    fig.canvas.draw_idle()
+#                    plt.pause(0.1)
                 fname_old = fname
                 attempt_count = 0
             else:
@@ -127,23 +149,42 @@ def offline_preprocess(config, regex_line):
     fig, ax = init_monitor_figure()
     try:
         for fname in f_list:
-            evt_arr = preprocess_bin_file(bin_fpath,raw_fpath, fname, amp_cut, save_raw) #extract events to numpy array with the following structure [[polarization, value, channel, frame],...]
-            if np.shape(evt_arr)[0]: 
-                h_list = map_events(evt_arr,zone_id) #map raw events to 2d coordinate histogramms return 4 histogram side region l/r center region l/r
-                save_mapped_hists(hist_fpath, h_list, fname) #save them to np.array[hs_l, hs_r, hc_l hc_r, xs, ys, xc, yc]
-                h_dict = load_hist(hist_fpath, fname[:19]+'_hist.npz')
-                print_stats(get_raw_stats(h_dict))
-                if config['preprocess']['draw']:
-                    plot_hitmap(fig, ax, h_dict, block=False, norm=False)
+#            evt_arr = preprocess_bin_file(bin_fpath,raw_fpath, fname, amp_cut, save_raw) #extract events to numpy array with the following structure [[polarization, value, channel, frame],...]
+#            if np.shape(evt_arr)[0]: 
+#                h_list = map_events(evt_arr,zone_id) #map raw events to 2d coordinate histogramms return 4 histogram side region l/r center region l/r
+#                save_mapped_hists(hist_fpath, h_list, fname) #save them to np.array[hs_l, hs_r, hc_l hc_r, xs, ys, xc, yc]
+#                h_dict = load_hist(hist_fpath, fname[:19]+'_hist.npz')
+#                print_stats(get_raw_stats(h_dict))
+#                if config['preprocess']['draw']:
+#                    plot_hitmap(fig, ax, h_dict, block=False, norm=False)
+              preprocess(config, fname, fig, ax)
     except KeyboardInterrupt:
         print('\n***Exiting offline preprocessing***')
         pass
+
+
+def test_preprocess(config, regex_line):
+    print('This is test preprocessing...')
+    print('Checking regex line:'+ regex_line)
+    fig, ax = init_monitor_figure()
+    fname = 'test-00-00T00:00:00.npz'
+    evt_file = np.load(config['raw_fpath']+fname, allow_pickle=True)
+    evt_arr = evt_file['evt_arr']
+    h_list = map_events(config, evt_arr)  # map raw events to 2d coordinate histogramms & save them to np.array[hs_l, hs_r, hc_l hc_r, xs, ys, xc, yc]
+    save_mapped_hists(config, h_list, fname)
+    h_dict = load_hist(config, fname[:19]+'_hist.npz')
+    #print_stats(get_raw_stats(h_dict))
+    plot_hitmap(fig, ax, h_dict, block=False, norm=False)
+    plt.pause(3)
+    plt.draw()
+    print('\n***Exiting test preprocessing***')
 
 def main():
     np.set_printoptions(linewidth=360)
     parser = argparse.ArgumentParser("pol_preprocess.py")
     parser.add_argument('config', nargs='?', help='Name of the config file')
     parser.add_argument('--offline', help='Use this key to preprocess iteratively all, starting from regrex_line',default=False, action="store_true")
+    parser.add_argument('--test', help='Use this key to perform standart preprocessing on a test file',default=False, action="store_true")
     parser.add_argument('regex_line', nargs='?', help='Name of the file to start online preprocessing in regex format')
     args = parser.parse_args()
    
@@ -156,6 +197,8 @@ def main():
         else:
             if args.offline:
                 preprocess_ = offline_preprocess
+            elif args.test:
+                preprocess_ = test_preprocess
             else:
                 preprocess_ = online_preprocess
 
