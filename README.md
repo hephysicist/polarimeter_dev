@@ -5,7 +5,7 @@ There is a simple way to do this using the Miniconda package manager.
 ## Getting Miniconda
 - Download the latest version of miniconda from   https://docs.conda.io/en/latest/miniconda.html 
 - ` bash Miniconda3-py39_version.sh `
-- During the installation process, you are required to initialize conda by editing the .bashrc file. You need to type #conda init# to make it automatically 
+- During the installation process, you are required to initialize conda by editing the .bashrc file. You need to type `conda init` to make it automatically 
 Make sure that your conda version is the latest: type `conda update conda`
 ## Installing polarimeter software
 - Make a local copy of the repo: ` git clone https://github.com/zakharov-binp/polarimeter_dev`
