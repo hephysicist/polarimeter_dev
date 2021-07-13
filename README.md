@@ -12,11 +12,10 @@ Make sure that your conda version is the latest: type `conda update conda`
 - Inside the polarimeter_dev type: `conda env create -f pol_env.yml` This creates conda enviroment with all required packeges
 - To start working with polarimeter software activate the enviroment: `conda activate pol_env`
 ## Running the code
-Processing data from coordinate detector is double-step operation. At the first step raw data files from the detector need to be preprocessed. 
-Before running the script, you need to edit configuration file: _pol_config.yml_ 
-To run the preprocessing type `python pol_preprocess.py`
-This produces detector hitmaps and saves them as a set of histogramms in .npz file
-By running `python pol_fit.py --config pol_fit_config.yml --regex_line` you can start the fitting script.
+- Processing data from coordinate detector is double-step operation. At the first step raw data files from the detector need to be preprocessed. 
+- Before running the script, you need to edit configuration file: _pol_config.yml_ 
+- To run the preprocessing type `python pol_preprocess.py`This produces detector hitmaps and saves them as a set of histogramms in .npz file
+- By running `python pol_fit.py --config pol_fit_config.yml --regex_line` you can start the fitting script.
 For further instructions look at the code)
 
 
