@@ -2,6 +2,8 @@ import numpy as np
 from math import pi, sqrt, exp, cos, sin
 from iminuit.util import make_func_code
 from scipy import signal
+import cupy as cp
+import cusignal
 from scipy.ndimage import gaussian_filter, uniform_filter, median_filter, maximum_filter, generic_filter
 
 def double_gausn2d(x, y, mx, sx, my, sy, mx2, sx2, my2, sy2, N):
@@ -50,6 +52,16 @@ def crystall_ball_1d(x, alpha, n1, n2):
                                np.exp(-0.5*x**2.) ),
                      np.power((na2/(na2-alpha+x)), n2) * np.exp(-0.5*alpha**2.))
 
+def crystall_ball_1d_cp(x, alpha, n1, n2):
+    #helper params
+    na1 = n1/alpha
+    na2 = n2/alpha
+    return np.where( x < alpha, 
+                     cp.where( x < -alpha,  
+                               cp.power((na1/(na1+alpha-x)), n1) * cp.exp(-0.5*alpha**2.),
+                               cp.exp(-0.5*x**2.) ),
+                     cp.power((na2/(na2-alpha+x)), n2) * cp.exp(-0.5*alpha**2.))
+
 def crystall_ball_2d(x, y, sx,sy, alpha_x1,  alpha_x2, alpha_y1, alpha_y2, nx1, nx2, ny1, ny2, phi, p1, p2,p3):
     X =  x/sx*cos(phi) + y/sy*sin(phi)
     Y = -x/sx*sin(phi) + y/sy*cos(phi)
@@ -59,6 +71,16 @@ def crystall_ball_2d(x, y, sx,sy, alpha_x1,  alpha_x2, alpha_y1, alpha_y2, nx1, 
     n     = np.sqrt( np.power(nx1*c - nx2, 2.0) + np.power(ny1*s - ny2, 2.0) )
     alpha = np.sqrt( np.power(alpha_x1*c -alpha_x2, 2.0) + np.power(alpha_y1*s- alpha_y2, 2.0) )
     return crystall_ball_1d(Z, alpha, n, n)*(1.0 + p1*y + p2*y*y + p3*np.power(y,3.0))
+
+def crystall_ball_2d_cp(x, y, sx,sy, alpha_x1,  alpha_x2, alpha_y1, alpha_y2, nx1, nx2, ny1, ny2, phi, p1, p2,p3):
+    X =  x/sx*cos(phi) + y/sy*sin(phi)
+    Y = -x/sx*sin(phi) + y/sy*cos(phi)
+    Z =  cp.sqrt(X*X+Y*Y)
+    c = X/Z
+    s = Y/Z
+    n     = cp.sqrt( cp.power(nx1*c - nx2, 2.0) + cp.power(ny1*s - ny2, 2.0) )
+    alpha = cp.sqrt( cp.power(alpha_x1*c -alpha_x2, 2.0) + cp.power(alpha_y1*s- alpha_y2, 2.0) )
+    return crystall_ball_1d_cp(Z, alpha, n, n)*(1.0 + p1*y + p2*y*y + p3*cp.power(y,3.0))
 
 def wrap_array(x_mid, n_p):
     step = x_mid[1]-x_mid[0]
@@ -101,7 +123,26 @@ def get_xsec_xy(x,y, Ksi=0, phi_lin=0., P=0, V=0, E=4730, L=33000, alpha=0):
     - 2.*eta2/(1.+eta2)/(1.+eta2) * (1 - Ksi * np.cos(2.*(phi-phi_lin)))+
     + P*V*eta*kappa/(1+eta2+kappa)/(1.+eta2)*np.sin(phi-alpha))
     return dsigma
-24 
+
+def get_xsec_xy_cp(x,y, Ksi=0, phi_lin=0., P=0, V=0, E=4730, L=33000, alpha=0):
+    m_e = 0.511*10**6   #eV
+    gamma = E/0.511 
+    omega_0 = 2.35 #eV
+    
+    r = cp.hypot(x,y)
+    phi = cp.arctan2(y, x)
+    theta = r/L
+    
+    
+    kappa = 4.*gamma*omega_0/m_e
+    eta = gamma*theta
+    eta2 = cp.power(eta,2)
+    
+    dsigma = 1/cp.power((1+eta2+kappa),2)*(
+    1 + 0.5*(kappa**2)/((1.+eta2+kappa)*(1.+eta2)) -
+    - 2.*eta2/(1.+eta2)/(1.+eta2) * (1 - Ksi * cp.cos(2.*(phi-phi_lin)))+
+    + P*V*eta*kappa/(1+eta2+kappa)/(1.+eta2)*cp.sin(phi-alpha))
+    return dsigma
 
 def fit_func_gaus_(X, mx, sx, my, sy, mx2, sx2, my2, sy2, N_grel, Q, beta, P, V, E, L,alpha):
     x_mid = X[0]-mx
@@ -117,6 +158,7 @@ def fit_func_gaus_(X, mx, sx, my, sy, mx2, sx2, my2, sy2, N_grel, Q, beta, P, V,
     x_sec = get_xsec_xy(xx, yy, Q, beta, P, V, E, L,alpha)
     core = double_gausn2d3(xx, yy,  sx,  sy, mx2, sx2, my2, sy2, N_grel)
     res = signal.fftconvolve(x_sec, core, mode = 'same')
+#    res = cp.asnumpy(cusignal.fftconvolve(cp.asarray(x_sec), cp.asarray(core), mode = 'same'))
     res = res[n_sp_y:-n_sp_y, n_sp_x:-n_sp_x]
     return res
 
@@ -210,8 +252,27 @@ def get_fit_func_(X, E, L, P, V, Q, beta, alpha_d,  mx, my, sx, sy, alpha_x1,alp
     x_sec = get_xsec_xy(xx, yy, Q, beta, P, V, E, L,alpha_d)
     core = crystall_ball_2d(xx, yy,  sx,  sy, alpha_x1, alpha_x2,  alpha_y1, alpha_y2, nx1, nx2, ny1, ny2, phi, p1,p2,p3)
     res = signal.fftconvolve(x_sec, core, mode = 'same')
+    #res = cp.asnumpy(cusignal.fftconvolve(cp.asarray(x_sec), cp.asarray(core), mode = 'same'))
     res = res[n_sp_y:-n_sp_y, n_sp_x:-n_sp_x]
     return res
+
+#def get_fit_func_(X, E, L, P, V, Q, beta, alpha_d,  mx, my, sx, sy, alpha_x1,alpha_x2,  alpha_y1, alpha_y2, nx1,nx2,ny1, ny2, phi, p1,p2,p3):
+#    x_mid = X[0]-mx
+#    y_mid = X[1]-my
+#
+#    n_sp_x = 12
+#    n_sp_y = 20
+#
+#    x_wrapped = wrap_array(x_mid,n_sp_x)
+#    y_wrapped = wrap_array(y_mid,n_sp_y)
+#    xx,yy = cp.meshgrid(cp.asarray(x_wrapped), cp.asarray(y_wrapped))
+#
+#    x_sec = get_xsec_xy_cp(xx, yy, Q, beta, P, V, E, L,alpha_d)
+#    core = crystall_ball_2d_cp(xx, yy,  sx,  sy, alpha_x1, alpha_x2,  alpha_y1, alpha_y2, nx1, nx2, ny1, ny2, phi, p1,p2,p3)
+#    #res = signal.fftconvolve(x_sec, core, mode = 'same')
+#    res = cp.asnumpy(cusignal.fftconvolve(x_sec, core, mode = 'same'))
+#    res = res[n_sp_y:-n_sp_y, n_sp_x:-n_sp_x]
+#    return res
 
 def get_fit_func(x, y, par, inverse_pol=False):
 	x_mid = (x[1:] + x[:-1])/2

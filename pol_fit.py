@@ -202,6 +202,7 @@ def make_fit(config, h_dict):
     
     m2d.print_level = 0
     m2d.errordef=1
+    begin_time = time.time()
     m2d.migrad()
     m2d.hesse()
     print(m2d)
@@ -211,6 +212,8 @@ def make_fit(config, h_dict):
        m2d.migrad()
        m2d.hesse()
        print(m2d)
+    end_time = time.time()
+    print("Fit time: ", end_time-begin_time, " s")
     return m2d, ndf
 
 
@@ -218,14 +221,14 @@ def online_fit(config, regex_line):
     hist_fpath = config['hist_fpath']
     xrange = config['xrange']
     n_files = config['n_files']
-    need_blur = config['need_blur'] and not NOBLUR
+    need_blur = config['need_blur']
     fname = np.sort(np.array(glob.glob1(hist_fpath , regex_line)))[-2] #get 2nd last file
     fname_prev = fname
     file_count = 0
     attempt_count = 0
-    fig1, ax1 = init_fit_figure(label = 'L')
-    fig2, ax2 = init_fit_figure(label = 'R')
-    fig3, ax3 = init_fit_figure(label = 'Diff')
+    fig1, ax1 = init_fit_figure(label = 'L', title='Left')
+    fig2, ax2 = init_fit_figure(label = 'R', title='Right')
+    fig3, ax3 = init_fit_figure(label = 'Diff', title='Diff')
     counter = 0
     try:
         while True:
