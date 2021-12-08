@@ -2,6 +2,8 @@ import numpy as np
 from math import pi, sqrt, exp, cos, sin
 from iminuit.util import make_func_code
 from scipy import signal
+import cupy as cp
+import cusignal
 from scipy.ndimage import gaussian_filter, uniform_filter, median_filter, maximum_filter, generic_filter
 
 def double_gausn2d(x, y, mx, sx, my, sy, mx2, sx2, my2, sy2, N):
@@ -16,29 +18,6 @@ def double_gausn2d3(x, y, sx, sy, mx2, sx2, my2, sy2, N):
     return (1./(2*pi*sx*sy) * np.exp(-np.power(x,2.)/(2.*sx**2.)-np.power(y,2.)/(2.*sy**2))+
             N/(2*pi*np.sqrt(sx**2+sx2**2)*np.sqrt(sy**2+sy2**2)) * np.exp(-np.power(x,2.)/(2.*(sx**2+sx2**2.))-np.power(y,2.)/(2.*(sy**2 +sy2**2))))/(1.+ N)
 
-#def crystall_ball(x, y, sx, sy, alpha, nx, ny):
-#    z = np.sqrt( x**2/sx**2 + y**2/sy**2)
-#    r2 = x**2+y**2;
-#    n = np.sqrt( ((nx*x)**2.   + (ny*y)**2. )/r2)
-#    na=n/alpha
-#    return np.where( z<alpha, np.exp(- z**2./2.), (na/(na-alpha+z))**n * np.exp(-alpha**2./2.))# / (2.*pi*sx*sy)
-#    #return np.where( z<alpha, np.exp(-z**2/2), 0) / (2*pi*sx*sy)
-#    #return  np.where( z<alpha, np.exp( -x**2./(2.*sx**2.) - y**2./(2.*sy**2.))/(2.*pi*sx*sy), (na/(na-alpha+z))**n * np.exp(-alpha**2/2))
-#
-#def crystall_ball_2d(x, y, sx, sy, alpha, n, phi):
-#    na=n/alpha
-#    X =  x/sx*cos(phi) + y/sy*sin(phi)
-#    Y = -x/sx*sin(phi) + y/sy*cos(phi)
-#    return np.where( X<alpha, np.exp(-0.5*X**2.), (na/(na-alpha+X))**n * np.exp(-0.5*alpha**2.)) * \
-#           np.exp(-0.5*Y**2.)    
-#
-#def crystall_ball_2d2(x, y, sx, sy, alpha_x, alpha_y, n_x, n_y, phi):
-#    n2ax=n_x/alpha_x
-#    n2ay=n_y/alpha_y
-#    X =  x/sx*cos(phi) + y/sy*sin(phi)
-#    Y = -x/sx*sin(phi) + y/sy*cos(phi)
-#    return np.where( X<alpha_x, np.exp(-0.5*X**2.), np.power((n2ax/(n2ax-alpha_x+X)), n_x) * np.exp(-0.5*alpha_x**2.)) * \
-#           np.where( Y<alpha_y, np.exp(-0.5*Y**2.), np.power((n2ay/(n2ay-alpha_y+Y)), n_y) * np.exp(-0.5*alpha_y**2.))       
 
 def crystall_ball_1d(x, alpha, n1, n2):
     #helper params
@@ -50,6 +29,16 @@ def crystall_ball_1d(x, alpha, n1, n2):
                                np.exp(-0.5*x**2.) ),
                      np.power((na2/(na2-alpha+x)), n2) * np.exp(-0.5*alpha**2.))
 
+def crystall_ball_1d_cp(x, alpha, n1, n2):
+    #helper params
+    na1 = n1/alpha
+    na2 = n2/alpha
+    return np.where( x < alpha, 
+                     cp.where( x < -alpha,  
+                               cp.power((na1/(na1+alpha-x)), n1) * cp.exp(-0.5*alpha**2.),
+                               cp.exp(-0.5*x**2.) ),
+                     cp.power((na2/(na2-alpha+x)), n2) * cp.exp(-0.5*alpha**2.))
+
 def crystall_ball_2d(x, y, sx,sy, alpha_x1,  alpha_x2, alpha_y1, alpha_y2, nx1, nx2, ny1, ny2, phi, p1, p2,p3):
     X =  x/sx*cos(phi) + y/sy*sin(phi)
     Y = -x/sx*sin(phi) + y/sy*cos(phi)
@@ -59,6 +48,16 @@ def crystall_ball_2d(x, y, sx,sy, alpha_x1,  alpha_x2, alpha_y1, alpha_y2, nx1, 
     n     = np.sqrt( np.power(nx1*c - nx2, 2.0) + np.power(ny1*s - ny2, 2.0) )
     alpha = np.sqrt( np.power(alpha_x1*c -alpha_x2, 2.0) + np.power(alpha_y1*s- alpha_y2, 2.0) )
     return crystall_ball_1d(Z, alpha, n, n)*(1.0 + p1*y + p2*y*y + p3*np.power(y,3.0))
+
+def crystall_ball_2d_cp(x, y, sx,sy, alpha_x1,  alpha_x2, alpha_y1, alpha_y2, nx1, nx2, ny1, ny2, phi, p1, p2,p3):
+    X =  x/sx*cos(phi) + y/sy*sin(phi)
+    Y = -x/sx*sin(phi) + y/sy*cos(phi)
+    Z =  cp.sqrt(X*X+Y*Y)
+    c = X/Z
+    s = Y/Z
+    n     = cp.sqrt( cp.power(nx1*c - nx2, 2.0) + cp.power(ny1*s - ny2, 2.0) )
+    alpha = cp.sqrt( cp.power(alpha_x1*c -alpha_x2, 2.0) + cp.power(alpha_y1*s- alpha_y2, 2.0) )
+    return crystall_ball_1d_cp(Z, alpha, n, n)*(1.0 + p1*y + p2*y*y + p3*cp.power(y,3.0))
 
 def wrap_array(x_mid, n_p):
     step = x_mid[1]-x_mid[0]
@@ -101,7 +100,26 @@ def get_xsec_xy(x,y, Ksi=0, phi_lin=0., P=0, V=0, E=4730, L=33000, alpha=0):
     - 2.*eta2/(1.+eta2)/(1.+eta2) * (1 - Ksi * np.cos(2.*(phi-phi_lin)))+
     + P*V*eta*kappa/(1+eta2+kappa)/(1.+eta2)*np.sin(phi-alpha))
     return dsigma
-24 
+
+def get_xsec_xy_cp(x,y, Ksi=0, phi_lin=0., P=0, V=0, E=4730, L=33000, alpha=0):
+    m_e = 0.511*10**6   #eV
+    gamma = E/0.511 
+    omega_0 = 2.35 #eV
+    
+    r = cp.hypot(x,y)
+    phi = cp.arctan2(y, x)
+    theta = r/L
+    
+    
+    kappa = 4.*gamma*omega_0/m_e
+    eta = gamma*theta
+    eta2 = cp.power(eta,2)
+    
+    dsigma = 1/cp.power((1+eta2+kappa),2)*(
+    1 + 0.5*(kappa**2)/((1.+eta2+kappa)*(1.+eta2)) -
+    - 2.*eta2/(1.+eta2)/(1.+eta2) * (1 - Ksi * cp.cos(2.*(phi-phi_lin)))+
+    + P*V*eta*kappa/(1+eta2+kappa)/(1.+eta2)*cp.sin(phi-alpha))
+    return dsigma
 
 def fit_func_gaus_(X, mx, sx, my, sy, mx2, sx2, my2, sy2, N_grel, Q, beta, P, V, E, L,alpha):
     x_mid = X[0]-mx
@@ -117,6 +135,7 @@ def fit_func_gaus_(X, mx, sx, my, sy, mx2, sx2, my2, sy2, N_grel, Q, beta, P, V,
     x_sec = get_xsec_xy(xx, yy, Q, beta, P, V, E, L,alpha)
     core = double_gausn2d3(xx, yy,  sx,  sy, mx2, sx2, my2, sy2, N_grel)
     res = signal.fftconvolve(x_sec, core, mode = 'same')
+#    res = cp.asnumpy(cusignal.fftconvolve(cp.asarray(x_sec), cp.asarray(core), mode = 'same'))
     res = res[n_sp_y:-n_sp_y, n_sp_x:-n_sp_x]
     return res
 
@@ -146,55 +165,6 @@ def fit_func_gaus(x, y, par, inverse_pol=False):
                         alpha  = par[15])
 	return res
 
-#def get_fit_func_cb_(X, mx, sx, my, sy, mx2, sx2, my2, sy2, N_grel, Ksi, phi_lin, P, V, E, L,alpha):
-#    x_mid = X[0]-mx
-#    y_mid = X[1]-my
-#
-#    n_sp_x = 12
-#    n_sp_y = 20
-#
-#    x_wrapped = wrap_array(x_mid,n_sp_x)
-#    y_wrapped = wrap_array(y_mid,n_sp_y)
-#    xx,yy = np.meshgrid(x_wrapped, y_wrapped)
-#
-#    x_sec = get_xsec_xy(xx, yy, Ksi, phi_lin, P, V, E, L,alpha)
-##PARAMETERS MUST BE RENAMED
-## sx - spread x
-## sy - spread  y
-## mx2 - z0
-## sx2 - nx
-## sy2 - ny
-#    #core = crystall_ball_2d2(xx, yy,  sx,  sy, mx2, sx, sy2)
-#    core = crystall_ball_2d2(xx, yy,  sx,  sy, mx2, my2, sx2, sy2, N_grel)
-#    res = signal.fftconvolve(x_sec, core, mode = 'same')
-#    res = res[n_sp_y:-n_sp_y, n_sp_x:-n_sp_x]
-#    return res
-#
-#def get_fit_func_cb(x, y, par, inverse_pol=False):
-#	x_mid = (x[1:] + x[:-1])/2
-#	y_mid = (y[1:] + y[:-1])/2
-#	if inverse_pol:
-#		par[9] = - par[9]
-#		par[12] = - par[12]
-#	X = [x_mid,y_mid]
-#	res = get_fit_func_cb_(X, 
-#						mx	   = par[0],
-#						sx	   = par[1],
-#						my	   = par[2],
-#						sy	   = par[3],
-#						mx2    = par[4],
-#						sx2    = par[5],
-#						my2    = par[6],
-#						sy2    = par[7],
-#						N_grel = par[8],
-#						Ksi    = par[9],
-#						phi_lin= par[10],
-#						P	   = par[11],
-#						V	   = par[12],
-#						E	   = par[13],
-#						L	   = par[14],
-#						alpha  = par[15])
-#	return res
 
 def get_fit_func_(X, E, L, P, V, Q, beta, alpha_d,  mx, my, sx, sy, alpha_x1,alpha_x2,  alpha_y1, alpha_y2, nx1,nx2,ny1, ny2, phi, p1,p2,p3):
     x_mid = X[0]-mx
@@ -212,6 +182,7 @@ def get_fit_func_(X, E, L, P, V, Q, beta, alpha_d,  mx, my, sx, sy, alpha_x1,alp
     res = signal.fftconvolve(x_sec, core, mode = 'same')
     res = res[n_sp_y:-n_sp_y, n_sp_x:-n_sp_x]
     return res
+
 
 def get_fit_func(x, y, par, inverse_pol=False):
 	x_mid = (x[1:] + x[:-1])/2
@@ -244,54 +215,6 @@ def get_fit_func(x, y, par, inverse_pol=False):
 )
 	return res
 
-#def get_fit_func(*args, **kwargs):
-#    return fit_func_cb(**args,**kwargs)
-#
-#def get_fit_func_(*args, **kwargs):
-#    return fit_func_cb_(**args,**kwargs)
-
-##Try to fit the 2d differenece. Result is bad. Minuit unable to detetermine correct normalization.
-#class Chi2_gaus:
-#    def __init__(self, model, x, z_l, z_r, tied_VQ = False):
-#        self.model = model	# model predicts z for given x()
-#        self.x = x
-#        self.z_l = z_l.flatten()
-#        self.z_r = z_r.flatten()
-#        fit_varnames = ['mx','sx','my','sy','mx2','sx2','my2','sy2','N_grel','Ksi','phi_lin','P','V','E','L','alpha','NL','NR']
-#        self.tied_VQ = tied_VQ
-#        self.func_code = make_func_code(fit_varnames)
-#
-#    def __call__(self, *par):  
-#        NL = par[16]
-#        NR = par[17]
-#        Q  = par[9]
-#        V  = np.sqrt(1-Q*Q) if self.tied_VQ else par[12]
-#        
-#        par_l = np.array(par[:16])
-#        par_l[9] = Q
-#        par_l[12] = V
-#
-#        par_r = np.array(par[:16])
-#        par_r[9] = -Q
-#        par_r[12]= -V
-#
-#        zm_l = self.model(self.x, *par_l).flatten()
-#        zm_r = self.model(self.x, *par_r).flatten()
-#        zm  = zm_l - zm_r
-#        zm0 = NL*zm_l + NR*zm_r
-#
-#        zd  = self.z_l/NL - self.z_r/NR
-#        zde = self.z_l/NL**2 + self.z_r/NR**2
-#
-#        zd0 = self.z_l + self.z_r
-#        zde0 = self.z_l + self.z_r
-#
-#        chi2_diff = np.sum(np.where(zde > 0,  np.power((zd-zm),2.)/zde, 0.))
-#        chi20     = np.sum(np.where(zde0 > 0, np.power((zd0-zm0),2.)/zde0, 0.))
-#        chi2 = chi20 + chi2_diff
-#        #print(chi2)
-#        #print(self.x)
-#        return chi2
     
 class Chi2:
     def __init__(self, model, x, z_l, z_r, tied_VQ = False):
@@ -300,7 +223,6 @@ class Chi2:
         self.z_l = z_l.flatten()
         self.z_r = z_r.flatten()
         fit_varnames  = list(model.__code__.co_varnames)[1:model.__code__.co_argcount]+['NL','NR']
-        #print(fit_varnames)
         self.tied_VQ = tied_VQ
         self.func_code = make_func_code(fit_varnames)
         self.idxNL=fit_varnames.index('NL')
@@ -313,8 +235,6 @@ class Chi2:
         NR = par[self.idxNR]
         Q  = par[self.idxQ]
         V  = np.sqrt(1.-Q*Q) if self.tied_VQ else par[self.idxV]
-        #if self.tied_VQ:
-        #    V  = np.sqrt(1.-Q*Q)
         
         par_l = np.array(par[:self.idxNL])
         par_l[self.idxQ] = Q
@@ -338,8 +258,6 @@ class Chi2:
         chi2_diff = np.sum(np.where(zde > 0,  np.power((zd-zm),2.)/zde, 0.))
         chi20     = np.sum(np.where(zde0 > 0, np.power((zd0-zm0),2.)/zde0, 0.))
         chi2 = chi20 + chi2_diff
-        #print(chi2)
-        #print(self.x)
         return chi2
 
 def make_blur(h_dict):
