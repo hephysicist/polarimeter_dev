@@ -1,5 +1,5 @@
 hist_fpath : '/storage/hist/' #Path to store mapped event histograms
-fitres_file : 'pol_fitres.txt'
+fitres_file : '/tmp/pol_fitres.txt'
 regex_line : '2021*'
 
 #Choose fit region (use physical coordinates and take in mind that each bin at the central region has length of 2 mm)
@@ -13,54 +13,9 @@ ymask:
     - []
 
 mask:
-  #     - [-20,-30]
-#    - [-9,-10]
-#    - [-5,-10]
-#    - [-3,-8]
-#    - [-7,-8]
-#    - [-9,-6]
-#    - [-5,-6]
-#    - [-1,-6]
-#    - [-3,-4]
-#    - [-7,-4]
-#    - [-1,-2]
-#    
-#    - [-2, 0]
-#    - [-4, 2]
-#    - [-8, 2]
-#    - [-2, 4]
-#    - [-6, 4]
-#    - [-10, 4]
-#    - [-4, 6]
-#    - [-8, 6]
-#    - [-6, 8]
-#    - [-10, 8]
-#    
-#    - [8, 8]
-#    - [5, 8]
-#    - [2, 6]
-#    - [6, 6]
-#    - [8, 4]
-#    - [4, 4]
-#    - [0, 4]
-#    - [2, 2]
-#    - [6, 2]
-#    - [0, 0]
-#    
-#    - [1, -2]
-#    - [3, -4]
-#    - [7, -4]
-#    - [1, -6]
-#    - [5, -6]
-#    - [9, -6]
-#    - [3, -8]
-#    - [7, -8]
-#    - [5, -10]
-#    - [9, -10]
     
 initial_values:  
     E       : 4470 #MeV
- #    E       : 4116 #MeV
     L       : 33000 #mm
     P       : 0.
     V       : 1.

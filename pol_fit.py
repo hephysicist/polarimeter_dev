@@ -30,133 +30,6 @@ def transform(h_dict):
                 'yc': h_dict['yc']}
     return buf_dict
 
-# def make_fit(h_dict):
-#     h_l = h_dict['hc_l']
-#     h_r = h_dict['hc_r']
-#     x = h_dict['xc']
-#     y = h_dict['yc']
-
-#     h_l, h_r, x = arrange_region(h_l, h_r ,x ,lim = [-XRANGE,XRANGE])
-
-#     n_evt_l = np.sum(np.sum(h_l))
-#     n_evt_r = np.sum(np.sum(h_r))
-
-#     hprof_xl = np.sum(h_l, axis=0)
-#     hprof_yl = np.sum(h_l, axis=1)
-#     hprof_xr = np.sum(h_r, axis=0)
-#     hprof_yr = np.sum(h_r, axis=1)
-
-#     mx_l = get_mean(x,hprof_xl)
-#     mx_r = get_mean(x,hprof_xr)
-#     my_l = get_mean(y,hprof_yl)
-#     my_r = get_mean(y,hprof_yr)
-
-
-#     x_mid = (x[1:] + x[:-1])/2
-#     y_mid = (y[1:] + y[:-1])/2
-
-#     ndf = np.shape(x_mid)[0]*np.shape(y_mid)[0]
-
-#     X = [x_mid,y_mid]
-#     chi2_2d = Chi2_2d(get_fit_func_,
-#                       X,
-#                       h_l,
-#                       h_r)
-
-#     m2d = Minuit(chi2_2d,
-#                  mx=(mx_l+mx_r)*0.5,
-#                  sx=5,
-#                  my=(my_l+my_r)*0.5,
-#                  sy=3,
-#                  mx2=0.,
-#                  sx2=5.,
-#                  my2=0.,
-#                  sy2=3.,
-#                  N_grel = 0.,
-#                  Ksi=INITIAL_Q,
-#                  phi_lin=-2.413,
-#                  P=0,
-#                  V=1.,
-#                  E=INITIAL_ENERGY,
-#                  L=33000.,
-#                  NL=1,
-#                  NR=1,
-#                  alpha=0.)
-
-#     m2d.fixed['mx']=False
-#     m2d.fixed['my']=False
-#     m2d.fixed['sy']=False
-
-#     use_double_gaus = DOUBLE_GAUS
-#     m2d.fixed['mx2']=not use_double_gaus
-#     m2d.fixed['my2']=not use_double_gaus
-#     m2d.fixed['sx2']= use_double_gaus
-#     m2d.fixed['sy2']= use_double_gaus
-#     m2d.fixed['N_grel']= use_double_gaus
-
-#     m2d.fixed['Ksi']=FIXQ
-#     m2d.fixed['phi_lin']=False
-#     m2d.fixed['P']=False
-#     m2d.fixed['V']=True
-#     m2d.values['V']=1.
-
-#     m2d.fixed['E']=True  
-#     m2d.fixed['L']=True
-#     m2d.fixed['NL']=False
-#     m2d.fixed['NR']=False
-#     m2d.fixed['alpha']=True
-
-
-#     m2d.errors['mx']=5
-#     m2d.errors['my']=5
-#     m2d.errors['sx']=5
-#     m2d.errors['sy']=5
-
-#     m2d.errors['sy2']=1
-#     m2d.errors['mx2']=1
-#     m2d.errors['my2']=1
-#     m2d.errors['sx2']=1
-#     m2d.errors['N_grel']=0.1
-
-#     m2d.errors['Ksi']=0.1
-#     m2d.errors['phi_lin']=1
-#     m2d.errors['P']=0.1
-#     m2d.errors['V']=0.1
-
-#     m2d.errors['NL']=100
-#     m2d.errors['NR']=100
-
-#     m2d.errors['alpha']=0.1
-
-#     m2d.limits['mx']=(-20,20)
-#     m2d.limits['my']=(-10,10)
-#     m2d.limits['sx']=(1.,8.)
-#     m2d.limits['sy']=(1.,5.)
-
-
-#     m2d.limits['mx2']=(-20,20)
-#     m2d.limits['my2']=(-10,10)
-#     m2d.limits['sx2']=(0.5,100.)
-#     m2d.limits['sy2']=(0.5,100.)
-#     #m2d.limits['N_grel']=(0.,0.95)
-
-#     m2d.limits['Ksi']=(-1,1)
-#     #m2d.limits['phi_lin']=(-2*3.1415, 2*3.1415)
-#     #m2d.limits['phi_lin']=(-np.pi/4, np.pi/4.)
-#     #m2d.limits['P']=(-0.92376,0.92376) 
-#     m2d.limits['P']=(-10,10.) 
-#     m2d.limits['V']=(-1., 1.)
-#     m2d.limits['NL']=(0.1, 1e6)
-#     m2d.limits['NR']=(0.1, 1e6)
-#     m2d.limits['alpha']=(-3.14/4,+3.14/4)
-
-#     m2d.print_level = 0
-#     m2d.errordef=1
-#     m2d.migrad()
-#     m2d.hesse()
-#     print(m2d)
-#     #m2d.minos()
-#     return m2d
 
 def make_fit(config, h_dict):
     
@@ -259,15 +132,9 @@ def online_fit(config, regex_line):
                 plot_fit(h_dict, fitres, xrange, fig3, ax3, diff=True)
                 plt.show(block=False)
                 plt.pause(1)
-                #stats = get_raw_stats(h_dict)
-                #print_pol_stats(fitres)
-                #moments=get_moments(h_dict)
-                #calc_all_moments(h_dict)
                 chi2_normed = fitres.fval / (ndf - fitres.npar)
                 if chi2_normed < 1e100:
                     print('Chi2: {}'.format(chi2_normed))
-                    #fitres_file = config['fitres_file']
-                    #write2file_(fitres_file, fname, fitres, counter,moments)
                 else:
                     print('Chi2 is to big: {}'.format(chi2_normed))
                
@@ -305,11 +172,9 @@ def offline_fit(config, regex_line):
                 h_dict = load_hist(hist_fpath, fname)
                 buf_dict = h_dict
                 fname_start = fname
-            #    calc_asymmetry(h_dict)
             else:
                 buf_dict = load_hist(hist_fpath, fname)
                 h_dict = add_statistics(h_dict, buf_dict)
-            #    calc_asymmetry(h_dict)
             file_count += 1
             attempt_count = 0
             fname_prev = fname
@@ -359,10 +224,8 @@ def main():
     parser.add_argument('regex_line', nargs='?', help='Name of the file to start offline  fit in regex format')
     parser.add_argument('-i', help='Interactive mode', action='store_true')
     parser.add_argument('--noblur', help='Disable blur', action='store_true')
-    #parser.add_argument('--blur', nargs='?', help='Blur algorithm', type=str, default='default')
     parser.add_argument('--blur', help='Blur algorithm', type=str, default='default')
     parser.add_argument('--plot3d', help='Plot 3D left right', action='store_true')
-    #parser.add_argument('--noblur', help='Disable blur')
     
     args = parser.parse_args()
     global INTERACTIVE_MODE
