@@ -1,7 +1,6 @@
-bin_fpath :  '/opt/online/2021-06-10/' #Path to binary files
-raw_fpath  : '/home/zakharov/polarimeter/raw_events/' #Path to store events dumped to .npz files 
-#hist_fpath : '/storage/hist/' #Path to store mapped event histograms
-hist_fpath : '/storage/hist_test/' #Path to store mapped event histograms
+bin_fpath :  '/opt/online/' #Path to binary files
+raw_fpath  : '/home/lsrp/raw_events' #Path to store events dumped to .npz files 
+hist_fpath : '/storage/hist/' #Path to store mapped event histograms
 regex_line : '2021*' #Specify regex line to choose files for preprocessing
 
 preprocess:
