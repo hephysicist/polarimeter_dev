@@ -1,3 +1,4 @@
+#!/usr/bin/env python3 
 from iminuit import Minuit
 
 import numpy as np
@@ -9,10 +10,10 @@ import argparse
 import matplotlib.pyplot as plt
 import yaml
 
-from pol_lib import *
-from pol_fit_lib import *
-from pol_plot_lib import *
-from moments import get_moments
+from lib.pol_lib import *
+from lib.pol_fit_lib import *
+from lib.pol_plot_lib import *
+from lib.moments import get_moments
 
 def transform(h_dict):
     h_l = h_dict['hc_l']
@@ -30,9 +31,7 @@ def transform(h_dict):
                 'yc': h_dict['yc']}
     return buf_dict
 
-
-def make_fit(config, h_dict):
-    
+def make_fit(config, h_dict, vepp4E):
     h_l = h_dict['hc_l']
     h_r = h_dict['hc_r']
     x = h_dict['xc']
@@ -63,6 +62,8 @@ def make_fit(config, h_dict):
     X = [x_mid,y_mid]
     chi2_2d = Chi2(get_fit_func_, X, h_l, h_r)
     initial_values = config['initial_values']
+    initial_values['E'] = vepp4E
+    print('Energy is set to: {:4.2f}'.format(initial_values['E']))
     fix_par = config['fix_par']
     par_err = config['par_err']
     par_lim = config['par_lim']
@@ -72,7 +73,6 @@ def make_fit(config, h_dict):
         m2d.fixed[p_key]  = fix_par[p_key]
         m2d.errors[p_key] = par_err[p_key]
         m2d.limits[p_key] = par_lim[p_key]
-    
     m2d.print_level = 0
     m2d.errordef=1
     begin_time = time.time()
@@ -89,32 +89,50 @@ def make_fit(config, h_dict):
     print("Fit time: ", end_time-begin_time, " s")
     return m2d, ndf
 
+def init_figures():
+    fig_l, ax_l = init_fit_figure(label = 'L', title='Left')
+    fig_r, ax_r = init_fit_figure(label = 'R', title='Right')
+    fig_d, ax_d = init_fit_figure(label = 'Diff', title='Diff')
+    return [fig_l, fig_r, fig_d], [ax_l, ax_r, ax_d]
 
-def online_fit(config, regex_line):
-    hist_fpath = config['hist_fpath']
+def show_res(config, h_dict, fitres, Fig, Ax):
     xrange = config['xrange']
+    plot_fit(h_dict, fitres, xrange, Fig[0], Ax[0], diff=False, pol='l')
+    plot_fit(h_dict, fitres, xrange, Fig[1], Ax[1], diff=False, pol='r')
+    plot_fit(h_dict, fitres, xrange, Fig[2], Ax[2], diff=True)
+    plt.show(block=False)
+    plt.pause(1)
+
+def accum_data_and_make_fit(config, regex_line, offline = False):
+    hist_fpath = config['hist_fpath']
     n_files = config['n_files']
-    need_blur = config['need_blur']
-    fname = np.sort(np.array(glob.glob1(hist_fpath , regex_line)))[-2] #get 2nd last file
-    fname_prev = fname
+    file_arr = np.array(glob.glob1(hist_fpath, regex_line))
+    if np.shape(file_arr):
+        file_arr = np.sort(file_arr)
+        if not offline:
+            fname = file_arr[-2] #get 2nd last file
+        else:
+            fname = file_arr[0] 
+    fname_prev = ''
     file_count = 0
+    files4point_count = 0
     attempt_count = 0
-    fig1, ax1 = init_fit_figure(label = 'L', title='Left')
-    fig2, ax2 = init_fit_figure(label = 'R', title='Right')
-    fig3, ax3 = init_fit_figure(label = 'Diff', title='Diff')
-    counter = 0
+    fig_arr, ax_arr = init_figures()
+    fit_counter = 0
     try:
-        while True:
-            if fname != fname_prev:
-                if file_count == 0:
-                    h_dict = load_hist(hist_fpath, fname)
+        while (file_count < np.shape(file_arr)[0] and offline) or (not offline):
+            if fname_prev != fname:
+                if files4point_count == 0:
+                    h_dict = load_hist(hist_fpath,fname)
+                    vepp4E = h_dict['vepp4E']
                     buf_dict = h_dict
-                    fname_start = fname
+                    fname_prev = fname
                     calc_asymmetry(h_dict)
                 else:
-                    buf_dict = load_hist(hist_fpath, fname)
-                    h_dict = add_statistics(h_dict, buf_dict)
+                    buf_dict = load_hist(hist_fpath,fname)
+                    h_dict = accum_data(h_dict, buf_dict)
                     calc_asymmetry(h_dict)
+                files4point_count += 1
                 file_count += 1
                 attempt_count = 0
                 fname_prev = fname
@@ -122,97 +140,32 @@ def online_fit(config, regex_line):
                 time.sleep(1)
                 attempt_count +=1
                 print('Waiting for the new file: {:3d} seconds passed'.format(attempt_count), end= '\r')
-            if file_count == n_files:
-                #h_dict = mask_hist(config, h_dict)
-                if need_blur:
-                    h_dict = make_blur_nik(h_dict)
-                fitres, ndf = make_fit(config, h_dict)
-                plot_fit(h_dict, fitres, xrange, fig1, ax1, diff=False, pol='l')
-                plot_fit(h_dict, fitres, xrange, fig2, ax2, diff=False, pol='r')
-                plot_fit(h_dict, fitres, xrange, fig3, ax3, diff=True)
-                plt.show(block=False)
-                plt.pause(1)
-                chi2_normed = fitres.fval / (ndf - fitres.npar)
-                if chi2_normed < 1e100:
-                    print('Chi2: {}'.format(chi2_normed))
-                else:
-                    print('Chi2 is to big: {}'.format(chi2_normed))
-               
-                del buf_dict
-                file_count = 0
-                del h_dict
-                counter += 1
-            fname = np.sort(np.array(glob.glob1(hist_fpath , regex_line)))[-2]
-
-    except KeyboardInterrupt:
-        print('\n***Exiting fit program***')
-        pass
-
-def offline_fit(config, regex_line):
-    hist_fpath = config['hist_fpath']
-    xrange = config['xrange']
-    n_files = config['n_files']
-    need_blur = config['need_blur']
-    blur_algo = config['blur']
-    fname_list = np.sort(np.array(glob.glob1(hist_fpath , regex_line))) #get 2nd last file
-    file_count = 0
-    if config['plot3d']:
-        fig0, ax0 = init_data_figure(label='Data')
-    fig1, ax1 = init_fit_figure(label = 'L', title='Left')
-    fig2, ax2 = init_fit_figure(label = 'R', title='Right')
-    fig3, ax3 = init_fit_figure(label = 'Diff', title='Diff')
-    counter = 0
-    ymask = config['ymask']
-    for y in ymask[0]:
-        for x in range(config['xrange'][0], config['xrange'][1], 2):
-            config['mask'].append([y,x])
-    try:
-        for fname in fname_list:
-            if file_count == 0:
-                h_dict = load_hist(hist_fpath, fname)
-                buf_dict = h_dict
-                fname_start = fname
-            else:
-                buf_dict = load_hist(hist_fpath, fname)
-                h_dict = add_statistics(h_dict, buf_dict)
-            file_count += 1
-            attempt_count = 0
-            fname_prev = fname
-            if file_count == n_files:
-                h_dict = mask_hist(config, h_dict)
-                if need_blur:
-                    print("Blur algo: ", blur_algo)
-                    if blur_algo == 'default':
-                        h_dict = make_blur(h_dict)
-                        print("Use default blur algo")
-                    if blur_algo == 'nik':
-                        h_dict = make_blur_nik(h_dict)
-                        print("Use nik blur algo")
-                fitres, ndf = make_fit(config, h_dict)
-                if config['plot3d']:
-                        plot_data3d(h_dict,fitres , xrange, fig0, ax0, h_type='diff_l')
-                        plot_data3d(h_dict, fitres, xrange, fig0, ax0, h_type='diff_r')
-                plot_fit(h_dict, fitres, xrange, fig1, ax1, diff=False, pol='l')
-                plot_fit(h_dict, fitres, xrange, fig2, ax2, diff=False, pol='r')
-                plot_fit(h_dict, fitres, xrange, fig3, ax3, diff=True)
-                plt.show(block=False)
-                plt.pause(1)
-                stats = get_raw_stats(h_dict)
-                print_pol_stats_nik(fitres)
+            if files4point_count == n_files:
+             h_dict = mask_hist(config, h_dict)
+             if config['need_blur']:
+                h_dict = eval(config['blur_type']+'(h_dict)')
+                    
+                fitres, ndf = make_fit(config, h_dict, vepp4E)
                 moments=get_moments(h_dict)
+                show_res(config, h_dict, fitres, fig_arr, ax_arr)
                 chi2_normed = fitres.fval / (ndf - fitres.npar)
-                if chi2_normed < 1e100:
-                     print('Chi2: {}'.format(chi2_normed))
-                     fitres_file = config['fitres_file']
-                     write2file_nik(fitres_file, fname, fitres, counter,moments, chi2_normed)
-                else:
-                     print('Chi2 is too big: {}'.format(chi2_normed))
-                file_count = 0
-                counter += 1
+                write2file_nik( config['fitres_file'],
+                                fname,
+                                fitres,
+                                fit_counter,
+                                moments,
+                                chi2_normed)
                 del buf_dict
                 del h_dict
-                if INTERACTIVE_MODE:
-                    input("Press Enter to continue...")
+                fit_counter += 1
+                files4point_count = 0
+            file_arr = np.array(glob.glob1(hist_fpath, regex_line))
+            if not offline:
+                fname = file_arr[-2] #get 2nd last file
+            else:
+                fname = file_arr[file_count] 
+           
+
     except KeyboardInterrupt:
         print('\n***Exiting fit program***')
         pass
@@ -242,16 +195,10 @@ def main():
             print('Error opening pol_config.yaml file:')
             print(exc)
         else:
-            if args.offline:
-                fit_ = offline_fit
-            else:
-                fit_ = online_fit
-
             if args.regex_line:
                 regex_line = str(args.regex_line)
             else:
                 regex_line = str(config['regex_line'])
-
-            fit_(config, regex_line) 
+            accum_data_and_make_fit(config, regex_line, args.offline) 
 if __name__ == '__main__':
     main()

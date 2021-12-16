@@ -6,7 +6,7 @@ regex_line : '2021*' #Specify regex line to choose files for preprocessing
 preprocess:
     save_raw_file : False 
     amp_cut : 500 #Cut on the signal value to perform background rejection
-    draw : False
+    draw : True
 
 zone_id: 
 #Specify position of the hybrid board and its id starting from 0. If the region isn't connected put id=-1  
