@@ -75,7 +75,9 @@ def map_events(evt_arr, zone_id):
 def save_mapped_hist(hist_fpath, h_dict,  vepp4E, f_name):
     h_dict['vepp4E'] = vepp4E
     print('ENERGY IS:', vepp4E)
-    np.savez(hist_fpath+f_name[:19]+'_hist', *h_dict)
+    np.savez(hist_fpath+f_name[:19]+'_hist',  hc_l = h_dict['hc_l'], hc_r = h_dict['hc_r'],
+    hs_l = h_dict['hs_l'], hs_r = h_dict['hs_r'], xs = h_dict['xs'], ys = h_dict['ys'],
+    xc = h_dict['xc'], yc = h_dict['yc'], vepp4E = h_dict['vepp4E'])
     print('nl: ',sum(sum(h_dict['hc_l'])), 'nr: ', sum(sum(h_dict['hc_r'])))
     print('Saved mapped hist to the file: '+f_name[:19]+'_hist.npz\n')
 

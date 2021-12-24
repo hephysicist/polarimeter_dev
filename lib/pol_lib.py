@@ -157,16 +157,16 @@ def load_hist(hist_fpath, fname):
 
 def load_files(file_path, regex_filename):
     filenames = np.sort(np.array(glob.glob1(file_path , regex_filename)))
-    file = np.load(file_path+filenames[0], allow_pickle=True)
-    h_l = file['hc_l']
-    h_r = file['hc_r']
-    x = file['xc']
-    y = file['yc']
+    fname = np.load(file_path+filenames[0], allow_pickle=True)
+    h_l = fname['hc_l']
+    h_r = fname['hc_r']
+    x = fname['xc']
+    y = fname['yc']
     for filename in filenames[1:]:
         print('Reading file: ', filename)
-        file = np.load(file_path+filename, allow_pickle=True)
-        h_l += file['hc_l']
-        h_l += file['hc_r']
+        fname = np.load(file_path+filename, allow_pickle=True)
+        h_l += fname['hc_l']
+        h_l += fname['hc_r']
     h_l, h_r, x = arrange_fit_region(h_l, h_r ,x ,lim = [-XRANGE,XRANGE])
     return h_l, h_r, x, y, filenames[0], filenames[-1]
 

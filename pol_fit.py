@@ -107,7 +107,7 @@ def accum_data_and_make_fit(config, regex_line, offline = False):
     hist_fpath = config['hist_fpath']
     n_files = config['n_files']
     file_arr = np.array(glob.glob1(hist_fpath, regex_line))
-    if np.shape(file_arr):
+    if np.shape(file_arr)[0]:
         file_arr = np.sort(file_arr)
         if not offline:
             fname = file_arr[-2] #get 2nd last file
