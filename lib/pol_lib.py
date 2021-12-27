@@ -148,7 +148,7 @@ def print_pol_stats_nik(fitres):
     print('*** Polarization ***')
     print('P={:>6.2f} ± {:1.2f}'.format(fitres.values['P'],fitres.errors['P']))
     print('Q={:>6.2f} ± {:1.2f}'.format(fitres.values['Q'],fitres.errors['Q']))
-    print('V={:>6.2f} ± {:1.2f}'.format(np.sqrt(1-fitres.values['Q']**2),fitres.errors['Q']/np.sqrt(1-fitres.values['Q']**2)))
+    print('V={:>6.2f} ± {:1.2f}'.format(fitres.values['V'],fitres.errors['V']))
 
 def load_hist(hist_fpath, fname):
     print('Reading histogram file: ', fname)

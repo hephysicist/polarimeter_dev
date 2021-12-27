@@ -63,7 +63,7 @@ def make_fit(config, h_dict, vepp4E):
     chi2_2d = Chi2(get_fit_func_, X, h_l, h_r)
     initial_values = config['initial_values']
     initial_values['E'] = vepp4E
-    print('Energy is set to: {:4.2f}'.format(initial_values['E']))
+    #print('Energy is set to: {:4.2f}'.format(initial_values['E']))
     fix_par = config['fix_par']
     par_err = config['par_err']
     par_lim = config['par_lim']
@@ -78,15 +78,15 @@ def make_fit(config, h_dict, vepp4E):
     begin_time = time.time()
     m2d.migrad()
     m2d.hesse()
-    print(m2d)
+    #print(m2d)
     if not m2d.valid:
        for name in  ['sx', 'sy', 'alpha_x1', 'alpha_x2', 'alpha_y1', 'alpha_y2', 'nx1','nx2', 'ny1','ny2', 'phi', 'p1', 'p2', 'p3']:
             m2d.fixed[name]=True
        m2d.migrad()
        m2d.hesse()
-       print(m2d)
+       #print(m2d)
     end_time = time.time()
-    print("Fit time: ", end_time-begin_time, " s")
+    #print("Fit time: ", end_time-begin_time, " s")
     return m2d, ndf
 
 def init_figures():
@@ -127,11 +127,9 @@ def accum_data_and_make_fit(config, regex_line, offline = False):
                     vepp4E = h_dict['vepp4E']
                     buf_dict = h_dict
                     fname_prev = fname
-                    calc_asymmetry(h_dict)
                 else:
                     buf_dict = load_hist(hist_fpath,fname)
                     h_dict = accum_data(h_dict, buf_dict)
-                    calc_asymmetry(h_dict)
                 files4point_count += 1
                 file_count += 1
                 attempt_count = 0
@@ -146,7 +144,9 @@ def accum_data_and_make_fit(config, regex_line, offline = False):
                 h_dict = eval(config['blur_type']+'(h_dict)')
                     
                 fitres, ndf = make_fit(config, h_dict, vepp4E)
+                print_pol_stats_nik(fitres)
                 moments=get_moments(h_dict)
+                calc_asymmetry(h_dict)
                 show_res(config, h_dict, fitres, fig_arr, ax_arr)
                 chi2_normed = fitres.fval / (ndf - fitres.npar)
                 write2file_nik( config['fitres_file'],
