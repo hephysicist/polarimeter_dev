@@ -72,16 +72,23 @@ def map_events(evt_arr, zone_id):
                 'yc' : grid['yc']}
     return h_dict
     
-def save_mapped_hist(hist_fpath, h_dict,  vepp4E, f_name):
-    h_dict['vepp4E'] = vepp4E
-    print('ENERGY IS:', vepp4E)
-    np.savez(hist_fpath+f_name[:19]+'_hist',  hc_l = h_dict['hc_l'], hc_r = h_dict['hc_r'],
-    hs_l = h_dict['hs_l'], hs_r = h_dict['hs_r'], xs = h_dict['xs'], ys = h_dict['ys'],
-    xc = h_dict['xc'], yc = h_dict['yc'], vepp4E = h_dict['vepp4E'])
+def save_mapped_hist(hist_fpath, h_dict, vepp4E, dfreq, f_name):
+    #print('ENERGY IS:', vepp4E)
+    np.savez(hist_fpath+f_name[:19]+'_hist',
+            hc_l = h_dict['hc_l'],
+            hc_r = h_dict['hc_r'],
+            hs_l = h_dict['hs_l'],
+            hs_r = h_dict['hs_r'],
+            xs = h_dict['xs'],
+            ys = h_dict['ys'],
+            xc = h_dict['xc'],
+            yc = h_dict['yc'],
+            vepp4E = vepp4E,
+            dfreq = dfreq)
     print('nl: ',sum(sum(h_dict['hc_l'])), 'nr: ', sum(sum(h_dict['hc_r'])))
     print('Saved mapped hist to the file: '+f_name[:19]+'_hist.npz\n')
 
-def preprocess_single_file(config, f_name, vepp4E, fig, ax ):
+def preprocess_single_file(config, f_name, vepp4E, dfreq, fig, ax ):
         evt_arr = get_evt_arr(config['bin_fpath'],
                                       config['raw_fpath'],
                                       f_name,
@@ -92,6 +99,7 @@ def preprocess_single_file(config, f_name, vepp4E, fig, ax ):
             save_mapped_hist(  config['hist_fpath'],
                                 h_dict,
                                 vepp4E,
+                                dfreq,
                                 f_name) 
             print_stats(get_raw_stats(h_dict))
             if config['preprocess']['draw']:
@@ -116,13 +124,21 @@ def preprocess(config, regex_line, offline = False):
         vepp4E = float(input('Enter VEPP4 energy in MeV: '))
     else:
         f_name = file_arr[-2]
+        if config['preprocess']['use_depolarizer']:
+            depol_device = init_depol()
     file_count = 0
+    dfreq = np.zeros([1,2])
     try:
         while (file_count < np.shape(file_arr)[0] and offline) or (not offline):
             if(f_name_old != f_name):
                 if not offline:
                      vepp4E = read_vepp4_stap()
-                preprocess_single_file(config, f_name, vepp4E, fig, ax)
+                if config['preprocess']['use_depolarizer']:
+                    dfreq = get_depol_freq(depol_device, f_name)
+                else:
+                    dfreq = np.zeros([1,2])
+                print(dfreq, end= '\n')
+                preprocess_single_file(config, f_name, vepp4E, dfreq, fig, ax)
                 f_name_old = f_name
                 attempt_count = 0
                 file_count +=1

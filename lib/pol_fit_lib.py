@@ -299,7 +299,9 @@ def general_blur(h_dict):
                 'xs': h_dict['xs'],
                 'ys': h_dict['ys'],
                 'xc': h_dict['xc'],
-                'yc': h_dict['yc']}
+                'yc': h_dict['yc'],
+                'vepp4E': h_dict['vepp4E'],
+                'dfreq': h_dict['dfreq']}
 
 
 #Make blur among only nonzero pixels
@@ -328,6 +330,8 @@ def nonzero_blur(h_dict):
 				'xs': h_dict['xs'],
 				'ys': h_dict['ys'],
 				'xc': h_dict['xc'],
-				'yc': h_dict['yc']}
+				'yc': h_dict['yc'],
+				'vepp4E': h_dict['vepp4E'],
+				'dfreq': h_dict['dfreq']}
 				
 				

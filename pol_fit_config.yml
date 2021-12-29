@@ -4,7 +4,7 @@ regex_line : '2021*'
 
 #Choose fit region (use physical coordinates and take in mind that each bin at the central region has length of 2 mm)
 xrange : [-32,32]
-n_files : 12
+n_files : 2
 need_blur : True
 blur_type : general_blur
 fixQ : False

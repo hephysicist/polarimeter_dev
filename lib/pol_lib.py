@@ -5,6 +5,7 @@ from numba import jit
 
 import time
 from datetime import datetime
+from lib.depol.depolarizer import *
 
 @jit(nopython=True)
 def convert_val(x):
@@ -180,7 +181,8 @@ def accum_data(h_dict1, h_dict2):
                 'ys': h_dict1['ys'],
                 'xc': h_dict1['xc'],
                 'yc': h_dict1['yc'],
-                'vepp4E': h_dict1['vepp4E']}
+                'vepp4E': h_dict2['vepp4E'],
+                'dfreq': h_dict2['dfreq']}
     return buf_dict
 
 
@@ -231,7 +233,7 @@ def write2file(out_file, fname, fitres, stats):
             else:
                 the_file.write('{0:>6.6f}\t\t#{1:s}\n'.format(value, key))
                 
-def write2file_(the_file, fname, fitres, counter, moments):
+def write2file_(the_file, fname, fitres, dfreq, counter, moments):
     with open(the_file, 'a') as the_file:
         if counter%10==0:
             the_file.write('#{:>3s}\t{:>9s}\t'.format('cnt', 'utime'))
@@ -264,7 +266,7 @@ def write2file_(the_file, fname, fitres, counter, moments):
 
         the_file.write('#{0:20s}\n'.format(fname[:19]))
         
-def write2file_nik(the_file, fname, fitres, counter, moments,normchi2):
+def write2file_nik(the_file, fname, fitres, freq, vepp4E, counter, moments,normchi2):
     with open(the_file, 'a') as the_file:
         if counter%10==0:
             the_file.write('#{:>3s}\t{:>9s}\t'.format('cnt', 'utime'))
@@ -278,11 +280,11 @@ def write2file_nik(the_file, fname, fitres, counter, moments,normchi2):
         the_file.write('{0:>3d}\t'.format(counter))
         unix_time = time.mktime(datetime.strptime(fname[:19], '%Y-%m-%dT%H:%M:%S').timetuple())
         the_file.write('{0:>.0f}\t'.format(unix_time))
-    # 		freq = float(Depol.get_frequency())
-    # 		energy = 0
-    # 		if freq!= 0:
-    # 			energy = (9+freq/818924.)*440.648
-    # 		the_file.write('\t{0:>10.3f}\t{1:>10.3f}\t'.format(freq,energy))
+        energy = 0
+        if freq!= 0:
+            n = int(vepp4E/440.648)
+            energy = (n+freq/818924.)*440.648
+        the_file.write('\t{0:>10.3f}\t{1:>10.3f}\t'.format(freq,energy))
         the_file.write('{0:>10.6f}\t{1:>10.6f}\t'.format(fitres.values['P'], fitres.errors['P']))
         the_file.write('{0:>10.6f}\t{1:>10.6f}\t'.format(fitres.values['Q'], fitres.errors['Q']))
         V = np.sqrt(1.-fitres.values['Q']**2)
@@ -316,7 +318,8 @@ def mask_hist(config, h_dict):
                 'ys': h_dict['ys'],
                 'xc': h_dict['xc'],
                 'yc': h_dict['yc'],
-                'vepp4E': h_dict1['vepp4E']}
+                'vepp4E': h_dict1['vepp4E'],
+                'dfreq': h_dict1['dfreq']}
         return buf_dict
     else:
         return h_dict
@@ -328,10 +331,37 @@ def read_vepp4_stap():
         lines = stap.readlines()
         if len(lines) > 0:
             vepp4E = float(lines[13])/100.
-            print(vepp4E)
         else:
             print('ERROR: stap file is empty!')
             vepp4E = -1
         return vepp4E
+        
+def init_depol():
+    d = depolarizer('vepp4-spin',9090)
+    print("Depolarizer is ", ("ON" if d.is_on() else "OFF" ))
+    print("Attenuation ", d.get_attenuation())
+    print("Scanning speed {:.3f} Hz".format(d.get_speed()))
+    print("Frequency step {:.3f} Hz".format(d.get_step()))
+    print("Initial frequency {:.3f} Hz".format(d.get_initial()))
+    print("State: ",d.get_state())
+    d.start_fmap()
+    return d
+
+def get_depol_freq(device, fname):
+    ts = datetime.strptime(fname[:19], "%Y-%m-%dT%H:%M:%S").timestamp()
+    fmap = device.get_fmap()
+    depol_pair = []
+    if len(fmap) > 0:
+        idx = -1
+        for i, depol_pair in enumerate(fmap):
+            #print(datetime.fromtimestamp(depol_pair[0]*1e-9), depol_pair[0]*1e-9)
+            if (depol_pair[0]*1e-9 - ts) > 0:
+                idx = i
+                break
+        if idx >= 0:
+            depol_pair = fmap[idx]
+        else:
+            print('No frequency for corresponding time found!')
+    return depol_pair
 
 

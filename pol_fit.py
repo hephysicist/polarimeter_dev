@@ -125,11 +125,13 @@ def accum_data_and_make_fit(config, regex_line, offline = False):
                 if files4point_count == 0:
                     h_dict = load_hist(hist_fpath,fname)
                     vepp4E = h_dict['vepp4E']
+                  
                     buf_dict = h_dict
                     fname_prev = fname
                 else:
                     buf_dict = load_hist(hist_fpath,fname)
                     h_dict = accum_data(h_dict, buf_dict)
+                    print(h_dict['dfreq'][1])
                 files4point_count += 1
                 file_count += 1
                 attempt_count = 0
@@ -152,6 +154,8 @@ def accum_data_and_make_fit(config, regex_line, offline = False):
                 write2file_nik( config['fitres_file'],
                                 fname,
                                 fitres,
+                                h_dict['dfreq'][1], 
+                                h_dict['vepp4E'],
                                 fit_counter,
                                 moments,
                                 chi2_normed)
