@@ -44,7 +44,7 @@ fix_par:
     L       : True
     P       : False
     V       : True
-    Q       : True
+    Q       : False
     beta    : False
     alpha_d : True
     mx      : False
