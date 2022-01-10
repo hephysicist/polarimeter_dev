@@ -424,8 +424,8 @@ std::tuple<double, double> Fit3(TGraphErrors * g, double T) {
     if(fabs(speed) > 0.1) std::cout << "Wrong scan speed: ";
     else std::cout << " Calculate scan speed: ";
     std::cout <<  speed*1e3 << " keV/s" <<  std::endl;
-    std::cout << "Energy: " << E << " +- " << dTd*0.002 << std::endl;
-    return {E, dTd*0.002};
+    std::cout << "Energy: " << E << " +- " << dTd*speed << std::endl;
+    return {E, dTd*speed};
 };
 
 
