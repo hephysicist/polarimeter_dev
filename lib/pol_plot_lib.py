@@ -138,19 +138,17 @@ def plot_data3d(h_dict, m_fitres, xrange, fig,  ax, h_type='l'):
     xx, yy = np.meshgrid((x[1:]+x[:-1])/2,(y[1:]+y[:-1])/2)
     ax_dat = None
     ax_l, ax_r = ax
-    if h_type == 'l':
+    if h_type == 'dl':
         h_data = h_l
         ax_dat = ax_l
-    elif h_type == 'r':
+    elif h_type == 'dr':
         h_data = h_r
         ax_dat = ax_r
-    elif h_type == 'diff_l':
-        fit_l = np.where(h_l > 0, get_fit_func(x, y, fit_pars), 0)
-        h_data = h_l/NL - fit_l
+    elif h_type == 'fl':
+        h_data = np.where(h_l > 0, get_fit_func(x, y, fit_pars), 0)
         ax_dat = ax_l
-    elif h_type == 'diff_r':
-        fit_r = np.where(h_r > 0, get_fit_func(x, y, fit_pars, inverse_pol=True), 0)
-        h_data = h_r/NR - fit_r
+    elif h_type == 'fr':
+        h_data = np.where(h_r > 0, get_fit_func(x, y, fit_pars), 0)
         ax_dat = ax_r
     else:
         pass
@@ -214,14 +212,14 @@ def plot_fit(h_dict, m_fitres, xrange, fig, ax, diff=True, pol='l'):
 
     elif pol == 'r' :
         h_data = h_r
-        h_fit = fit_r - h_r 
+        h_fit = fit_r 
         h_data_x = h_rx
         h_fit_x = fit_rx
         h_data_y = h_ry
         h_fit_y = fit_ry
     elif pol == 'l' :
         h_data = h_l
-        h_fit = fit_l - h_l
+        h_fit = fit_l 
         h_data_x = h_lx
         h_fit_x = fit_lx
         h_data_y = h_ly

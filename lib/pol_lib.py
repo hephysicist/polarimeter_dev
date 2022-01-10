@@ -181,8 +181,8 @@ def accum_data(h_dict1, h_dict2):
                 'ys': h_dict1['ys'],
                 'xc': h_dict1['xc'],
                 'yc': h_dict1['yc'],
-                'vepp4E': h_dict2['vepp4E'],
-                'dfreq': h_dict2['dfreq']}
+                'vepp4E': h_dict1['vepp4E'],
+                'dfreq': h_dict1['dfreq']}
     return buf_dict
 
 
@@ -266,7 +266,7 @@ def write2file_(the_file, fname, fitres, dfreq, counter, moments):
 
         the_file.write('#{0:20s}\n'.format(fname[:19]))
         
-def write2file_nik(the_file, fname, fitres, freq, vepp4E, counter, moments,normchi2):
+def write2file_nik(the_file, fname, fitres, freq, vepp4E, raw_stats, counter, moments,normchi2):
     with open(the_file, 'a') as the_file:
         if counter%10==0:
             the_file.write('#{:>3s}\t{:>9s}\t'.format('cnt', 'utime'))
@@ -297,6 +297,9 @@ def write2file_nik(the_file, fname, fitres, freq, vepp4E, counter, moments,normc
                   'fft1_amp', 'fft1_ang', 'fft2_amp', 'fft2_ang',
                   'gross_moments', 'gross_moments_err']:
             the_file.write('{:>10.6f}\t'.format(moments[i]))
+        
+        for key in ['n_evt_l', 'n_evt_r', 'mx_l', 'mx_r', 'my_l', 'my_r', 'sx_l', 'sx_r', 'sy_l', 'sy_r']:
+            the_file.write('{:>10.6f}\t'.format(raw_stats[key]))
 
         the_file.write('#{0:20s}\n'.format(fname[:19]))
         

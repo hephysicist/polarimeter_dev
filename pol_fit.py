@@ -78,7 +78,7 @@ def make_fit(config, h_dict, vepp4E):
     begin_time = time.time()
     m2d.migrad()
     m2d.hesse()
-    #print(m2d)
+    print(m2d)
     if not m2d.valid:
        for name in  ['sx', 'sy', 'alpha_x1', 'alpha_x2', 'alpha_y1', 'alpha_y2', 'nx1','nx2', 'ny1','ny2', 'phi', 'p1', 'p2', 'p3']:
             m2d.fixed[name]=True
@@ -93,13 +93,16 @@ def init_figures():
     fig_l, ax_l = init_fit_figure(label = 'L', title='Left')
     fig_r, ax_r = init_fit_figure(label = 'R', title='Right')
     fig_d, ax_d = init_fit_figure(label = 'Diff', title='Diff')
-    return [fig_l, fig_r, fig_d], [ax_l, ax_r, ax_d]
+    fig_3d, ax_3d = init_data_figure(label = '3d')
+    return [fig_l, fig_r, fig_d, fig_3d], [ax_l, ax_r, ax_d, ax_3d]
 
 def show_res(config, h_dict, fitres, Fig, Ax):
     xrange = config['xrange']
     plot_fit(h_dict, fitres, xrange, Fig[0], Ax[0], diff=False, pol='l')
     plot_fit(h_dict, fitres, xrange, Fig[1], Ax[1], diff=False, pol='r')
     plot_fit(h_dict, fitres, xrange, Fig[2], Ax[2], diff=True)
+    plot_data3d(h_dict, fitres, xrange, Fig[3],  Ax[3], h_type='fl')
+    plot_data3d(h_dict, fitres, xrange, Fig[3],  Ax[3], h_type='fr')
     plt.show(block=False)
     plt.pause(1)
 
@@ -141,24 +144,27 @@ def accum_data_and_make_fit(config, regex_line, offline = False):
                 attempt_count +=1
                 print('Waiting for the new file: {:3d} seconds passed'.format(attempt_count), end= '\r')
             if files4point_count == n_files:
-             h_dict = mask_hist(config, h_dict)
-             if config['need_blur']:
-                h_dict = eval(config['blur_type']+'(h_dict)')
-                    
+                h_dict = mask_hist(config, h_dict)
+                if config['need_blur']:
+                    h_dict = eval(config['blur_type']+'(h_dict)')
                 fitres, ndf = make_fit(config, h_dict, vepp4E)
+                raw_stats = get_raw_stats(h_dict)
+                print_stats(raw_stats)
                 print_pol_stats_nik(fitres)
                 moments=get_moments(h_dict)
                 calc_asymmetry(h_dict)
                 show_res(config, h_dict, fitres, fig_arr, ax_arr)
                 chi2_normed = fitres.fval / (ndf - fitres.npar)
+                print('chi2/ndf', chi2_normed)
                 write2file_nik( config['fitres_file'],
-                                fname,
-                                fitres,
-                                h_dict['dfreq'][1], 
-                                h_dict['vepp4E'],
-                                fit_counter,
-                                moments,
-                                chi2_normed)
+                            fname,
+                            fitres,
+                            h_dict['dfreq'][1], 
+                            h_dict['vepp4E'],
+                            raw_stats,
+                            fit_counter,
+                            moments,
+                            chi2_normed)
                 del buf_dict
                 del h_dict
                 fit_counter += 1

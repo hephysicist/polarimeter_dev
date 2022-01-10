@@ -1,12 +1,13 @@
 bin_fpath :  '/opt/online/' #Path to binary files
 raw_fpath  : '/home/lsrp/raw_events' #Path to store events dumped to .npz files 
 hist_fpath : '/storage/hist/' #Path to store mapped event histograms
-regex_line : '2021*' #Specify regex line to choose files for preprocessing
+regex_line : '2022*' #Specify regex line to choose files for preprocessing
 
 preprocess:
     save_raw_file : False 
     amp_cut : 500 #Cut on the signal value to perform background rejection
     draw : True
+    use_depolarizer : True
 
 zone_id: 
 #Specify position of the hybrid board and its id starting from 0. If the region isn't connected put id=-1  

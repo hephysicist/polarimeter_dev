@@ -209,8 +209,7 @@ def get_fit_func(x, y, par, inverse_pol=False):
 						phi      =  par[19],
 						p1       =  par[20],
 						p2       =  par[21],
-						p3       =  par[22]
-)
+						p3       =  par[22])
 	return res
 
     
