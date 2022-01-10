@@ -1,3 +1,4 @@
 tmp
 *.sh
+.*.sw*
 __pycache__
