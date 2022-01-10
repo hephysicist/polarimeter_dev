@@ -5,7 +5,7 @@ regex_line : '2022*'
 #Choose fit region (use physical coordinates and take in mind that each bin at the central region has length of 2 mm)
 xrange : [-32,32]
 n_files : 30
-need_blur : True
+need_blur : False
 blur_type : general_blur
 fixQ : False
 double_gauss: True
@@ -17,7 +17,7 @@ initial_values:
     L       : 33000 #mm
     P       : 0.
     V       : 1.
-    Q       : 0
+    Q       : 0.2024
     beta    : -2.413
     alpha_d : 0.
     mx      : 0. #mm
@@ -44,7 +44,7 @@ fix_par:
     L       : True
     P       : False
     V       : True
-    Q       : False
+    Q       : True
     beta    : False
     alpha_d : True
     mx      : False
@@ -62,8 +62,8 @@ fix_par:
     phi     : False
     NL      : False
     NR      : False
-    p1      : True
-    p2      : True
+    p1      : False
+    p2      : False
     p3      : True
     
 par_err:  
@@ -114,8 +114,8 @@ par_lim:
     ny1     : [0.1, 10.]
     ny2     : [-10, 10.]
     phi     : [-3.14,+3.14]
-    p1     : [-100.,+100.]
-    p2     : [-100.,+100.]
+    p1     : [0,7]
+    p2     : [0,7]
     p3     : [-100.,+100.]
     NL      : [0., 100000]
     NR      : [0., 100000]

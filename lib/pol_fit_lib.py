@@ -25,9 +25,9 @@ def crystall_ball_1d(x, alpha, n1, n2):
     na2 = n2/alpha
     return np.where( x < alpha, 
                      np.where( x < -alpha,  
-                               np.power((na1/(na1+alpha-x)), n1) * np.exp(-0.5*alpha**2.),
+                               np.power(np.abs(na1/(na1+alpha-x)), n1) * np.exp(-0.5*alpha**2.),
                                np.exp(-0.5*x**2.) ),
-                     np.power((na2/(na2-alpha+x)), n2) * np.exp(-0.5*alpha**2.))
+                     np.power(np.abs(na2/(na2-alpha+x)), n2) * np.exp(-0.5*alpha**2.))
 
 def crystall_ball_1d_cp(x, alpha, n1, n2):
     #helper params
@@ -45,9 +45,12 @@ def crystall_ball_2d(x, y, sx,sy, alpha_x1,  alpha_x2, alpha_y1, alpha_y2, nx1, 
     Z =  np.sqrt(X*X+Y*Y)
     c = X/Z
     s = Y/Z
-    n     = np.sqrt( np.power(nx1*c - nx2, 2.0) + np.power(ny1*s - ny2, 2.0) )
-    alpha = np.sqrt( np.power(alpha_x1*c -alpha_x2, 2.0) + np.power(alpha_y1*s- alpha_y2, 2.0) )
-    return crystall_ball_1d(Z, alpha, n, n)*(1.0 + p1*y + p2*y*y + p3*np.power(y,3.0))
+    #n     = np.sqrt( np.power(nx1*c - nx2, 2.0) + np.power(ny1*s - ny2, 2.0) )
+    n     = np.sqrt( np.power(nx1*(c*cos(p2)+s*sin(p2)) - nx2, 2.0) + np.power(ny1*(s*cos(p2)-c*sin(p2)) - ny2, 2.0) )
+    #alpha = np.sqrt( np.power(alpha_x1*c -alpha_x2, 2.0) + np.power(alpha_y1*s- alpha_y2, 2.0) )
+    alpha = np.sqrt( np.power(alpha_x1*(c*cos(p1)+s*sin(p1)) -alpha_x2, 2.0) + np.power(alpha_y1*(s*cos(p1)-c*sin(p1))- alpha_y2, 2.0) )
+    #return crystall_ball_1d(Z, alpha, n, n)*(1.0 + p1*y + p2*y*y + p3*np.power(y,3.0))
+    return crystall_ball_1d(Z, alpha, n, n)
 
 def crystall_ball_2d_cp(x, y, sx,sy, alpha_x1,  alpha_x2, alpha_y1, alpha_y2, nx1, nx2, ny1, ny2, phi, p1, p2,p3):
     X =  x/sx*cos(phi) + y/sy*sin(phi)
