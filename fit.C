@@ -279,9 +279,10 @@ class ExpJump {
         //f->SetParLimits(1,-0.92376, +0.92376);
         set(2, "Pmax", -0.92);
         //f->SetParLimits(2,-0.92376, +0.92376);
-        set(3, "tau", 4000);
+        set(3, "tau", 2000);
         f->SetParLimits(3,100, 100000);
         set(4, "delta", 0.6432);
+        f->SetParLimits(4,0, 1);
        // f->FixParameter(3,1);
         //set(5, "T", 1);
         //set(5,"C", 0);
@@ -421,10 +422,18 @@ std::tuple<double, double> Fit3(TGraphErrors * g, double T) {
     TF1 pol1("mypol1", "[0]+[1]*x",graphE->GetX()[idx_min], graphE->GetX()[idx_max]);
     graphE->Fit("mypol1", "QR");
     double speed = pol1.GetParameter(1);
-    if(fabs(speed) > 0.1) std::cout << "Wrong scan speed: ";
+    if(fabs(speed) > 0.1) {
+      std::cout << "Wrong scan speed: ";
+      speed=0.01;
+    }
     else std::cout << " Calculate scan speed: ";
     std::cout <<  speed*1e3 << " keV/s" <<  std::endl;
     std::cout << "Energy: " << E << " +- " << dTd*speed << std::endl;
+    if(idx>0) {
+      if(graphE->GetY()[idx-1]==0) {
+        E=graphE->GetY()[idx];
+      }
+    }
     return {E, dTd*speed};
 };
 
