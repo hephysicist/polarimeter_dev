@@ -85,7 +85,7 @@ def save_mapped_hist(hist_fpath, h_dict, vepp4E, dfreq, f_name):
             yc = h_dict['yc'],
             vepp4E = vepp4E,
             dfreq = dfreq)
-    print('nl: ',sum(sum(h_dict['hc_l'])), 'nr: ', sum(sum(h_dict['hc_r'])))
+    print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
     print('Saved mapped hist to the file: '+f_name[:19]+'_hist.npz\n')
 
 def preprocess_single_file(config, f_name, vepp4E, dfreq, fig, ax ):
@@ -137,7 +137,7 @@ def preprocess(config, regex_line, offline = False):
                     dfreq = get_depol_freq(depol_device, f_name)
                 else:
                     dfreq = np.zeros([1,2])
-                print(dfreq, end= '\n')
+                #print(dfreq, end= '\n')
                 preprocess_single_file(config, f_name, vepp4E, dfreq, fig, ax)
                 f_name_old = f_name
                 attempt_count = 0
@@ -159,13 +159,12 @@ def preprocess(config, regex_line, offline = False):
 def main():
     np.set_printoptions(linewidth=360)
     parser = argparse.ArgumentParser("pol_preprocess.py")
-    parser.add_argument('config', nargs='?', help='Name of the config file')
     parser.add_argument('--offline', help='Use this key to preprocess iteratively all, starting from regrex_line',default=False, action="store_true")
     parser.add_argument('--test', help='Use this key to perform standart preprocessing on a test file',default=False, action="store_true")
     parser.add_argument('regex_line', nargs='?', help='Name of the file to start online preprocessing in regex format')
     args = parser.parse_args()
    
-    with open(os.getcwd()+'/'+str(args.config), 'r') as conf_file:
+    with open(os.getcwd()+'/'+str('pol_config.yml'), 'r') as conf_file:
         try:
             config = yaml.load(conf_file, Loader=yaml.Loader)
         except yaml.YAMLError as exc:

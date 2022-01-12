@@ -153,7 +153,7 @@ def print_pol_stats_nik(fitres):
 
 def load_hist(hist_fpath, fname):
     print('Reading histogram file: ', fname)
-    h_dict = np.load(hist_fpath+fname, allow_pickle=True)
+    h_dict = dict(np.load(hist_fpath+fname, allow_pickle=True))
     return h_dict
 
 def load_files(file_path, regex_filename):
@@ -173,16 +173,11 @@ def load_files(file_path, regex_filename):
 
 
 def accum_data(h_dict1, h_dict2):
-    buf_dict = {'hc_l': h_dict1['hc_l']+h_dict2['hc_l'],
-                'hc_r': h_dict1['hc_r']+h_dict2['hc_r'],
-                'hs_l': h_dict1['hs_l']+h_dict2['hs_l'],
-                'hs_r': h_dict1['hs_r']+h_dict2['hs_r'],
-                'xs': h_dict1['xs'],
-                'ys': h_dict1['ys'],
-                'xc': h_dict1['xc'],
-                'yc': h_dict1['yc'],
-                'vepp4E': h_dict1['vepp4E'],
-                'dfreq': h_dict1['dfreq']}
+    buf_dict = h_dict1
+    buf_dict['hc_l'] = h_dict1['hc_l'] + h_dict2['hc_l']
+    buf_dict['hc_r'] = h_dict1['hc_r'] + h_dict2['hc_r']
+    buf_dict['hs_l'] = h_dict1['hs_l'] + h_dict2['hs_l']
+    buf_dict['hs_r'] = h_dict1['hs_r'] + h_dict2['hs_r']
     return buf_dict
 
 
@@ -310,19 +305,12 @@ def mask_hist(config, h_dict):
     if mask is not None:
         for [y,x] in mask:
             idx = int((x+32)/2)
-            idy = y+10 
+            idy = int(y+9.5) 
             hc_l[idy, idx] = 0
             hc_r[idy, idx] = 0
-        buf_dict = {'hc_l': hc_l,
-                'hc_r': hc_r,
-                'hs_l': h_dict['hs_l'],
-                'hs_r': h_dict['hs_r'],
-                'xs': h_dict['xs'],
-                'ys': h_dict['ys'],
-                'xc': h_dict['xc'],
-                'yc': h_dict['yc'],
-                'vepp4E': h_dict1['vepp4E'],
-                'dfreq': h_dict1['dfreq']}
+        buf_dict = h_dict
+        buf_dict['hc_l'] = hc_l
+        buf_dict['hc_r'] = hc_r
         return buf_dict
     else:
         return h_dict

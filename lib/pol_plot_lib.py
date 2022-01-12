@@ -19,12 +19,13 @@ RGI = spint.RegularGridInterpolator
 def init_monitor_figure():
     plt.ion()
     fig, ax = plt.subplots(
-        nrows=3, ncols=3, sharex=False, sharey=False, 
-        gridspec_kw={'width_ratios':[1,0.07,0.07], 'height_ratios':[1,1,1]}
-        )
+        #nrows=3, ncols=3, sharex=False, sharey=False,
+        nrows=3, ncols=1, sharex=False, sharey=False,  
+        #gridspec_kw={'width_ratios':[1,0.07,0.07], 'height_ratios':[1,1,1]}
+        gridspec_kw={'width_ratios':[1], 'height_ratios':[1,1,1]})
     fig.set_tight_layout(True)
     fig.tight_layout(rect=[0, 0, 1, 1])
-    fig.set_size_inches(8,6)
+    fig.set_size_inches(8,8)
     return fig, ax
 
 def init_fit_figure(label, title):
@@ -81,13 +82,13 @@ def plot_hist(x, y, h, ax, cax, fig, diff=False):
                            vmin=tmin,#np.min(h_f),
                            vmax=tmax,#np.max(h_f),
                            cmap=plt.cm.gist_gray)
-        cbar = fig.colorbar(im, cax=cax,format=ticker.FuncFormatter(fmt))
-        cax.set_aspect(15)
-        cbar.set_ticks([tmin,tmed, tmax])
+        #cbar = fig.colorbar(im, cax=cax,format=ticker.FuncFormatter(fmt))
+        #cax.set_aspect(15)
+        #cbar.set_ticks([tmin,tmed, tmax])
     else:
         im = ax.pcolormesh(x,y,h, cmap=plt.cm.gist_gray)
-        cax.set_aspect(15)
-        cbar.set_ticks([0])
+        #cax.set_aspect(15)
+        #cbar.set_ticks([0])
 
 
 def plot_hitmap(fig, ax, h_dict, block=False, norm=False):
@@ -98,30 +99,31 @@ def plot_hitmap(fig, ax, h_dict, block=False, norm=False):
 
     xxs, yys = np.meshgrid(h_dict['xs'], h_dict['ys'])
     xxc, yyc = np.meshgrid(h_dict['xc'], h_dict['yc'])
-    ((ax1, ax2, ax3), (ax4, ax5, ax6), (ax7, ax8, ax9)) = ax
+    #((ax1, ax2, ax3), (ax4, ax5, ax6), (ax7, ax8, ax9)) = ax
+    (ax1, ax2, ax3) = ax
     ratio = 15
-    for i in range(1,10):
+    for i in range(1,3):
         exec('ax{:d}.clear()'.format(i))
     ax1.set_title('Left')
+    ax1.set_aspect(1)
+    #plot_hist(xxc, yyc, hc_l, ax1, ax3, fig)
+    plot_hist(xxc, yyc, hc_l, ax1, None, fig)
 
-    #plot_hist(xxs, yys, hs_l, ax1, ax2, fig)
-    #xx_new, yy_new, hc_l_new = get_interp_hist(h_dict['xc'], h_dict['yc'], hc_l, step_ratio=5)
-    plot_hist(xxc, yyc, hc_l, ax1, ax3, fig)
+    ax2.set_title('Right')
+    ax2.set_aspect(1)
+    #plot_hist(xxc, yyc, hc_r, ax4, ax6, fig)
+    plot_hist(xxc, yyc, hc_r, ax2, None, fig)
 
-    ax4.set_title('Right')
-    #plot_hist(xxs, yys, hs_r, ax4, ax5, fig)
-    plot_hist(xxc, yyc, hc_r, ax4, ax6, fig)
-
-    ax7.set_title('L-R difference')
-    ax7.set_aspect(1)
+    ax3.set_title('L-R difference')
+    ax3.set_aspect(1)
     if norm:
         hs_diff = hs_l/np.sum(np.sum(hs_l))-hs_r/np.sum(np.sum(hs_r))
         hc_diff = hc_l/np.sum(np.sum(hc_l))-hc_r/np.sum(np.sum(hc_r))
     else:
         hs_diff = hs_l-hs_r
         hc_diff = hc_l-hc_r
-    #plot_hist(xxs, yys, hs_diff, ax7, ax8, fig)
-    plot_hist(xxc, yyc, hc_diff, ax7, ax9, fig, diff=True)
+    #plot_hist(xxc, yyc, hc_diff, ax7, ax9, fig, diff=True)
+    plot_hist(xxc, yyc, hc_diff, ax3, None, fig, diff=True)
     
 
 def plot_data3d(h_dict, m_fitres, xrange, fig,  ax, h_type='l'):

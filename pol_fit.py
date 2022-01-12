@@ -125,7 +125,7 @@ def accum_data_and_make_fit(config, regex_line, offline = False):
     try:
         while (file_count < np.shape(file_arr)[0] and offline) or (not offline):
             if fname_prev != fname:
-                if files4point_count == 0:
+                if files4point_count == 0: 
                     h_dict = load_hist(hist_fpath,fname)
                     vepp4E = h_dict['vepp4E']
                   
@@ -134,7 +134,8 @@ def accum_data_and_make_fit(config, regex_line, offline = False):
                 else:
                     buf_dict = load_hist(hist_fpath,fname)
                     h_dict = accum_data(h_dict, buf_dict)
-                    print(h_dict['dfreq'][1])
+                    print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
+                    print('Dep freq: ', h_dict['dfreq'][1])
                 files4point_count += 1
                 file_count += 1
                 attempt_count = 0

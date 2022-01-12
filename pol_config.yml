@@ -5,9 +5,9 @@ regex_line : '2022*' #Specify regex line to choose files for preprocessing
 
 preprocess:
     save_raw_file : False 
-    amp_cut : 500 #Cut on the signal value to perform background rejection
+    amp_cut : 300 #Cut on the signal value to perform background rejection
     draw : True
-    use_depolarizer : True
+    use_depolarizer : False
 
 zone_id: 
 #Specify position of the hybrid board and its id starting from 0. If the region isn't connected put id=-1  
@@ -27,53 +27,6 @@ zone_id:
     
     sbl : -1
     sbr : -1
+#Mask nozy channels if they exist [y, x]. Reference frame is associated with center of the detector and physical coordinates are used i.e [-9.5,-32] corresponds to bottom left pad.
 mask:
-    - [-10,-30]
-    #- [-9,-10]
-    #- [-5,-10]
-    #- [-3,-8]
-    #- [-7,-8]
-    #- [-9,-6]
-    #- [-5,-6]
-    #- [-1,-6]
-    #- [-3,-4]
-    #- [-7,-4]
-    #- [-1,-2]
-    #
-    #- [-2, 0]
-    #- [-4, 2]
-    #- [-8, 2]
-    #- [-2, 4]
-    #- [-6, 4]
-    #- [-10, 4]
-    #- [-4, 6]
-    #- [-8, 6]
-    #- [-6, 8]
-    #- [-10, 8]
-    #
-    #- [8, 8]
-    #- [5, 8]
-    #- [2, 6]
-    #- [6, 6]
-    #- [8, 4]
-    #- [4, 4]
-    #- [0, 4]
-    #- [2, 2]
-    #- [6, 2]
-    #- [0, 0]
-    #
-    #- [1, -2]
-    #- [3, -4]
-    #- [7, -4]
-    #- [1, -6]
-    #- [5, -6]
-    #- [9, -6]
-    #- [3, -8]
-    #- [7, -8]
-    #- [5, -10]
-    #- [9, -10]
-    
 
-
-    
-    
