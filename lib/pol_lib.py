@@ -304,7 +304,7 @@ def mask_hist(config, h_dict):
     hc_r = np.array(h_dict['hc_r'])
     if mask is not None:
         for [y,x] in mask:
-            idx = int((x+32)/2)
+            idx = int((x+31)/2)
             idy = int(y+9.5) 
             hc_l[idy, idx] = 0
             hc_r[idy, idx] = 0

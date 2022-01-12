@@ -7,7 +7,7 @@ preprocess:
     save_raw_file : False 
     amp_cut : 300 #Cut on the signal value to perform background rejection
     draw : True
-    use_depolarizer : False
+    use_depolarizer : True
 
 zone_id: 
 #Specify position of the hybrid board and its id starting from 0. If the region isn't connected put id=-1  

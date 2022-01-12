@@ -137,7 +137,8 @@ def preprocess(config, regex_line, offline = False):
                     dfreq = get_depol_freq(depol_device, f_name)
                 else:
                     dfreq = np.zeros([1,2])
-                #print(dfreq, end= '\n')
+                
+                print(dfreq, end= '\n')
                 preprocess_single_file(config, f_name, vepp4E, dfreq, fig, ax)
                 f_name_old = f_name
                 attempt_count = 0

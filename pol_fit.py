@@ -128,9 +128,11 @@ def accum_data_and_make_fit(config, regex_line, offline = False):
                 if files4point_count == 0: 
                     h_dict = load_hist(hist_fpath,fname)
                     vepp4E = h_dict['vepp4E']
-                  
                     buf_dict = h_dict
+                    print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
+                    print('Dep freq: ', h_dict['dfreq'][1])
                     fname_prev = fname
+                    
                 else:
                     buf_dict = load_hist(hist_fpath,fname)
                     h_dict = accum_data(h_dict, buf_dict)
@@ -140,6 +142,7 @@ def accum_data_and_make_fit(config, regex_line, offline = False):
                 file_count += 1
                 attempt_count = 0
                 fname_prev = fname
+                print('Progress: ', int(files4point_count), '/', int(n_files))
             else:
                 time.sleep(1)
                 attempt_count +=1
