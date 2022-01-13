@@ -368,16 +368,29 @@ class ExpJumpTied {
 std::map<std::string, std::shared_ptr<TGraphErrors>  > GM;
 double GLOBAL_TIME_OFFSET;
 
-std::tuple<double, double> Fit3(TGraphErrors * g, double T) {
-    TF1 * f = ExpJump::GetFunction("expjump",T);
+struct FitConfig_t {
+  int run  = 0;
+  std::chrono::seconds update_time=60s;
+  double count_time=300;
+  double speed = 0.01; //scan speed MeV/sec. The sign shows scan direction
+  time_t start_view_time = 0;
+  time_t end_view_time = std::numeric_limits<time_t>::max();
+  std::vector<std::string> draw_list={"P","Q"};
+  std::string title;
+  std::string save_dir="/home/lsrp/Measurements";
+  bool is_save = false;
+};
+
+std::tuple<double, double> Fit3(TGraphErrors * g, const FitConfig_t & cfg) {
+    TF1 * f = ExpJump::GetFunction("expjump",cfg.count_time);
     //f->SetRange(0,4500);
 
+    //Looking for best chi2
     double chi2=1e10;
     int best_point=0;
     double best_time = 14000;
-
     for(int i=2;i<g->GetN();++i) {
-        double t =  g->GetX()[i]+T/2;
+        double t =  g->GetX()[i]+cfg.count_time/2;
         //std::cout << i << std::endl;
         ExpJump::InitPars(f, t);
         auto fr = g->Fit("expjump","EX0SQ");
@@ -388,18 +401,6 @@ std::tuple<double, double> Fit3(TGraphErrors * g, double T) {
         }
     }
 
-    //TRandom R;
-    //for (int i=0;i<100;++i) {
-    //    double t = R.Uniform(3600,5400);
-    //    ExpJump::InitPars(f, t);
-    //    auto fr = g->Fit("expjump","EX0S");
-    //    double lchi2 = f->GetChisquare();
-    //    if(fr->IsValid() && lchi2 < chi2) {
-    //        best_time = t;
-    //        chi2 = lchi2 ;
-    //    }
-    //}
-
     ExpJump::InitPars(f, best_time);
     g->Fit(f->GetName(),"EX0");
     //g->GetXaxis()->SetTitle("time, s");
@@ -409,6 +410,7 @@ std::tuple<double, double> Fit3(TGraphErrors * g, double T) {
     double dTd = f->GetParError(0);
     auto graphE = GM["E"];
     double E = graphE->Eval(Td);
+
     int idx=0;
     double distance_to_close_point=1e10;
     for(int i=0;i<graphE->GetN();i++) {
@@ -423,18 +425,18 @@ std::tuple<double, double> Fit3(TGraphErrors * g, double T) {
     graphE->Fit("mypol1", "QR");
     double speed = pol1.GetParameter(1);
     if(fabs(speed) > 0.1) {
-      std::cout << "Wrong scan speed: ";
-      speed=0.01;
+      std::cout << "Wrong scan speed: " << speed*1e3 << " keV/s."  << " Use default scan speed: ";
+      speed = cfg.speed;
     }
-    else std::cout << " Calculate scan speed: ";
-    std::cout <<  speed*1e3 << " keV/s" <<  std::endl;
-    std::cout << "Energy: " << E << " +- " << dTd*speed << std::endl;
+    else std::cout << "Calculated scan speed: ";
+    std::cout <<  fabs(speed*1e3) << " keV/s" <<  std::endl;
+    std::cout << "Energy: " << E << " +- " << dTd*speed <<  " MeV" << std::endl;
     if(idx>0) {
       if(graphE->GetY()[idx-1]==0) {
         E=graphE->GetY()[idx];
       }
     }
-    return {E, dTd*speed};
+    return {E, fabs(dTd*speed)};
 };
 
 
@@ -623,15 +625,6 @@ std::map<std::string, std::unique_ptr<TCanvas>> CanvasMap;
 
 static int CANVAS_IDX=0;
 
-struct FitConfig_t {
-  int run{0};
-  std::chrono::seconds update_time=60s;
-  double count_time=300;
-  time_t start_view_time = 0;
-  time_t end_view_time = std::numeric_limits<time_t>::max();
-  std::vector<std::string> draw_list={"P","Q"};
-  std::string title;
-};
 
 TLatex * ENERGY_LATEX{nullptr};
 
@@ -653,19 +646,11 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
 
     auto draw_label = [](double x, double y, const char * format, auto ... args) -> TLatex * {
       char buf[1024];
-      std::cout << "Before sprintf" << std::endl;
       snprintf(buf,sizeof(buf),format, args...);
-      std::cout << "After sprintf" << std::endl;
       TLatex *  l = new TLatex(x, y,buf); 
-      std::cout << "After new TLatex" << std::endl;
       l->SetNDC();
-      std::cout << "After SetNDC" << std::endl;
-      std::cout << "Before draw" << std::endl;
       l->Draw();
-      std::cout << "After draw" << std::endl;
-      //std::cout << "Before settextsize" << std::endl;
-      //l->SetTextSize(0.04);
-      //std::cout << "After settextsize" << std::endl;
+      //l->SetTextSize(0.04); //This line result in program crash (segmentation violation)
       return l;
     };
 
@@ -707,11 +692,9 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
             lDate->SetTextSize(0.04);
             lDate->Draw();
 
-            std::cout << "BEfore draw run " << std::endl;
             if( cfg.run>0) {
               draw_label(0.01,0.91,"Run %d", cfg.run);
             } 
-            std::cout << "After draw run " << std::endl;
 
             std::ifstream ifs("/mnt/vepp4/kadrs/nmr.dat");
             ifs.ignore(65535,'\n');
@@ -731,11 +714,25 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
         
         if(graph_name=="P") {
           gStyle->SetOptFit();
-          auto [E,dE] = Fit3(g,cfg.count_time);
+          auto [E,dE] = Fit3(g,cfg);
           if ( E > 1 ) {
             if ( ENERGY_LATEX ) delete ENERGY_LATEX;
             ENERGY_LATEX = draw_label(0.01, 0.0189, "E = %8.3f #pm %4.3f MeV", E, dE);
-          } 
+          }
+          if(cfg.is_save) {
+            char date[1024];
+            time_t global_time_offset = time_t(GLOBAL_TIME_OFFSET);
+            auto timeinfo_begin = *localtime(&global_time_offset);
+            strftime(date, sizeof(date), "%Y-%m-%dT%H-%M-%S", &timeinfo_begin);
+            char filename[65535];
+            auto save = [&](const char * type) {
+              snprintf(filename, 65535, "%s/R%04d-%s.%s", cfg.save_dir.c_str(), cfg.run, date, type);
+              c->SaveAs(filename);
+            };
+            save("pdf");
+            save("root");
+            save("png");
+          }
         }
         c->Modified();
         c->Update();
@@ -801,18 +798,12 @@ void fitloop(std::string name, FitConfig_t cfg=FitConfig_t()) {
       this_thread::sleep_for(100ms);
     } while (last_update == statbuf.st_mtim.tv_sec);
     last_update = statbuf.st_mtim.tv_sec;
-    //while( std::chrono::system_clock::now() < tb + cfg.update_time) {
-    //while( last_update == ) {
-    //  gSystem->ProcessEvents();
-    //  this_thread::sleep_for(100ms);
-    //  std::cout << statbuf.st_mtim << std::endl;
-    //}
   }
 };
 
 void fitloop(time_t start_view_time=0, time_t end_view_time=std::numeric_limits<time_t>::max()) {
   FitConfig_t cfg;
-  cfg.update_time = 60s;
+  //cfg.update_time = 60s;
   cfg.count_time = 300;
   cfg.start_view_time = start_view_time;
   cfg.end_view_time = end_view_time;
