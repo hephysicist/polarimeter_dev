@@ -378,7 +378,7 @@ struct FitConfig_t {
   std::vector<std::string> draw_list={"P","Q"};
   std::string title;
   std::string save_dir="/home/lsrp/Measurements";
-  bool is_save = false;
+  bool save = false;
 };
 
 std::tuple<double, double> Fit3(TGraphErrors * g, const FitConfig_t & cfg) {
@@ -719,7 +719,7 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
             if ( ENERGY_LATEX ) delete ENERGY_LATEX;
             ENERGY_LATEX = draw_label(0.01, 0.0189, "E = %8.3f #pm %4.3f MeV", E, dE);
           }
-          if(cfg.is_save) {
+          if(cfg.save) {
             char date[1024];
             time_t global_time_offset = time_t(GLOBAL_TIME_OFFSET);
             auto timeinfo_begin = *localtime(&global_time_offset);
