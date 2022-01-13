@@ -74,6 +74,11 @@ def map_events(evt_arr, zone_id):
     
 def save_mapped_hist(hist_fpath, h_dict, vepp4E, dfreq, f_name):
     #print('ENERGY IS:', vepp4E)
+    if np.shape(dfreq)[0]:
+        buf_freq = dfreq[1]
+    else:
+        buf_freq = 0
+        print('ERROR: Check depolarizer!')
     np.savez(hist_fpath+f_name[:19]+'_hist',
             hc_l = h_dict['hc_l'],
             hc_r = h_dict['hc_r'],
@@ -84,7 +89,8 @@ def save_mapped_hist(hist_fpath, h_dict, vepp4E, dfreq, f_name):
             xc = h_dict['xc'],
             yc = h_dict['yc'],
             vepp4E = vepp4E,
-            dfreq = dfreq)
+            dfreq = buf_freq)
+
     print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
     print('Saved mapped hist to the file: '+f_name[:19]+'_hist.npz\n')
 

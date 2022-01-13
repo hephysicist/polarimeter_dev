@@ -12,7 +12,10 @@ double_gauss: True
 
 #Mask nozy channels if they exist [y, x]. Reference frame is associated with center of the detector and physical coordinates are used i.e [-9.5,-32] corresponds to bottom left pad
 mask:
-#    - [-0.5,-2]
+  #    - [-0.5,-1]
+  #    - [ 0.5,-1]
+  #    - [-0.5,2]
+  #    - [0.5,2]
     
 initial_values:  
     E       : 4743 #MeV

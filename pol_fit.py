@@ -130,14 +130,14 @@ def accum_data_and_make_fit(config, regex_line, offline = False):
                     vepp4E = h_dict['vepp4E']
                     buf_dict = h_dict
                     print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
-                    print('Dep freq: ', h_dict['dfreq'][1])
+                    print('Dep freq: ', buf_dict['dfreq'])
                     fname_prev = fname
                     
                 else:
                     buf_dict = load_hist(hist_fpath,fname)
                     h_dict = accum_data(h_dict, buf_dict)
                     print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
-                    print('Dep freq: ', h_dict['dfreq'][1])
+                    print('Dep freq: ', buf_dict['dfreq'])
                 files4point_count += 1
                 file_count += 1
                 attempt_count = 0
@@ -163,7 +163,7 @@ def accum_data_and_make_fit(config, regex_line, offline = False):
                 write2file_nik( config['fitres_file'],
                             fname,
                             fitres,
-                            h_dict['dfreq'][1], 
+                            h_dict['dfreq'], 
                             h_dict['vepp4E'],
                             raw_stats,
                             fit_counter,
