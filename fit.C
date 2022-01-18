@@ -4,117 +4,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-inline double linearjump(double t,double D, double a, double k1, double k2, double T)
-{
-  	if(t <=0)	return a+k1*(t-T/2.);
-  	if(t >= T)	return a+D +k2*(t-T/2.);
-  	return a+D*t/T + (k2*t*t - k1*(T-t)*(T-t))/2./T;
-}
-
-double fun (double *x, double *p) {
-    return linearjump( x[0]- p[0],  p[1], p[2], p[3],p[4], p[5]);
-}
 #include <math.h>
 
-
-double polarization(double P, double Pmax, double tau, double t) {
-    //std::cout << "P = " << P << "  Pmax=" << Pmax << "  tau=" << tau << "  t= " << t << std::endl;
-    //std::cout <<  (1.0 - exp(- t/tau)) << std::endl;
-    return P + (Pmax-P) * (1.0 - exp(- t/tau));
-}
-
-double exp_jump(double time, double depol_time=0, double P0=0, double Pmax=-10, double tau=14, double DELTA=10, double T=1)
-{
-    if (time < depol_time - T/2) return polarization(P0, Pmax, tau, time);
-    double P1 = polarization(P0, Pmax, tau, depol_time);
-    double P2 = P1 + DELTA;
-    if (time > depol_time + T/2) {
-        return polarization(P2, Pmax, tau, time - depol_time);
-    }
-    double P1T = polarization(P0, Pmax, tau, depol_time - T/2);
-    double P2T = polarization(P2, Pmax, tau, T/2);
-    return P1T - (P1T - P2T) * (time - (depol_time - T/2)) / T;
-}
-
-TGraph gE;
-
-class Fitter {
-  std::ifstream file;
-  public:
-    Fitter(std::string file_name) : file(file_name) {
-      if(!file) {
-        std::cerr << "Unable to open file " << file_name << std::endl;
-      }
-      gP.Draw("a*");
-    }
-    TGraph gE;
-    TGraphErrors gP;
-    TGraphErrors gQ;
-    TCanvas c;
-
-    void loop(void) {
-      char buf[65536];
-      while(true) {
-        while(!file.getline(buf,65536)) {
-          gSystem->ProcessEvents();
-          this_thread::sleep_for(100ms);
-            //std::cout << buf << std::endl;
-          file.clear();
-        }
-        //std::cout << buf << std::endl;
-        std::istringstream iss(buf);
-        time_t t;
-        double P,dP,Q,dQ;
-        double E,F;
-        int n;
-
-        iss >> n >> t >> F >> E>> P >> dP >>Q >> dQ;
-
-        int i = gP.GetN();
-        gP.SetPoint(i, t, P);
-        gP.SetPointError(i, 0, dP);
-        gQ.SetPoint(i, t, Q);
-        gQ.SetPointError(i, 0, dQ);
-        c.Modified();
-        c.Update();
-      }
-    }
-    void loop2(std::string filename, int T=10) {
-      char buf[65536];
-      while(true) {
-        std::ifstream file2(filename);
-        gP.Clear();
-        gQ.Clear();
-        while(file2.getline(buf,65536)) {
-          std::istringstream iss(buf);
-          time_t t;
-          double P,dP,Q,dQ;
-          double E,F;
-          int n;
-
-          iss >> n >> t >> F >> E>> P >> dP >>Q >> dQ;
-          int i = gP.GetN();
-        gP.SetPoint(i, t, E);
-          gP.SetPoint(i, t, P);
-          gP.SetPointError(i, 0, dP);
-          gQ.SetPoint(i, t, Q);
-          gQ.SetPointError(i, 0, dQ);
-          c.Modified();
-          c.Update();
-        }
-        auto tb = std::chrono::system_clock::now();
-        while( std::chrono::system_clock::now() < tb + std::chrono::seconds(T)) {
-          gSystem->ProcessEvents();
-          this_thread::sleep_for(100ms);
-        }
-      }
-    }
-
-};
+R__LOAD_LIBRARY(libfmt.so)
+#include <fmt/format.h>
 
 
-template <class F> double dgaus(F  func, double a, double b, double epsilon)
+
+//algorithm for integrating function func in the range (a,b) with accuracy epsilon
+template <class F> double dgaus(F & func, double a, double b, double epsilon)
 {
     const double Z1 = 1;
     const double HF = Z1/2;
@@ -183,344 +81,223 @@ CASE2:
 }
 
 
-class ExpErf {
-    double Td;
-    double delta; 
-    double C;  
-    double k1; 
-    double k2; 
-    double tau;  
-    double power; 
-    public:
-    ExpErf(double td, double d, double c, double s1, double s2, double Tau, double Power) {
-        Td = td;
-        delta = d;
-        C = c;
-        k1 = s1;
-        k2 = s2;
-        tau = Tau;
-        power = Power;
-    };
-
-    double operator() ( double x) {
-        double t = x- Td;
-        double hev = ( 1.0 - exp( - power * (1. + std::erf(t/tau)) )  ) / ( 1. - exp(-2.*power) );
-        double result =  C + delta * hev + t*(k1 + (k2-k1)*hev);
-        return result;
-    };
-};
-
-
-
-//Многомерный интеграл
-
-inline double experf(double *x, double *p)
-{
-    ExpErf fun(p[0], p[1], p[2], p[3],p[4], p[5],p[6] );
-    double T= p[7];
-    double result =  dgaus(fun,x[0]-T/2, x[0]+T/2, 1e-8)/T;
-    return result;
+double polarization(double P, double Pmax, double tau, double t) {
+    return P + (Pmax-P) * (1.0 - exp(- t/tau));
 }
 
-class ExpJump {
-    double Td;
-    double P0;
-    double Pmax;
-    double tau;
-    double delta;
+class MultiExpJump {
+
+    const int Njumps; //number of depolarization jumps
+    std::vector<double> Tds;    //polarization times in seconds  Tds[0]=0 - fixed, another  Tds[1,2,Njumps] are free.
+    std::vector<double> Deltas; //depolarization jump values (free) 0,1,...Njump-1
+    std::vector<double> Fs; //buffer
+    std::vector<double> Ps; //Ps[0] - minimization parameter, other is the buffer
+    double Pmax; //Maximum polarization (free)
+    double tau; //polarization time (Sokolov Ternov) (free)
+    int Npars; //total number of fit parameters
+    double Taud; //depolarization time depends on depolarizer power (fixed)
+    double T;// count time (usualy 300 sec) (fixed)
+
     public:
-    double TT;
-    ExpJump(double depol_time=0, double P0_=0, double Pmax_=-10, double tau_=14, double DELTA_=10) {
-        Td=depol_time;
-        P0 = P0_;
-        Pmax = Pmax_;
-        tau = tau_;
-        delta = DELTA_;
-    }
 
-    //double operator() (double t) {
-    //    double result;
-    //    if (t < Td) result = polarization(P0, Pmax, tau, t);
-    //    double P1 = delta + polarization(P0, Pmax, tau, Td); //polarization just after the depolarization
-    //    result = polarization(P1, Pmax, tau, t-Td);
-    //    return result;
-    //    //double sigma=10;
-    //    //return result*1./sqrt(2.*M_PI)/sigma*exp(-0.5*pow(-(t-TT)/sigma,2));
-    //};
-    double operator() (double t) {
-        double result;
-        double f1 = polarization(P0, Pmax, tau, t);
-        double P1 = delta + polarization(P0, Pmax, tau, Td); //polarization just after the depolarization
-        double f2 = polarization(P1, Pmax, tau, t-Td);
-        return f1 + (f2-f1)*(1.0 + erf((t-Td)/5))*0.5;
-        //double sigma=10;
-        //return result*1./sqrt(2.*M_PI)/sigma*exp(-0.5*pow(-(t-TT)/sigma,2));
+    MultiExpJump(int n, double Tc, double taud) : Njumps(n), T(Tc), Taud(taud) {
+      n = Njumps+1;
+      //create buffers
+      Tds.resize(n);
+      Deltas.resize(n);
+      Ps.resize(n);
+      Fs.resize(n);
+      Npars = 3 + 2*Njumps;
     };
 
-    static double root(double *x, double *p)
-    {
-        ExpJump fun(p[0], p[1], p[2], p[3], p[4]);
-        fun.TT = x[0];
-        double T= p[5];
-        //double result =  dgaus(fun,x[0]-T/2, x[0]+T/2, 1e-8)/T;
-        double result =  dgaus(fun,x[0], x[0]+T, 1e-8)/T;
-        //double result =  dgaus(fun,x[0]-T+10, x[0]+10, 1e-8)/T;
-        return result;
-    }
+    int GetNpars() const {return Npars; } 
 
-    static void InitPars(TF1 * f, double td) {
-        auto set = [&](int i, const char * name, double value) {
-            f->SetParName(i,name);
-            f->SetParameter(i,value);
-        };
-        set(0,"Td", td);
-        f->SetParLimits(0,0, 1000000);
-        set(1, "P0", -0.9);
-        //f->SetParLimits(1,-0.92376, +0.92376);
-        set(2, "Pmax", -0.92);
-        //f->SetParLimits(2,-0.92376, +0.92376);
-        set(3, "tau", 2000);
-        f->SetParLimits(3,100, 100000);
-        set(4, "delta", 0.6432);
-        f->SetParLimits(4,0, 1);
-       // f->FixParameter(3,1);
-        //set(5, "T", 1);
-        //set(5,"C", 0);
-    };
-
-    static TF1 * GetFunction(std::string name, double T) {
-        TF1 * f = new TF1(name.c_str(), ExpJump::root, 0,100000,6);
-        InitPars(f,4000);
-        f->SetParName(5,"T");
-        f->FixParameter(5, T); 
-        f->SetNpx(1000);
-        return f;
-    };
-
-};
-
-class ExpJumpTied {
-    double Td;
-    double P0;
-    double tau0;
-    double Pmax;
-    double tau;
-    double delta;
-    public:
-    ExpJumpTied(double depol_time, double P0_, double Pmax_, double DELTA_) {
-        Td=depol_time;
-        P0 = P0_;
-        Pmax = Pmax_;
-        delta = DELTA_;
-        tau0 = 1540./pow(4.1,5.0)*3600.;
-        std::cout << tau0 << std::endl;
-        double G = Pmax/0.92376;
-        tau = fabs(G)*tau0;  
-        std::cout <<"G = " << G <<  " tau0 " << tau0  << " tau = " << tau << std::endl;
-    }
+    int GetNjumps() const {return Njumps; } 
 
     double operator() (double t) {
-        if (t < Td) return polarization(P0, Pmax, tau, t);
-        double P1 = delta + polarization(P0, Pmax, tau, Td); //polarization just after the depolarization
-        return polarization(P1, Pmax, tau, t-Td);
-    };
+        //Initial value must be set. This is not minimization parameter.
+        Tds[0]    = 0;
 
-    static double root(double *x, double *p) {
-        ExpJumpTied fun(p[0], p[1], p[2], p[3]);
-        double T= p[4];
-        double result =  dgaus(fun, x[0]-T/2, x[0]+T/2, 1e-8)/T;
-        //std::cout << p[0] << " " << p[1] << "  " << p[2] << "  " << p[3] <<  "  " << p[4] << "   result = " << result << std::endl;
-        return result;
-    };
+        //jump times must be sorted for correct work of the algorithm
+        std::sort(std::begin(Tds), std::end(Tds));
 
-    static void InitPars(TF1 * f, double td) {
-        auto set = [&](int i, const char * name, double value) {
-            f->SetParName(i,name);
-            f->SetParameter(i,value);
+        //just alias to shorten polarization call
+        auto pol = [this] (double P0, double tt) -> double {
+          return polarization(P0, Pmax, tau, tt);
         };
-        set(0,"Td", td);
-        f->SetParLimits(0,0, 100000);
-        //f->FixParameter(0, 14000);
-        set(1, "P0", -0.923);
-        f->SetParLimits(1,-0.92376, +0.92376);
-        //set(2, "tau0", 1540*3600/pow(4.1,5.0));
-        set(2, "Pmax", -0.92375);
-        f->SetParLimits(2,-0.92376, +0.92376);
-        //f->FixParameter(2, 1540*3600/pow(4.1,5.0));
-        //set(3, "tau", 4000);
-        set(3, "delta", 0.6432);
-       // f->FixParameter(3,1);
-        //set(4, "T", 1);
+
+        //Heaviside like function
+        auto H = [this](double tt, double tau_d) {
+          return 0.5*(1. + erf(tt/tau_d));
+        };
+
+        //calculate part of polarization curves between jumps
+        for(int i=0;i<=Njumps; ++i) {
+          Fs[i] = pol(Ps[i], t-Tds[i]);
+          //calculate initial polarization value for next curve
+          if(i<Njumps) Ps[i+1] = Deltas[i] + pol(Ps[i], Tds[i+1]-Tds[i]);
+        }
+
+        //accumulate the polarization
+        double P{Fs[0]};
+        for(int i=0;i<Njumps; ++i) {
+          auto h = H(t - Tds[i+1],Taud); //jumps are smooth
+          P += (Fs[i+1] - Fs[i]) * h; //describes smooth transition between behavior before and after depolarization jump Tds[i+1]
+        }
+        return P;
     };
 
-    static TF1 * GetFunction(std::string name, double T) {
-        TF1 * f = new TF1(name.c_str(), ExpJumpTied::root, 0,10000,5);
-        InitPars(f,3000);
-        f->SetParName(4,"T");
-        f->FixParameter(4, T); 
-        f->SetNpx(1000);
-        return f;
-    };
-
-
+    //this function is used by TF1
+    double operator() ( double *x, double *p) {
+      double t = x[0];
+      tau = p[0];
+      Pmax = p[1];
+      Ps[0] = p[2];
+      int idx=3;
+      for(int i = 0; i<Njumps; ++i, ++idx) {
+        Tds[i+1] = p[idx]; //jump position 
+      } 
+      for(int i = 0; i<Njumps; ++i, ++idx) {
+        Deltas[i] = p[idx]; //jump amplitude
+      }
+      return dgaus(*this,t, t+T, 1e-8)/T; //calculate average 
+    }
 };
+
 
 std::map<std::string, std::shared_ptr<TGraphErrors>  > GM;
 double GLOBAL_TIME_OFFSET;
 
 struct FitConfig_t {
   int run  = 0;
-  std::chrono::seconds update_time=60s;
+  //std::chrono::seconds update_time=60s;
   double count_time=300;
   double speed = 0.01; //scan speed MeV/sec. The sign shows scan direction
   time_t start_view_time = 0;
   time_t end_view_time = std::numeric_limits<time_t>::max();
   std::vector<std::string> draw_list={"P","Q"};
-  std::string title;
+  std::string title; //graph title
   std::string save_dir="/home/lsrp/Measurements";
   bool save = false;
+  std::vector<double> Tds; //initial values for jumps to help minimization function find good minimum
+  int Njumps = 1; //numer of jumps in the fit
+  double taud = 5; //The depolarization characteristic time (smooth jump by erf function)  in seconds
 };
 
-std::tuple<double, double> Fit3(TGraphErrors * g, const FitConfig_t & cfg) {
-    TF1 * f = ExpJump::GetFunction("expjump",cfg.count_time);
-    //f->SetRange(0,4500);
-
-    //Looking for best chi2
-    double chi2=1e10;
-    int best_point=0;
-    double best_time = 14000;
-    for(int i=2;i<g->GetN();++i) {
-        double t =  g->GetX()[i]+cfg.count_time/2;
-        //std::cout << i << std::endl;
-        ExpJump::InitPars(f, t);
-        auto fr = g->Fit("expjump","EX0SQ");
-        if(fr->IsValid() && f->GetChisquare() < chi2) {
-            best_point = i;
-            best_time = t;
-            chi2 = f->GetChisquare() ;
-        }
+//calculte the energy from fit result for parameter n
+auto get_energy( TF1 * f, const FitConfig_t & cfg, int n) -> std::tuple<double, double> {
+  double Td = f->GetParameter(n);
+  double dTd = f->GetParError(n);
+  auto graphE = GM["E"];
+  double E = graphE->Eval(Td);
+  int idx=0;
+  double distance_to_close_point=1e10;
+  for(int i=0;i<graphE->GetN();i++) {
+    if(fabs(graphE->GetX()[i] - Td) < distance_to_close_point) {
+      idx=i;
+      distance_to_close_point = fabs(graphE->GetX()[i] - Td);
     }
-
-    ExpJump::InitPars(f, best_time);
-    g->Fit(f->GetName(),"EX0");
-    //g->GetXaxis()->SetTitle("time, s");
-    //g->GetYaxis()->SetTitle("P");
-
-    double Td = f->GetParameter(0);
-    double dTd = f->GetParError(0);
-    auto graphE = GM["E"];
-    double E = graphE->Eval(Td);
-
-    int idx=0;
-    double distance_to_close_point=1e10;
-    for(int i=0;i<graphE->GetN();i++) {
-      if(fabs(graphE->GetX()[i] - Td) < distance_to_close_point) {
-        idx=i;
-        distance_to_close_point = fabs(graphE->GetX()[i] - Td);
-      }
+  }
+  int idx_min = idx-1 < 0 ? 0 : idx-1;
+  int idx_max = idx+1 >= graphE->GetN() ? graphE->GetN()-1 : idx+1;
+  TF1 pol1("mypol1", "[0]+[1]*x",graphE->GetX()[idx_min], graphE->GetX()[idx_max]);
+  graphE->Fit("mypol1", "QR");
+  double speed = pol1.GetParameter(1);
+  if(fabs(speed) > 0.1) {
+    std::cout << "Wrong scan speed: " << speed*1e3 << " keV/s."  << " Use default scan speed: ";
+    speed = cfg.speed;
+  }
+  else std::cout << "Calculated scan speed: ";
+  std::cout <<  fabs(speed*1e3) << " keV/s" <<  std::endl;
+  std::cout << fmt::format("Energy: {:8.3f} +- {:4.3f} MeV", E, dTd*speed) << std::endl;
+  if(idx>0) {
+    if(graphE->GetY()[idx-1]==0) {
+      E=graphE->GetY()[idx];
     }
-    int idx_min = idx-3 < 0 ? 0 : idx-3;
-    int idx_max = idx+3 >= graphE->GetN() ? graphE->GetN()-1 : idx+3;
-    TF1 pol1("mypol1", "[0]+[1]*x",graphE->GetX()[idx_min], graphE->GetX()[idx_max]);
-    graphE->Fit("mypol1", "QR");
-    double speed = pol1.GetParameter(1);
-    if(fabs(speed) > 0.1) {
-      std::cout << "Wrong scan speed: " << speed*1e3 << " keV/s."  << " Use default scan speed: ";
-      speed = cfg.speed;
-    }
-    else std::cout << "Calculated scan speed: ";
-    std::cout <<  fabs(speed*1e3) << " keV/s" <<  std::endl;
-    std::cout << "Energy: " << E << " +- " << dTd*speed <<  " MeV" << std::endl;
-    if(idx>0) {
-      if(graphE->GetY()[idx-1]==0) {
-        E=graphE->GetY()[idx];
-      }
-    }
-    return {E, fabs(dTd*speed)};
+  }
+  return {E, fabs(dTd*speed)};
 };
 
 
+//Main fit function
+std::tuple<double, double> FitGraph(TGraphErrors * g, const FitConfig_t & cfg) {
 
-void Fit(TF1 * f,  TGraphErrors * g, double T) {
-    auto tune_f = [&] (double t) {
-        f->SetParameter(0, t); //depol time
-        f->SetParName(0,"Td");
-        f->SetParameter(1, 0); //delta
-        f->SetParName(1,"DELTA");
-        f->SetParameter(2, 0); //const
-        //f->FixParameter(2,0);
-        f->SetParName(2,"CONST");
-        f->FixParameter(3, 0); //slope1
-        f->SetParName(3,"SLOPE1");
-        //f->FixParameter(4, 0); //slope2
-        f->SetParName(4,"SLOPE2");
-        f->FixParameter(5, 1); //tau
-        f->SetParName(5,"TAU");
-        f->FixParameter(6, 2); //power
-        f->SetParName(6,"POWER");
-        f->FixParameter(7, T); //point measurement time
-        f->SetParName(7,"T");
-        f->SetNpx(1000);
-    };
+  auto fun = new MultiExpJump(cfg.Njumps, cfg.count_time, cfg.taud);
 
+  TF1 * f = new TF1("multi_exp_jump", *fun, 0, 1, fun->GetNpars());
+
+  auto initpar = [&](int i, std::string name, double value, bool fix=false) {
+    f->SetParName(i,name.c_str());
+    f->SetParameter(i,value);
+    if(fix) { f->FixParameter(i,value); }
+  };
+
+  initpar(0, "tau", 1500);
+  initpar(1, "Pmax", -1);
+  initpar(2, "P0", 0);
+
+  const int TdJumpIdx=3;
+  int idx=TdJumpIdx;
+  for(int i=0;i<fun->GetNjumps();++i,++idx) {
+    initpar(idx, "Td"+std::to_string(i+1), 0);
+  }
+  for(int i=0;i<fun->GetNjumps();++i, ++idx) {
+    initpar(idx, "Delta"+std::to_string(i+1), 0);
+  }
+
+
+  //Looking for best chi2
+  if( cfg.Tds.empty() ) {
     double chi2=1e100;
-    int best_point=0;
-    double best_time = 100;
-
-    //for(int i=0;i<g->GetN();++i) {
-    //    double t = g->GetX()[i];
-    //    tune_f(t);
-    //    g->Fit("fun","EX0");
-    //    double lchi2 = f->GetChisquare();
-    //    if( lchi2 < chi2) {
-    //        best_point = i;
-    //        best_time = t;
-    //        std::cout << "lchi2 = " << lchi2 << "  chi2 = " << chi2 << std::endl;
-    //        chi2 = lchi2;
-    //    }
-    //}
-
-    tune_f(4000);
-    //tune_f(1800);
-    g->Fit(f->GetName(),"EX0");
-    g->GetXaxis()->SetTitle("time, s");
-    g->GetYaxis()->SetTitle("P");
-
-    double Td = f->GetParameter(0);
-    double dTd = f->GetParError(0);
-    double E = 4101.00 + (Td-4*60-2042)*0.01;
-    double dE = 0.01*dTd;
-    std::cout << "Energy: " << E << " +- " << dE << std::endl;
-    char buf[1024];
-    sprintf(buf," E = %.2f #pm %.2f MeV", E,dE);
-    TLatex * lE = new TLatex(500, 0, buf);
-    lE->Draw();
-    sprintf(buf," H = %.0f Gs", 3954.);
-    TLatex * lH = new TLatex(500,-0.2, buf);
-    lH->Draw();
-    sprintf(buf," #nu_{x}/#nu_{y} = %.3f/%.3f", 0.534, 0.581);
-    TLatex * lnu = new TLatex(500,-0.4, buf);
-    lnu->Draw();
-
-    double ymin = g->GetMinimum();
-    for(int i=0;i<g->GetN();++i) {
-        auto text = new TText();
-        //text->SetNDF();
-        char buf[1024];
-        double t = g->GetX()[i];
-        if(t<2042) sprintf(buf,"%s","");
-        else sprintf(buf,"%.2f", 4101 + (t-4*60 -2042)*0.01);
-        text->SetText(t, -1.4, buf);
-        text->SetTextSize(0.02);
-        text->SetTextAngle(90);
-        if((t+T/2)/60 >4 ) {
-        text->Draw();
+    for(int njump=0;njump<fun->GetNjumps();++njump) {
+      int best_point=0;
+      double best_time = 0;
+      for(int i=3;i<g->GetN()-1;++i) {
+        double t =  g->GetX()[i]+cfg.count_time/2;
+        std::cout << i << " " << t <<  std::endl;
+        f->SetParameter(TdJumpIdx+njump,t);
+        auto fr = g->Fit("multi_exp_jump","0QEX0S");
+        // options
+        // 0 - do not draw result
+        // Q - minimum printing
+        // EX0 - do not take into account errors on axis X (if exist)
+        // S  - return FitResult
+        if(fr->IsValid() && f->GetChisquare() < chi2) {
+          best_point = i;
+          best_time = t;
+          chi2 = f->GetChisquare();
+          //std::cout << "Find better chi2: "<< chi2 << " for point "  << best_point << " and time " << best_time << std::endl;
         }
+      }
+      std::cout << "Found best time for jump << " << njump << ": " << best_time << std::endl;
+      f->FixParameter(TdJumpIdx+njump, best_time);
     }
+    //Release fixed parameters
+    for(int njump=0;njump<fun->GetNjumps();++njump) {
+      f->ReleaseParameter(njump+TdJumpIdx);
+    }
+  } 
+  else if(cfg.Tds.size() <= cfg.Njumps) { //Use user preset values instead
+    for(int njump=0;njump<cfg.Tds.size(); ++njump) {
+        f->SetParameter(TdJumpIdx+njump,cfg.Tds[njump]);
+    }
+  }
+
+  //main fit
+  g->Fit("multi_exp_jump","EX0");
+
+  //prepare multiple jumps for future display on canvas. Doesnt work yet
+  std::vector<std::tuple<double, double> > R;
+  for(int i=0;i<fun->GetNjumps(); ++i) {
+    R.push_back(get_energy(f,cfg, i+TdJumpIdx));
+  }
+  if( !R.empty() ) return R[0];
+  return {0,0};
 };
 
 //read and updating existing TGraphErrors in  map container  GM
 void read_graph(std::string name, time_t start_view_time=0, time_t end_view_time=std::numeric_limits<time_t>::max()) {
+    std::cout << "Reading file " << name << std::endl;
     std::ifstream ifs(name);
     int n;
     std::string n_str;
@@ -631,14 +408,6 @@ TLatex * ENERGY_LATEX{nullptr};
 std::list<std::unique_ptr<TLatex>> EnergyNoteList;
 
 void fit_single(std::string file_name, const FitConfig_t & cfg){
-    auto f  = new TF1("fun", &experf,  0, 10000, 8);
-    auto fun_pol  = new TF1("fun_pol", "[0]*(1-exp(-(x-[1])/[2]))",  0, 10000);
-    fun_pol->SetParameter(0,1);
-    fun_pol->SetParameter(1,0);
-    fun_pol->SetParameter(2,1000);
-
-    fun_pol->FixParameter(1,0);
-
     read_graph(file_name, cfg.start_view_time, cfg.end_view_time);
     if(GM.empty()) return;
 
@@ -693,7 +462,8 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
             lDate->Draw();
 
             if( cfg.run>0) {
-              draw_label(0.01,0.91,"Run %d", cfg.run);
+              auto l = draw_label(0.01,0.91,"Run %d", cfg.run);
+              l->SetTextSize(0.04);
             } 
 
             std::ifstream ifs("/mnt/vepp4/kadrs/nmr.dat");
@@ -701,7 +471,7 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
             double H;
             ifs >> H;
             ifs.close();
-            draw_label(0.564, 0.0189, "H = %8.3f Gs", H);
+            draw_label(0.564, 0.0189, "H = %8.3f Gs", H)->SetTextSize(0.04);
 
             return c;
           } else {
@@ -713,11 +483,13 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
         }();
         
         if(graph_name=="P") {
+          std::cout << "Fitting graph P" << std::endl;
           gStyle->SetOptFit();
-          auto [E,dE] = Fit3(g,cfg);
+          auto [E,dE] = FitGraph(g,cfg);
           if ( E > 1 ) {
             if ( ENERGY_LATEX ) delete ENERGY_LATEX;
             ENERGY_LATEX = draw_label(0.01, 0.0189, "E = %8.3f #pm %4.3f MeV", E, dE);
+            ENERGY_LATEX->SetTextSize(0.04);
           }
           if(cfg.save) {
             char date[1024];
@@ -754,19 +526,18 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
         auto itC = CanvasMap.find("P");
         if( itC  != CanvasMap.end() ) {
           for( int i=0; i<Pg->GetN(); ++i) {
-            char buf[1024];
-            if(Eg->GetY()[i]>100) {
-              snprintf(buf,1024,"%-7.2f", Eg->GetY()[i]);
-            } else {
-              snprintf(buf,1024,"%s", ".");
-            }
-            auto l = new TLatex(Eg->GetX()[i],Pg->GetHistogram()->GetMinimum(),buf);
+            auto l = new TLatex(Eg->GetX()[i], Pg->GetHistogram()->GetMinimum(),
+                Eg->GetY()[i]>100 ? 
+                fmt::format("{:<7.2f}", Eg->GetY()[i]).c_str() :
+                ".");
             l->SetTextAngle(90);
             l->SetTextSize(0.04);
             EnergyNoteList.push_back( std::unique_ptr<TLatex>(l));
             itC->second->cd();
             l->Draw();
           }
+          itC->second->Modified();
+          itC->second->Update();
         }
       }
     }
@@ -779,21 +550,20 @@ void graph_list(void) {
   std::cout << std::flush;
 }
 
-void fitloop(std::string name, FitConfig_t cfg=FitConfig_t()) {
-  std::cout << "Reading file " << name << std::endl;
+void fitloop(std::string filename, FitConfig_t cfg=FitConfig_t()) {
+  std::clog << "Clear old data" << std::endl;
   GM.clear();
   CanvasMap.clear();
-  using namespace std::chrono;
   if ( cfg.end_view_time <= cfg.start_view_time ) {
     std::cerr << "ERROR: wrong time range: end time less or equal start time\n";
   }
   struct stat statbuf;
   time_t last_update=0;
   while(true) {
-    fit_single(name, cfg);
+    fit_single(filename, cfg);
     auto tb = std::chrono::system_clock::now();
     do {
-      int rc = stat(name.c_str(), &statbuf);
+      int rc = stat(filename.c_str(), &statbuf);
       gSystem->ProcessEvents();
       this_thread::sleep_for(100ms);
     } while (last_update == statbuf.st_mtim.tv_sec);
@@ -803,7 +573,6 @@ void fitloop(std::string name, FitConfig_t cfg=FitConfig_t()) {
 
 void fitloop(time_t start_view_time=0, time_t end_view_time=std::numeric_limits<time_t>::max()) {
   FitConfig_t cfg;
-  //cfg.update_time = 60s;
   cfg.count_time = 300;
   cfg.start_view_time = start_view_time;
   cfg.end_view_time = end_view_time;
