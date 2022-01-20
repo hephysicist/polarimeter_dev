@@ -229,6 +229,7 @@ std::vector<std::tuple<double, double>> FitGraph(TGraphErrors * g, const FitConf
   auto fun = new MultiExpJump(cfg.Njumps, cfg.count_time, cfg.taud);
 
   TF1 * f = new TF1("multi_exp_jump", *fun, 0, 1, fun->GetNpars());
+  f->SetNpx(500);
 
   auto initpar = [&](int i, std::string name, double value, bool fix=false) {
     f->SetParName(i,name.c_str());
@@ -402,13 +403,22 @@ void read_graph(std::string name, time_t start_view_time=0, time_t end_view_time
     return g;
 }
 
-std::map<std::string, std::unique_ptr<TCanvas>> CanvasMap;
+struct Canvas {
+  std::unique_ptr<TCanvas> canvas; //The TCanvas
+  std::vector<std::unique_ptr<TLatex>> energy_text; //Energy information
+  std::vector<std::unique_ptr<TLatex>> nmr_text; //nmr text
+  std::list<std::unique_ptr<TLatex>> EnergyNoteList;
+};
+
+//std::map<std::string, std::unique_ptr<TCanvas>> CanvasMap;
+std::map<std::string, Canvas> CanvasMap;
 
 static int CANVAS_IDX=0;
 
 
 //TLatex * ENERGY_LATEX{nullptr};
 std::vector<std::unique_ptr<TLatex>> ENERGY_LATEX;
+std::unique_ptr<TLatex> NMR_LATEX;
 
 std::list<std::unique_ptr<TLatex>> EnergyNoteList;
 
@@ -431,14 +441,15 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
     auto draw = [&](std::string graph_name) {
       try { 
         auto g = GM.at(graph_name).get();
-        TCanvas * c = [&]() { //This canvas always exists
+        Canvas * cnvs = [&]() { //This canvas always exists
           auto it = CanvasMap.find(graph_name);
           if( it  == CanvasMap.end() ) {
             //c = new TCanvas(graph_name.c_str(),graph_name.c_str(), 327,714, 615,365);
-            c = new TCanvas(graph_name.c_str(),graph_name.c_str(), 838,570,1022,459);
+            TCanvas * c = new TCanvas(graph_name.c_str(),graph_name.c_str(), 838,570,1022,459);
             c->SetGridx();
             c->SetGridy();
-            CanvasMap[graph_name].reset(c); 
+//            c->SetPad(0,0,0.8,0.8);
+            CanvasMap[graph_name].canvas.reset(c); 
             CANVAS_IDX++;
             std::cout << "Drawing graph " <<  graph_name << std::endl;
             g->Draw("ap");
@@ -468,24 +479,28 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
             lDate->SetTextSize(0.04);
             lDate->Draw();
 
+            auto Hlatex = draw_label(0.564, 0.0189, "H = %8.3f Gs", GM["H"]->GetY()[0]);
+            Hlatex->SetTextSize(0.04);
+            //it->second.nmr_text.push_back(std::unique_ptr<TLatex>(Hlatex));
+            NMR_LATEX.reset(Hlatex);
+
             if( cfg.run>0) {
               auto l = draw_label(0.01,0.91,"Run %d", cfg.run);
               l->SetTextSize(0.04);
             } 
-
-
-            return c;
+            return &CanvasMap[graph_name];
           } else {
-            auto c = it->second.get();
+            auto c = it->second.canvas.get();
             c->cd();
             std::cout << "Updating graph " <<  graph_name << std::endl;
-            return c;
+            return &(it->second);
           }
         }();
         
         if(graph_name=="P") {
           std::cout << "Fitting graph P" << std::endl;
           gStyle->SetOptFit();
+          NMRs.clear();
           auto Es = FitGraph(g,cfg);
           ENERGY_LATEX.clear();
           double x = 0.01;
@@ -497,15 +512,8 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
             }
           }
           if(NMRs.size()>0) {
-            draw_label(0.564, 0.0189, "H = %8.3f Gs", NMRs[0])->SetTextSize(0.04);
-          } else {
-            std::ifstream ifs("/mnt/vepp4/kadrs/nmr.dat");
-            ifs.ignore(65535,'\n');
-            double H;
-            ifs >> H;
-            ifs.close();
-            draw_label(0.564, 0.0189, "H = %8.3f Gs", H)->SetTextSize(0.04);
-          }
+            NMR_LATEX->SetText(0.564,0.0189, fmt::format("H = {:8.3f} Gs",NMRs[0]).c_str());
+          } 
           if(cfg.save) {
             char date[1024];
             time_t global_time_offset = time_t(GLOBAL_TIME_OFFSET);
@@ -514,15 +522,15 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
             char filename[65535];
             auto save = [&](const char * type) {
               snprintf(filename, 65535, "%s/R%04d-%s.%s", cfg.save_dir.c_str(), cfg.run, date, type);
-              c->SaveAs(filename);
+              cnvs->canvas->SaveAs(filename);
             };
             save("pdf");
             save("root");
             save("png");
           }
         }
-        c->Modified();
-        c->Update();
+        cnvs->canvas->Modified();
+        cnvs->canvas->Update();
       }
       catch(...) {
         std::cerr << "fit: fitsingle: Something wrong in draw lambda function\n";
@@ -548,11 +556,11 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
             l->SetTextAngle(90);
             l->SetTextSize(0.04);
             EnergyNoteList.push_back( std::unique_ptr<TLatex>(l));
-            itC->second->cd();
+            itC->second.canvas->cd();
             l->Draw();
           }
-          itC->second->Modified();
-          itC->second->Update();
+          itC->second.canvas->Modified();
+          itC->second.canvas->Update();
         }
       }
     }
