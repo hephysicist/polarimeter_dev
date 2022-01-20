@@ -261,17 +261,19 @@ def write2file_(the_file, fname, fitres, dfreq, counter, moments):
 
         the_file.write('#{0:20s}\n'.format(fname[:19]))
         
-def write2file_nik(the_file, fname, fitres, freq, vepp4E, raw_stats, counter, moments,normchi2):
+def write2file_nik(the_file, fname, fitres, par_list, raw_stats, counter, moments,normchi2):
+    freq = par_list[0]
+    vepp4E_nmr = par_list[1]
     with open(the_file, 'a') as the_file:
-        if counter%10==0:
-            the_file.write('#{:>3s}\t{:>9s}\t'.format('cnt', 'utime'))
-            for i in ['P',          'P_err',    'Q',      'Q_err',
-                      'V',          'V_err',    'beta',  'beta_err', 'chi2',
-                      'dip_amp',    'dip_ang',  'quad_amp', 'quad_ang',
-                      'fft1_amp',   'fft1_ang', 'fft2_amp', 'fft2_ang',
-                      'gross_moments',          'gross_moments_err']:
-                the_file.write('{:>16s}\t'.format(i))
-            the_file.write('#{:20s}\n'.format('date'))
+#        if counter%10==0:
+#            the_file.write('#{:>3s}\t{:>9s}\t'.format('cnt', 'utime'))
+#            for i in ['P',          'P_err',    'Q',      'Q_err',
+#                      'V',          'V_err',    'beta',  'beta_err', 'chi2',
+#                      'dip_amp',    'dip_ang',  'quad_amp', 'quad_ang',
+#                      'fft1_amp',   'fft1_ang', 'fft2_amp', 'fft2_ang',
+#                      'gross_moments',          'gross_moments_err']:
+#                the_file.write('{:>16s}\t'.format(i))
+#            the_file.write('#{:20s}\n'.format('date'))
         the_file.write('{0:>3d}\t'.format(counter))
         unix_time = time.mktime(datetime.strptime(fname[:19], '%Y-%m-%dT%H:%M:%S').timetuple())
         the_file.write('{0:>.0f}\t'.format(unix_time))
@@ -279,7 +281,7 @@ def write2file_nik(the_file, fname, fitres, freq, vepp4E, raw_stats, counter, mo
         if freq!= 0:
             n = int(vepp4E/440.648)
             energy = (n+freq/818924.)*440.648
-        the_file.write('\t{0:>10.3f}\t{1:>10.3f}\t'.format(freq,energy))
+        the_file.write('\t{0:>10.3f}\t{1:>10.3f}\t{2:>10.3f}\t'.format(freq,energy, vepp4E_nmr))
         the_file.write('{0:>10.6f}\t{1:>10.6f}\t'.format(fitres.values['P'], fitres.errors['P']))
         the_file.write('{0:>10.6f}\t{1:>10.6f}\t'.format(fitres.values['Q'], fitres.errors['Q']))
         V = np.sqrt(1.-fitres.values['Q']**2)
@@ -326,6 +328,17 @@ def read_vepp4_stap():
             print('ERROR: stap file is empty!')
             vepp4E = -1
         return vepp4E
+        
+def get_par_from_file(path2file, par_id_arr):
+    with open(path2file, 'r', encoding='UTF-8') as data:
+        lines = data.readlines()
+        data = []
+        if len(lines) > 0:
+            for par_id in par_id_arr:
+                data.append(lines[par_id])
+        else:
+            print('ERROR: stap file is empty!')
+        return data
         
 def init_depol():
     d = depolarizer('vepp4-spin',9090)

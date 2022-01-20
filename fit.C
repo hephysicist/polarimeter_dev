@@ -184,10 +184,13 @@ struct FitConfig_t {
   double taud = 5; //The depolarization characteristic time (smooth jump by erf function)  in seconds
 };
 
+std::vector<double> NMRs;
+
 //calculte the energy from fit result for parameter n
 auto get_energy( TF1 * f, const FitConfig_t & cfg, int n) -> std::tuple<double, double> {
   double Td = f->GetParameter(n);
   double dTd = f->GetParError(n);
+  NMRs.push_back(GM["H"]->Eval(Td));
   auto graphE = GM["E"];
   double E = graphE->Eval(Td);
   int idx=0;
@@ -219,8 +222,9 @@ auto get_energy( TF1 * f, const FitConfig_t & cfg, int n) -> std::tuple<double, 
 };
 
 
+
 //Main fit function
-std::tuple<double, double> FitGraph(TGraphErrors * g, const FitConfig_t & cfg) {
+std::vector<std::tuple<double, double>> FitGraph(TGraphErrors * g, const FitConfig_t & cfg) {
 
   auto fun = new MultiExpJump(cfg.Njumps, cfg.count_time, cfg.taud);
 
@@ -291,8 +295,7 @@ std::tuple<double, double> FitGraph(TGraphErrors * g, const FitConfig_t & cfg) {
   for(int i=0;i<fun->GetNjumps(); ++i) {
     R.push_back(get_energy(f,cfg, i+TdJumpIdx));
   }
-  if( !R.empty() ) return R[0];
-  return {0,0};
+  return R;
 };
 
 //read and updating existing TGraphErrors in  map container  GM
@@ -301,7 +304,7 @@ void read_graph(std::string name, time_t start_view_time=0, time_t end_view_time
     std::ifstream ifs(name);
     int n;
     std::string n_str;
-    double unixtime, E,F, P,dP,Q, dQ, V,dV, beta, dbeta, chi2;
+    double unixtime, H, E,F, P,dP,Q, dQ, V,dV, beta, dbeta, chi2;
     double dip_amp, dip_ang, quad_amp, quad_ang;
     double fft1_amp, fft1_ang, fft2_amp, fft2_ang;
     double gross_moments, d_gross_moments;
@@ -319,7 +322,7 @@ void read_graph(std::string name, time_t start_view_time=0, time_t end_view_time
         } else {
         }
         std::istringstream iss(line);
-        iss >> n >> unixtime >> F >> E>> P >> dP >>Q >>dQ >> V>> dV;
+        iss >> n >> unixtime >> F >> E >> H >> P >> dP >>Q >>dQ >> V>> dV;
         iss >> beta >> dbeta >> chi2;
         iss >> dip_amp >> dip_ang >> quad_amp >>quad_ang;
         iss >> fft1_amp >> fft1_ang >> fft2_amp >> fft2_ang;
@@ -387,6 +390,7 @@ void read_graph(std::string name, time_t start_view_time=0, time_t end_view_time
             set_point("asym_y"   , asym_y        , dasym_y);
             set_point("E"        , E             , 0);
             set_point("F"        , F             , 0);
+            set_point("H"        , H             , 0);
             ++i;
           }
         }
@@ -403,7 +407,8 @@ std::map<std::string, std::unique_ptr<TCanvas>> CanvasMap;
 static int CANVAS_IDX=0;
 
 
-TLatex * ENERGY_LATEX{nullptr};
+//TLatex * ENERGY_LATEX{nullptr};
+std::vector<std::unique_ptr<TLatex>> ENERGY_LATEX;
 
 std::list<std::unique_ptr<TLatex>> EnergyNoteList;
 
@@ -429,7 +434,8 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
         TCanvas * c = [&]() { //This canvas always exists
           auto it = CanvasMap.find(graph_name);
           if( it  == CanvasMap.end() ) {
-            c = new TCanvas(graph_name.c_str(),graph_name.c_str(), 327,714, 615,365);
+            //c = new TCanvas(graph_name.c_str(),graph_name.c_str(), 327,714, 615,365);
+            c = new TCanvas(graph_name.c_str(),graph_name.c_str(), 838,570,1022,459);
             c->SetGridx();
             c->SetGridy();
             CanvasMap[graph_name].reset(c); 
@@ -453,6 +459,7 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
             g->GetYaxis()->SetTitle(graph_name.c_str());
             g->GetYaxis()->CenterTitle();
             g->SetTitle(cfg.title.c_str());
+            //g->SetTitle(cfg.title);
 
             char datebuf[1024];
             strftime(datebuf,1024, "%Y-%m-%d %H:%M:%S", &timeinfo_begin); 
@@ -466,12 +473,6 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
               l->SetTextSize(0.04);
             } 
 
-            std::ifstream ifs("/mnt/vepp4/kadrs/nmr.dat");
-            ifs.ignore(65535,'\n');
-            double H;
-            ifs >> H;
-            ifs.close();
-            draw_label(0.564, 0.0189, "H = %8.3f Gs", H)->SetTextSize(0.04);
 
             return c;
           } else {
@@ -485,11 +486,25 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
         if(graph_name=="P") {
           std::cout << "Fitting graph P" << std::endl;
           gStyle->SetOptFit();
-          auto [E,dE] = FitGraph(g,cfg);
-          if ( E > 1 ) {
-            if ( ENERGY_LATEX ) delete ENERGY_LATEX;
-            ENERGY_LATEX = draw_label(0.01, 0.0189, "E = %8.3f #pm %4.3f MeV", E, dE);
-            ENERGY_LATEX->SetTextSize(0.04);
+          auto Es = FitGraph(g,cfg);
+          ENERGY_LATEX.clear();
+          double x = 0.01;
+          for(auto & [E, dE] : Es) {
+            if ( E > 1 ) {
+              ENERGY_LATEX.push_back(std::unique_ptr<TLatex>(draw_label(x, 0.0189, "E = %8.3f #pm %4.3f MeV", E, dE)));
+              ENERGY_LATEX.back()->SetTextSize(0.04);
+              x+=0.24;
+            }
+          }
+          if(NMRs.size()>0) {
+            draw_label(0.564, 0.0189, "H = %8.3f Gs", NMRs[0])->SetTextSize(0.04);
+          } else {
+            std::ifstream ifs("/mnt/vepp4/kadrs/nmr.dat");
+            ifs.ignore(65535,'\n');
+            double H;
+            ifs >> H;
+            ifs.close();
+            draw_label(0.564, 0.0189, "H = %8.3f Gs", H)->SetTextSize(0.04);
           }
           if(cfg.save) {
             char date[1024];

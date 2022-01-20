@@ -128,9 +128,13 @@ def accum_data_and_make_fit(config, regex_line, offline = False):
                 if files4point_count == 0: 
                     h_dict = load_hist(hist_fpath,fname)
                     vepp4E = h_dict['vepp4E']
+                    buf_list = get_par_from_file('/mnt/vepp4/kadrs/nmr.dat', par_id_arr = [1])
+                    vepp4E_nmr = float(buf_list[0])
+                    first_fname = fname
                     buf_dict = h_dict
-                    print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
+                    print('Enmr: ', vepp4E_nmr)
                     print('Dep freq: ', buf_dict['dfreq'])
+                    print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
                     fname_prev = fname
                     
                 else:
@@ -160,11 +164,11 @@ def accum_data_and_make_fit(config, regex_line, offline = False):
                 show_res(config, h_dict, fitres, fig_arr, ax_arr)
                 chi2_normed = fitres.fval / (ndf - fitres.npar)
                 print('chi2/ndf', chi2_normed)
+                par_list = [h_dict['dfreq'], vepp4E_nmr]
                 write2file_nik( config['fitres_file'],
-                            fname,
+                            first_fname,
                             fitres,
-                            h_dict['dfreq'], 
-                            h_dict['vepp4E'],
+                            par_list,
                             raw_stats,
                             fit_counter,
                             moments,
