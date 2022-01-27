@@ -223,8 +223,13 @@ auto get_energy( TF1 * f, const FitConfig_t & cfg, int n) -> std::tuple<double, 
 
 
 
+struct FitResult {
+  double t, dt;
+  double E, dE;
+  double H;
+};
 //Main fit function
-std::vector<std::tuple<double, double>> FitGraph(TGraphErrors * g, const FitConfig_t & cfg) {
+std::vector<FitResult> FitGraph(TGraphErrors * g, const FitConfig_t & cfg) {
 
   auto fun = new MultiExpJump(cfg.Njumps, cfg.count_time, cfg.taud);
 
@@ -292,9 +297,14 @@ std::vector<std::tuple<double, double>> FitGraph(TGraphErrors * g, const FitConf
   g->Fit("multi_exp_jump","EX0");
 
   //prepare multiple jumps for future display on canvas. Doesnt work yet
-  std::vector<std::tuple<double, double> > R;
+  std::vector<FitResult> R;
   for(int i=0;i<fun->GetNjumps(); ++i) {
-    R.push_back(get_energy(f,cfg, i+TdJumpIdx));
+    FitResult fr;
+    fr.t = f->GetParameter(i+TdJumpIdx);
+    fr.dt = f->GetParError(i+TdJumpIdx);
+    std::tie(fr.E, fr.dE) = get_energy(f,cfg, i+TdJumpIdx);
+    fr.H = GM["H"]->Eval(fr.t);
+    R.push_back(fr);
   }
   return R;
 };
@@ -303,6 +313,10 @@ std::vector<std::tuple<double, double>> FitGraph(TGraphErrors * g, const FitConf
 void read_graph(std::string name, time_t start_view_time=0, time_t end_view_time=std::numeric_limits<time_t>::max()) {
     std::cout << "Reading file " << name << std::endl;
     std::ifstream ifs(name);
+    if(!ifs) {
+      std::cerr << "Unalbe to read file " << name << std::endl;
+      return;
+    }
     int n;
     std::string n_str;
     double unixtime, H, E,F, P,dP,Q, dQ, V,dV, beta, dbeta, chi2;
@@ -418,7 +432,7 @@ static int CANVAS_IDX=0;
 
 //TLatex * ENERGY_LATEX{nullptr};
 std::vector<std::unique_ptr<TLatex>> ENERGY_LATEX;
-std::unique_ptr<TLatex> NMR_LATEX;
+std::vector<std::unique_ptr<TLatex>> NMR_LATEX;
 
 std::list<std::unique_ptr<TLatex>> EnergyNoteList;
 
@@ -479,10 +493,10 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
             lDate->SetTextSize(0.04);
             lDate->Draw();
 
-            auto Hlatex = draw_label(0.564, 0.0189, "H = %8.3f Gs", GM["H"]->GetY()[0]);
-            Hlatex->SetTextSize(0.04);
-            //it->second.nmr_text.push_back(std::unique_ptr<TLatex>(Hlatex));
-            NMR_LATEX.reset(Hlatex);
+            //auto Hlatex = draw_label(0.564, 0.0189, "H = %8.3f Gs", GM["H"]->GetY()[0]);
+            //Hlatex->SetTextSize(0.04);
+            ////it->second.nmr_text.push_back(std::unique_ptr<TLatex>(Hlatex));
+            //NMR_LATEX.reset(Hlatex);
 
             if( cfg.run>0) {
               auto l = draw_label(0.01,0.91,"Run %d", cfg.run);
@@ -501,19 +515,33 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
           std::cout << "Fitting graph P" << std::endl;
           gStyle->SetOptFit();
           NMRs.clear();
-          auto Es = FitGraph(g,cfg);
+          std::vector<FitResult> FR = FitGraph(g,cfg);
           ENERGY_LATEX.clear();
+          NMR_LATEX.clear();
           double x = 0.01;
-          for(auto & [E, dE] : Es) {
-            if ( E > 1 ) {
-              ENERGY_LATEX.push_back(std::unique_ptr<TLatex>(draw_label(x, 0.0189, "E = %8.3f #pm %4.3f MeV", E, dE)));
+          double y_NMR=0.35;
+          NMR_LATEX.push_back(std::unique_ptr<TLatex>(new TLatex)); 
+          NMR_LATEX.back()->SetText(0.9,y_NMR, fmt::format("H_{{0}} = {:8.3f} Gs", GM["H"]->GetY()[0]).c_str());
+          NMR_LATEX.back()->SetNDC();
+          NMR_LATEX.back()->Draw();
+          NMR_LATEX.back()->SetTextSize(0.03);
+          y_NMR-=0.07;
+
+          int idx=1;
+          for(auto & fr : FR) {
+            if ( fr.E > 1 ) {
+              ENERGY_LATEX.push_back(std::unique_ptr<TLatex>(draw_label(x, 0.0189, fmt::format("E_{{{}}} = %8.3f #pm %4.3f MeV", idx).c_str(), fr.E, fr.dE)));
               ENERGY_LATEX.back()->SetTextSize(0.04);
               x+=0.24;
             }
+            NMR_LATEX.push_back(std::unique_ptr<TLatex>(new TLatex)); 
+            NMR_LATEX.back()->SetText(0.9,y_NMR, fmt::format("H_{{{}}} = {:8.3f} Gs",idx, fr.H).c_str());
+            NMR_LATEX.back()->SetNDC();
+            NMR_LATEX.back()->Draw();
+            NMR_LATEX.back()->SetTextSize(0.03);
+            y_NMR-=0.07;
+            idx++;
           }
-          if(NMRs.size()>0) {
-            NMR_LATEX->SetText(0.564,0.0189, fmt::format("H = {:8.3f} Gs",NMRs[0]).c_str());
-          } 
           if(cfg.save) {
             char date[1024];
             time_t global_time_offset = time_t(GLOBAL_TIME_OFFSET);
