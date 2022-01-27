@@ -107,7 +107,7 @@ class MultiExpJump {
       Deltas.resize(n);
       Ps.resize(n);
       Fs.resize(n);
-      Npars = 3 + 2*Njumps;
+      Npars = 4 + 2*Njumps;
     };
 
     int GetNpars() const {return Npars; } 
@@ -153,7 +153,8 @@ class MultiExpJump {
       tau = p[0];
       Pmax = p[1];
       Ps[0] = p[2];
-      int idx=3;
+      Taud = p[3];
+      int idx=4;
       for(int i = 0; i<Njumps; ++i, ++idx) {
         Tds[i+1] = p[idx]; //jump position 
       } 
@@ -245,8 +246,11 @@ std::vector<FitResult> FitGraph(TGraphErrors * g, const FitConfig_t & cfg) {
   initpar(0, "tau", 1500);
   initpar(1, "Pmax", -1);
   initpar(2, "P0", 0);
+  initpar(3, "taud", 10);
+  f->SetParLimits(3, 0, 10000);
+  if(cfg.taud>0) f->FixParameter(3, cfg.taud);
 
-  const int TdJumpIdx=3;
+  const int TdJumpIdx=4;
   int idx=TdJumpIdx;
   for(int i=0;i<fun->GetNjumps();++i,++idx) {
     initpar(idx, "Td"+std::to_string(i+1), 0);
