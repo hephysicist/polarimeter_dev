@@ -8,6 +8,7 @@
 
 R__LOAD_LIBRARY(libfmt.so)
 #include <fmt/format.h>
+#include <fmt/chrono.h>
 
 
 
@@ -100,10 +101,13 @@ class MultiExpJump {
     double T;// count time (usualy 300 sec) (fixed)
     double Pshift; //shift of polarization scale
     double tau0; //sokolov ternov time
+    double Pscale; //scale of the P
+
 
     public:
 
-    static constexpr double P_SOKOLOV_TERNOV =  .92376043070340122320;
+    static constexpr double P_SOKOLOV_TERNOV = .92376043070340122320;
+    static constexpr int TD_IDX = 6;
 
     MultiExpJump(int n, double Tc, double Tau0=0) : Njumps(n), T(Tc), tau0(Tau0) {
       n = Njumps+1;
@@ -112,7 +116,7 @@ class MultiExpJump {
       Deltas.resize(n);
       Ps.resize(n);
       Fs.resize(n);
-      Npars = 5 + 2*Njumps;
+      Npars = TD_IDX + 2*Njumps;
     };
 
     int GetNpars() const {return Npars; } 
@@ -151,18 +155,19 @@ class MultiExpJump {
           auto h = H(t - Tds[i+1],Taud); //jumps are smooth
           P += (Fs[i+1] - Fs[i]) * h; //describes smooth transition between behavior before and after depolarization jump Tds[i+1]
         }
-        return P+Pshift;
+        return P*Pscale+Pshift;
     };
 
     //this function is used by TF1
     double operator() ( double *x, double *p) {
       double t = x[0];
-      tau = p[0];
-      Pmax = p[1];
-      Ps[0] = p[2];
-      Taud = p[3];
-      Pshift= p[4];
-      int idx=5;
+      tau    = p[0];
+      Pmax   = p[1];
+      Ps[0]  = p[2];
+      Taud   = p[3];
+      Pshift = p[4];
+      Pscale = p[5];
+      int idx=TD_IDX;
       for(int i = 0; i<Njumps; ++i, ++idx) {
         Tds[i+1] = p[idx]; //jump position 
       } 
@@ -178,8 +183,7 @@ std::map<std::string, std::shared_ptr<TGraphErrors>  > GM;
 double GLOBAL_TIME_OFFSET;
 
 struct FitConfig_t {
-  int run  = 0;
-  //std::chrono::seconds update_time=60s;
+  std::vector<int> run; //list of run numbers (jumps in the fit)
   double count_time=300;
   double speed = 0.01; //scan speed MeV/sec. The sign shows scan direction
   time_t start_view_time = 0;
@@ -195,52 +199,64 @@ struct FitConfig_t {
   double tau0 = 0; //if > 0 then use Sokolov-Ternov time from that parameter
   double Pshift = 0;
   bool free_pshift = false;
+  double Pscale=1;
+  bool free_pscale = false;
 };
 
 std::vector<double> NMRs;
-
-//calculte the energy from fit result for parameter n
-auto get_energy( TF1 * f, const FitConfig_t & cfg, int n) -> std::tuple<double, double> {
-  double Td = f->GetParameter(n);
-  double dTd = f->GetParError(n);
-  NMRs.push_back(GM["H"]->Eval(Td));
-  auto graphE = GM["E"];
-  double E = graphE->Eval(Td);
-  int idx=0;
-  double distance_to_close_point=1e10;
-  for(int i=0;i<graphE->GetN();i++) {
-    if(fabs(graphE->GetX()[i] - Td) < distance_to_close_point) {
-      idx=i;
-      distance_to_close_point = fabs(graphE->GetX()[i] - Td);
-    }
-  }
-  int idx_min = idx-1 < 0 ? 0 : idx-1;
-  int idx_max = idx+1 >= graphE->GetN() ? graphE->GetN()-1 : idx+1;
-  TF1 pol1("mypol1", "[0]+[1]*x",graphE->GetX()[idx_min], graphE->GetX()[idx_max]);
-  graphE->Fit("mypol1", "QR");
-  double speed = pol1.GetParameter(1);
-  if(fabs(speed) > 0.1) {
-    std::cout << "Wrong scan speed: " << speed*1e3 << " keV/s."  << " Use default scan speed: ";
-    speed = cfg.speed;
-  }
-  else std::cout << "Calculated scan speed: ";
-  std::cout <<  fabs(speed*1e3) << " keV/s" <<  std::endl;
-  std::cout << fmt::format("Energy: {:8.3f} +- {:4.3f} MeV", E, dTd*speed) << std::endl;
-  if(idx>0) {
-    if(graphE->GetY()[idx-1]==0) {
-      E=graphE->GetY()[idx];
-    }
-  }
-  return {E, fabs(dTd*speed)};
-};
-
-
 
 struct FitResult {
   double t, dt;
   double E, dE;
   double H;
+  double scan_speed; //MeV/s
+  int scan_direction; // +1 - up, -1 - down
 };
+
+FitResult get_fit_result(TF1 * f, int njump , const FitConfig_t & cfg) {
+    FitResult fr;
+    fr.t = f->GetParameter(njump+MultiExpJump::TD_IDX); //depolarization moment
+    fr.dt = f->GetParError(njump+MultiExpJump::TD_IDX); //its error
+    fr.H = GM["H"]->Eval(fr.t);
+
+    auto graphE = GM["E"];
+    fr.E = graphE->Eval(fr.t);
+    int idx=0;
+    double distance_to_close_point=1e10;
+    for(int i=0;i<graphE->GetN();i++) {
+        if(fabs(graphE->GetX()[i] - fr.t) < distance_to_close_point) {
+            idx=i;
+            distance_to_close_point = fabs(graphE->GetX()[i] - fr.t);
+        }
+    }
+    int idx_min = idx-1 < 0 ? 0 : idx-1;
+    int idx_max = idx+1 >= graphE->GetN() ? graphE->GetN()-1 : idx+1;
+    TF1 pol1("mypol1", "[0]+[1]*x",graphE->GetX()[idx_min], graphE->GetX()[idx_max]);
+    graphE->Fit("mypol1", "QR");
+    fr.scan_speed = pol1.GetParameter(1);
+    std::string scan_str;
+    if(fabs(fr.scan_speed) > 0.1) {
+        fr.scan_speed = cfg.speed;
+        scan_str = fmt::format("scan speed = {:<+5.2f} keV/s (default)", fr.scan_speed*1000.);
+    }
+    else {
+        scan_str = fmt::format("scan speed = {:<+5.2f} keV/s (calculated)", fr.scan_speed*1000.);
+    }
+    fr.scan_direction=0;
+    if(fr.scan_speed > 0) fr.scan_direction = +1;
+    if(fr.scan_speed < 0) fr.scan_direction = -1;
+    fr.dE = fabs(fr.dt*fr.scan_speed);
+    int nDelta = njump+MultiExpJump::TD_IDX + cfg.Njumps;
+    std::string delta_str = fmt::format("Δ{} = {:<+5.3f} ± {:<5.3f}", njump+1, f->GetParameter(nDelta), fabs(f->GetParError(nDelta)) );
+    std::string resstr = fmt::format(" Energy {}: {:8.3f} ± {:4.3f} MeV,  {}, {}", njump+1, fr.E, fr.dE, scan_str, delta_str);
+    std::cout << fmt::format("{0:->{1}}", "", resstr.size()+3) << std::endl;
+    std::cout << resstr << std::endl;
+    return fr;
+};
+
+
+
+
 //Main fit function
 std::vector<FitResult> FitGraph(TGraphErrors * g, const FitConfig_t & cfg) {
 
@@ -269,11 +285,15 @@ std::vector<FitResult> FitGraph(TGraphErrors * g, const FitConfig_t & cfg) {
   initpar(3, "taud", 10);
   f->SetParLimits(3, 0, 10000);
   if(cfg.taud>0) f->FixParameter(3, cfg.taud);
+
   initpar(4, "Pshift", cfg.Pshift);
   if(!cfg.free_pshift ) f->FixParameter(4, cfg.Pshift);
 
-  const int TdJumpIdx=5;
-  int idx=TdJumpIdx;
+  initpar(5, "Pscale", cfg.Pscale);
+  if(!cfg.free_pscale ) f->FixParameter(5, cfg.Pscale);
+
+  //const int TdJumpIdx=5;
+  int idx=MultiExpJump::TD_IDX;
   for(int i=0;i<fun->GetNjumps();++i,++idx) {
     initpar(idx, "Td"+std::to_string(i+1), 0);
   }
@@ -291,7 +311,7 @@ std::vector<FitResult> FitGraph(TGraphErrors * g, const FitConfig_t & cfg) {
       for(int i=3;i<g->GetN()-1;++i) {
         double t =  g->GetX()[i]+cfg.count_time/2;
         std::cout << i << " " << t <<  std::endl;
-        f->SetParameter(TdJumpIdx+njump,t);
+        f->SetParameter(MultiExpJump::TD_IDX+njump,t);
         auto fr = g->Fit("multi_exp_jump","0QEX0S");
         // options
         // 0 - do not draw result
@@ -306,16 +326,16 @@ std::vector<FitResult> FitGraph(TGraphErrors * g, const FitConfig_t & cfg) {
         }
       }
       std::cout << "Found best time for jump << " << njump << ": " << best_time << std::endl;
-      f->FixParameter(TdJumpIdx+njump, best_time);
+      f->FixParameter(MultiExpJump::TD_IDX+njump, best_time);
     }
     //Release fixed parameters
     for(int njump=0;njump<fun->GetNjumps();++njump) {
-      f->ReleaseParameter(njump+TdJumpIdx);
+      f->ReleaseParameter(njump+MultiExpJump::TD_IDX);
     }
   } 
   else if(cfg.Tds.size() <= cfg.Njumps) { //Use user preset values instead
     for(int njump=0;njump<cfg.Tds.size(); ++njump) {
-        f->SetParameter(TdJumpIdx+njump,cfg.Tds[njump]);
+        f->SetParameter(MultiExpJump::TD_IDX+njump,cfg.Tds[njump]);
     }
   }
 
@@ -330,11 +350,7 @@ std::vector<FitResult> FitGraph(TGraphErrors * g, const FitConfig_t & cfg) {
   //prepare multiple jumps for future display on canvas. Doesnt work yet
   std::vector<FitResult> R;
   for(int i=0;i<fun->GetNjumps(); ++i) {
-    FitResult fr;
-    fr.t = f->GetParameter(i+TdJumpIdx);
-    fr.dt = f->GetParError(i+TdJumpIdx);
-    std::tie(fr.E, fr.dE) = get_energy(f,cfg, i+TdJumpIdx);
-    fr.H = GM["H"]->Eval(fr.t);
+    FitResult fr = get_fit_result(f,i, cfg);
     R.push_back(fr);
   }
   return R;
@@ -464,6 +480,7 @@ static int CANVAS_IDX=0;
 //TLatex * ENERGY_LATEX{nullptr};
 std::vector<std::unique_ptr<TLatex>> ENERGY_LATEX;
 std::vector<std::unique_ptr<TLatex>> NMR_LATEX;
+std::vector<std::unique_ptr<TLatex>> DELTA_ENERGY_NMR_LATEX;
 
 std::list<std::unique_ptr<TLatex>> EnergyNoteList;
 
@@ -529,63 +546,91 @@ void fit_single(std::string file_name, const FitConfig_t & cfg){
             ////it->second.nmr_text.push_back(std::unique_ptr<TLatex>(Hlatex));
             //NMR_LATEX.reset(Hlatex);
 
-            if( cfg.run>0) {
-              auto l = draw_label(0.01,0.91,"Run %d", cfg.run);
-              l->SetTextSize(0.04);
+            if(!cfg.run.empty()) {
+                std::string run_str = "Run ";
+                for( int i=0; i<cfg.run.size(); ++i) {
+                    if(i>0) run_str+=", ";
+                    run_str += fmt::format("{}", cfg.run[i]);
+                }
+                auto run_tex = new TLatex(0.01, 0.91, run_str.c_str());
+                run_tex->SetNDC();
+                run_tex->Draw();
             } 
             return &CanvasMap[graph_name];
           } else {
             auto c = it->second.canvas.get();
             c->cd();
-            std::cout << "Updating graph " <<  graph_name << std::endl;
+            //std::cout << "Updating graph " <<  graph_name << std::endl;
             return &(it->second);
           }
         }();
         
         if(graph_name=="P") {
           std::cout << "Fitting graph P" << std::endl;
+          //gStyle->SetStatFormat("2.3f");
           gStyle->SetOptFit();
           NMRs.clear();
           std::vector<FitResult> FR = FitGraph(g,cfg);
           ENERGY_LATEX.clear();
           NMR_LATEX.clear();
+          DELTA_ENERGY_NMR_LATEX.clear();
           double x = 0.01;
+          auto draw_latex = [&] (std::vector< std::unique_ptr < TLatex> > & L, double x, double y, std::string text, double size) {
+              L.push_back(std::unique_ptr<TLatex>(new TLatex));
+              L.back()->SetText(x, y, text.c_str());
+              L.back()->SetNDC();
+              L.back()->SetTextSize(size);
+              L.back()->Draw();
+          };
+
+          double x_NMR=0.903;
           double y_NMR=0.35;
-          NMR_LATEX.push_back(std::unique_ptr<TLatex>(new TLatex)); 
-          NMR_LATEX.back()->SetText(0.9,y_NMR, fmt::format("H_{{0}} = {:8.3f} Gs", GM["H"]->GetY()[0]).c_str());
-          NMR_LATEX.back()->SetNDC();
-          NMR_LATEX.back()->Draw();
-          NMR_LATEX.back()->SetTextSize(0.03);
-          y_NMR-=0.07;
+          draw_latex(NMR_LATEX, x_NMR, y_NMR, fmt::format("H_{{{}}} = {:8.3f} Gs",0, GM["H"]->GetY()[0]).c_str(), 0.03);
+          y_NMR-=0.05;
 
           int idx=1;
           for(auto & fr : FR) {
-            if ( fr.E > 1 ) {
-              ENERGY_LATEX.push_back(std::unique_ptr<TLatex>(draw_label(x, 0.0189, fmt::format("E_{{{}}} = %8.3f #pm %4.3f MeV", idx).c_str(), fr.E, fr.dE)));
-              ENERGY_LATEX.back()->SetTextSize(0.04);
-              x+=0.24;
-            }
-            NMR_LATEX.push_back(std::unique_ptr<TLatex>(new TLatex)); 
-            NMR_LATEX.back()->SetText(0.9,y_NMR, fmt::format("H_{{{}}} = {:8.3f} Gs",idx, fr.H).c_str());
-            NMR_LATEX.back()->SetNDC();
-            NMR_LATEX.back()->Draw();
-            NMR_LATEX.back()->SetTextSize(0.03);
-            y_NMR-=0.07;
+              const double yE=0.0189;
+              std::string direction = fr.scan_direction == 1 ? "#uparrow" : "#downarrow";
+              double speed = fabs(fr.scan_speed*1000);
+              speed=0.321;
+              std::string Estr = fr.E > 1000 ?  fmt::format("{:8.3f} #pm {:4.3f} MeV", fr.E, fr.dE) : "none";
+              if(speed >= 10) {
+                  draw_latex(ENERGY_LATEX, x, yE, fmt::format("E_{{{}}}^{{{}{:.0}keVs}} = {}", idx, direction, speed, Estr), 0.04);
+              } 
+              else if(speed >= 0.1) {
+                  draw_latex(ENERGY_LATEX, x, yE, fmt::format("E_{{{}}}^{{{}{:.1}keVs}} = {}", idx, direction, speed, Estr), 0.04);
+              } else {
+                  draw_latex(ENERGY_LATEX, x, yE, fmt::format("E_{{{}}}^{{{}{:.0f}eVs}} = {}", idx, direction, speed*1000, Estr), 0.04);
+              }
+              x+=0.27;
+            draw_latex(NMR_LATEX, x_NMR, y_NMR, fmt::format("H_{{{}}} = {:8.3f} Gs",idx, fr.H).c_str(), 0.03);
+            y_NMR-=0.05;
             idx++;
           }
+
+          for( int i=1;i<FR.size();++i) {
+            draw_latex(DELTA_ENERGY_NMR_LATEX, x_NMR, y_NMR, fmt::format("#DeltaE_{{{}{}}}^{{NMR}} = {:4.0f} keV",i+1, i, (FR[i].E - FR[i-1].E/FR[i-1].H*FR[i].H)*1000), 0.03);
+            y_NMR-=0.05;
+          }
+
+
+
           if(cfg.save) {
-            char date[1024];
-            time_t global_time_offset = time_t(GLOBAL_TIME_OFFSET);
-            auto timeinfo_begin = *localtime(&global_time_offset);
-            strftime(date, sizeof(date), "%Y-%m-%dT%H-%M-%S", &timeinfo_begin);
-            char filename[65535];
-            auto save = [&](const char * type) {
-              snprintf(filename, 65535, "%s/R%04d-%s.%s", cfg.save_dir.c_str(), cfg.run, date, type);
-              cnvs->canvas->SaveAs(filename);
-            };
-            save("pdf");
-            save("root");
-            save("png");
+              if(!cfg.run.empty()) {
+                  std::string head;
+                  for( int i =0;i<cfg.run.size(); ++i) {
+                      if(i>0) head+="_";
+                      head += fmt::format("R{:04}", cfg.run[i]);
+                  }
+                  auto save = [&](const char * type) {
+                      std::string filename =  fmt::format("{}/{}-{:%Y-%m-%dT%H:%M:%S}.{}", cfg.save_dir, head, fmt::localtime(GLOBAL_TIME_OFFSET), type);
+                      cnvs->canvas->SaveAs(filename.c_str());
+                  };
+                  save("pdf");
+                  save("root");
+                  save("png");
+              }
           }
         }
         cnvs->canvas->Modified();
