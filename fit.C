@@ -87,6 +87,7 @@ double polarization(double P, double Pmax, double tau, double t) {
 
 class MultiExpJump {
 
+
     const int Njumps; //number of depolarization jumps
     std::vector<double> Tds;    //polarization times in seconds  Tds[0]=0 - fixed, another  Tds[1,2,Njumps] are free.
     std::vector<double> Deltas; //depolarization jump values (free) 0,1,...Njump-1
@@ -97,17 +98,21 @@ class MultiExpJump {
     int Npars; //total number of fit parameters
     double Taud; //depolarization time depends on depolarizer power (fixed)
     double T;// count time (usualy 300 sec) (fixed)
+    double Pshift; //shift of polarization scale
+    double tau0; //sokolov ternov time
 
     public:
 
-    MultiExpJump(int n, double Tc, double taud) : Njumps(n), T(Tc), Taud(taud) {
+    static constexpr double P_SOKOLOV_TERNOV =  .92376043070340122320;
+
+    MultiExpJump(int n, double Tc, double Tau0=0) : Njumps(n), T(Tc), tau0(Tau0) {
       n = Njumps+1;
       //create buffers
       Tds.resize(n);
       Deltas.resize(n);
       Ps.resize(n);
       Fs.resize(n);
-      Npars = 4 + 2*Njumps;
+      Npars = 5 + 2*Njumps;
     };
 
     int GetNpars() const {return Npars; } 
@@ -117,6 +122,8 @@ class MultiExpJump {
     double operator() (double t) {
         //Initial value must be set. This is not minimization parameter.
         Tds[0]    = 0;
+
+        if(tau0>0) tau = fabs(tau0*Pmax/P_SOKOLOV_TERNOV); //no tau parameter, use tau0 instead and Pmax
 
         //jump times must be sorted for correct work of the algorithm
         std::sort(std::begin(Tds), std::end(Tds));
@@ -144,7 +151,7 @@ class MultiExpJump {
           auto h = H(t - Tds[i+1],Taud); //jumps are smooth
           P += (Fs[i+1] - Fs[i]) * h; //describes smooth transition between behavior before and after depolarization jump Tds[i+1]
         }
-        return P;
+        return P+Pshift;
     };
 
     //this function is used by TF1
@@ -154,7 +161,8 @@ class MultiExpJump {
       Pmax = p[1];
       Ps[0] = p[2];
       Taud = p[3];
-      int idx=4;
+      Pshift= p[4];
+      int idx=5;
       for(int i = 0; i<Njumps; ++i, ++idx) {
         Tds[i+1] = p[idx]; //jump position 
       } 
@@ -183,6 +191,10 @@ struct FitConfig_t {
   std::vector<double> Tds; //initial values for jumps to help minimization function find good minimum
   int Njumps = 1; //numer of jumps in the fit
   double taud = 5; //The depolarization characteristic time (smooth jump by erf function)  in seconds
+  double tau = 0; //polarization time if >0 then fixed
+  double tau0 = 0; //if > 0 then use Sokolov-Ternov time from that parameter
+  double Pshift = 0;
+  bool free_pshift = false;
 };
 
 std::vector<double> NMRs;
@@ -232,7 +244,7 @@ struct FitResult {
 //Main fit function
 std::vector<FitResult> FitGraph(TGraphErrors * g, const FitConfig_t & cfg) {
 
-  auto fun = new MultiExpJump(cfg.Njumps, cfg.count_time, cfg.taud);
+  auto fun = new MultiExpJump(cfg.Njumps, cfg.count_time, cfg.tau0);
 
   TF1 * f = new TF1("multi_exp_jump", *fun, 0, 1, fun->GetNpars());
   f->SetNpx(500);
@@ -244,13 +256,23 @@ std::vector<FitResult> FitGraph(TGraphErrors * g, const FitConfig_t & cfg) {
   };
 
   initpar(0, "tau", 1500);
-  initpar(1, "Pmax", -1);
+  f->SetParLimits(0, 0, 100000);
+  if(cfg.tau>0) f->FixParameter(0, cfg.tau);
+  if(cfg.tau0>0) f->FixParameter(0, -1);
+
+  initpar(1, "Pmax", 0);
+  if(cfg.tau0>0) f->SetParLimits(1, -MultiExpJump::P_SOKOLOV_TERNOV,+MultiExpJump::P_SOKOLOV_TERNOV);
+
   initpar(2, "P0", 0);
+  if(cfg.tau0>0) f->SetParLimits(2, -MultiExpJump::P_SOKOLOV_TERNOV,+MultiExpJump::P_SOKOLOV_TERNOV);
+
   initpar(3, "taud", 10);
   f->SetParLimits(3, 0, 10000);
   if(cfg.taud>0) f->FixParameter(3, cfg.taud);
+  initpar(4, "Pshift", cfg.Pshift);
+  if(!cfg.free_pshift ) f->FixParameter(4, cfg.Pshift);
 
-  const int TdJumpIdx=4;
+  const int TdJumpIdx=5;
   int idx=TdJumpIdx;
   for(int i=0;i<fun->GetNjumps();++i,++idx) {
     initpar(idx, "Td"+std::to_string(i+1), 0);
@@ -299,6 +321,11 @@ std::vector<FitResult> FitGraph(TGraphErrors * g, const FitConfig_t & cfg) {
 
   //main fit
   g->Fit("multi_exp_jump","EX0");
+  if(cfg.tau0>0) {
+      //adjust tau to calculated value
+      f->FixParameter(0, cfg.tau0*f->GetParameter(1)/MultiExpJump::P_SOKOLOV_TERNOV);
+      g->Fit("multi_exp_jump","EX0");
+  }
 
   //prepare multiple jumps for future display on canvas. Doesnt work yet
   std::vector<FitResult> R;
