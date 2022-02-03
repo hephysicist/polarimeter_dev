@@ -183,6 +183,7 @@ std::map<std::string, std::shared_ptr<TGraphErrors>  > GM;
 double GLOBAL_TIME_OFFSET;
 
 struct FitConfig_t {
+  std::string filename="/home/lsrp/polarimeter_dev/tmp/pol_fitres.txt";
   std::vector<int> run; //list of run numbers (jumps in the fit)
   double count_time=300;
   double speed = 0.01; //scan speed MeV/sec. The sign shows scan direction
@@ -344,7 +345,10 @@ std::vector<FitResult> FitGraph(TGraphErrors * g, const FitConfig_t & cfg) {
   if(cfg.tau0>0) {
       //adjust tau to calculated value
       f->FixParameter(0, cfg.tau0*f->GetParameter(1)/MultiExpJump::P_SOKOLOV_TERNOV);
-      g->Fit("multi_exp_jump","EX0");
+      std::cout <<  cfg.tau0 << "  " << f->GetParameter(1) << "  " << cfg.tau0*f->GetParameter(1)/MultiExpJump::P_SOKOLOV_TERNOV << std::endl;
+      g->Fit("multi_exp_jump","EX0E");
+      //f->FixParameter(0, cfg.tau0*f->GetParameter(1)/MultiExpJump::P_SOKOLOV_TERNOV);
+      //g->Fit("multi_exp_jump","EX0E");
   }
 
   //prepare multiple jumps for future display on canvas. Doesnt work yet
@@ -484,8 +488,8 @@ std::vector<std::unique_ptr<TLatex>> DELTA_ENERGY_NMR_LATEX;
 
 std::list<std::unique_ptr<TLatex>> EnergyNoteList;
 
-void fit_single(std::string file_name, const FitConfig_t & cfg){
-    read_graph(file_name, cfg.start_view_time, cfg.end_view_time);
+void fit_single(const FitConfig_t & cfg){
+    read_graph(cfg.filename, cfg.start_view_time, cfg.end_view_time);
     if(GM.empty()) return;
 
     double t0 = GM["unixtime"]->GetY()[0];
@@ -677,7 +681,7 @@ void graph_list(void) {
   std::cout << std::flush;
 }
 
-void fitloop(std::string filename, FitConfig_t cfg=FitConfig_t()) {
+void fitloop(FitConfig_t cfg=FitConfig_t()) {
   std::clog << "Clear old data" << std::endl;
   GM.clear();
   CanvasMap.clear();
@@ -687,13 +691,13 @@ void fitloop(std::string filename, FitConfig_t cfg=FitConfig_t()) {
   struct stat statbuf;
   time_t last_update=0;
   while(true) {
-    fit_single(filename, cfg);
     auto tb = std::chrono::system_clock::now();
     do {
-      int rc = stat(filename.c_str(), &statbuf);
+      int rc = stat(cfg.filename.c_str(), &statbuf);
       gSystem->ProcessEvents();
       this_thread::sleep_for(100ms);
     } while (last_update == statbuf.st_mtim.tv_sec);
+    fit_single(cfg);
     last_update = statbuf.st_mtim.tv_sec;
   }
 };
@@ -703,6 +707,7 @@ void fitloop(time_t start_view_time=0, time_t end_view_time=std::numeric_limits<
   cfg.count_time = 300;
   cfg.start_view_time = start_view_time;
   cfg.end_view_time = end_view_time;
-  fitloop("/home/lsrp/polarimeter_dev/tmp/pol_fitres.txt", cfg);
+  cfg.filename="/home/lsrp/polarimeter_dev/tmp/pol_fitres.txt";
+  fitloop(cfg);
 }
 
