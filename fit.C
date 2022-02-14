@@ -686,7 +686,8 @@ void fitloop(FitConfig_t cfg=FitConfig_t()) {
   GM.clear();
   CanvasMap.clear();
   if ( cfg.end_view_time <= cfg.start_view_time ) {
-    std::cerr << "ERROR: wrong time range: end time less or equal start time\n";
+    std::cerr << "WARNING: wrong time range: end time less or equal start time. Set start_view_time to infinity\n";
+    cfg.start_view_time = std::numeric_limits<time_t>::max();
   }
   struct stat statbuf;
   time_t last_update=0;
@@ -702,12 +703,9 @@ void fitloop(FitConfig_t cfg=FitConfig_t()) {
   }
 };
 
-void fitloop(time_t start_view_time=0, time_t end_view_time=std::numeric_limits<time_t>::max()) {
-  FitConfig_t cfg;
-  cfg.count_time = 300;
+void fitloop(time_t start_view_time, time_t end_view_time=std::numeric_limits<time_t>::max(), FitConfig_t cfg=FitConfig_t()) {
   cfg.start_view_time = start_view_time;
   cfg.end_view_time = end_view_time;
-  cfg.filename="/home/lsrp/polarimeter_dev/tmp/pol_fitres.txt";
   fitloop(cfg);
 }
 

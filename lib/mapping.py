@@ -1,6 +1,4 @@
 import numpy as np
-from numba import jit
-import glob
 
 #X: [-6*2 .. 6*2),  Y: [0 .. +10). 
 ctc_id_arr = np.array([[ 2, 13, 33, 43, 63, 50, 81, 68,  88,  98, 118,  65],
@@ -132,3 +130,45 @@ def get_center_ch_id(x,y, zone_id):
 			ch = ctc_id_arr[y, x-10]  
 
 	return (zone_id.get(zone)*128 + ch)*(zone_id.get(zone)>=0)
+
+def get_xy(ch, zone_id):
+    zone_num = int(ch/128)
+    zone_pos = [key for key, value in zone_id.items() if value == zone_num]
+    raw_ch = int(ch)%128
+    #print(f'zone: {zone_num:1.0f}, raw_ch: {raw_ch: 4.0f}')
+    if zone_pos:
+        if zone_pos[0] == 'cbl':
+            raw_y, raw_x = np.where(ctl_id_arr==raw_ch)
+            x = 9-raw_x
+            y = 9-raw_y
+        elif  zone_pos[0] == 'cbr':
+            raw_y, raw_x = np.where(ctr_id_arr==raw_ch)
+            x = 31 - raw_x
+            y = 9 - raw_y
+        elif zone_pos[0] == 'cbc':
+            raw_y, raw_x = np.where(ctc_id_arr==raw_ch)
+            x = 21 - raw_x
+            y = raw_y #TODO: understand y difference between central and side plates
+        elif zone_pos[0] == 'ctl':
+            raw_y, raw_x = np.where(ctl_id_arr==raw_ch)
+            x = raw_x
+            y = 19 - raw_y
+        elif  zone_pos[0] == 'ctr':
+            raw_y, raw_x = np.where(ctr_id_arr==raw_ch)
+            x = 22 + raw_x
+            y = 19 - raw_y
+        elif zone_pos[0] == 'ctc':
+            raw_y, raw_x = np.where(ctc_id_arr==raw_ch)
+            x = 10 + raw_x
+            y = 19 - raw_y  
+        if not np.shape(raw_x)[0]:
+            print('Unable to find this raw channel at channel map')
+            print(f'zone: {zone_num:1.0f}, raw_ch: {raw_ch: 4.0f}')
+            x = np.array([-1])
+            y = np.array([-1])
+    else:
+        print('Event does not match to the detector sensitive area')
+        print(f'zone: {zone_num:1.0f}, raw_ch: {raw_ch: 4.0f}')
+        x = np.array([-1])
+        y = np.array([-1])
+    return [x[0],y[0]]

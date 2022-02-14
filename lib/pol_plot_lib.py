@@ -11,8 +11,8 @@ import scipy.interpolate as spint
 from lib.pol_lib import arrange_region
 from lib.pol_fit_lib import get_fit_func
 
-matplotlib.use('TkAgg')
-
+#matplotlib.use('TkAgg')
+matplotlib.use('Agg')
 plt.rcParams.update({'errorbar.capsize': 2})
 RGI = spint.RegularGridInterpolator
 

@@ -18,7 +18,7 @@ mask:
   #    - [0.5,2]
     
 initial_values:  
-    E       : 4743 #MeV
+    E       : 4730 #MeV
     L       : 33000 #mm
     P       : 0.
     V       : 1.

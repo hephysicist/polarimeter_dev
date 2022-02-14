@@ -2,7 +2,6 @@
 import glob
 import numpy as np 
 import time
-from numba import jit
 import argparse
 import matplotlib.pyplot as plt
 import yaml

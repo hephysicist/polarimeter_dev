@@ -215,6 +215,7 @@ def main():
         else:
             if args.regex_line:
                 regex_line = str(args.regex_line)
+                print(regex_line)
             else:
                 regex_line = str(config['regex_line'])
             accum_data_and_make_fit(config, regex_line, args.offline) 

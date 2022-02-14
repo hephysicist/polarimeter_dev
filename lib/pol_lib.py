@@ -25,15 +25,12 @@ def translate_word(word):
     fr     = (word >> 20) & 0x7F
     chip   = (word >> 27) & 0x1F
     glb_ch = (chip*64+ch + 640) % 1280
-    pol = 0
-    if chip < 20:
-        out = val
-    elif chip >= 20:
+    trig = 0
+    if chip >= 20:
         val = -1
-        pol = (word>>24 & 0x07)
-    else:
-        val = -1
-    return pol, val, glb_ch, chip, fr
+        trig = (word>>24 & 0x07)
+        
+    return trig, val, glb_ch, chip, fr
 
 def load_events(fname, n_evt=None):
     data = []
@@ -44,7 +41,7 @@ def load_events(fname, n_evt=None):
         word_arr = word_arr[:n_evt]
     for word in word_arr:
         pol, val, ch, chip, fr = translate_word(word)
-        if curr_pol > 0 and fr < 3 and ch!=412:
+        if curr_pol > 0 and fr < 3 :
             data.append([curr_pol-3, val, ch, fr]) #curr_pol = +2, +4 => curr_pol-4 = -1, +1
         if pol != 0:
             curr_pol = pol
@@ -279,6 +276,8 @@ def write2file_nik(the_file, fname, fitres, par_list, raw_stats, counter, moment
         the_file.write('{0:>.0f}\t'.format(unix_time))
         energy = 0
         if freq!= 0:
+            #ATTENTION temporary solution --- Dendrofecal method is applied !!!!!
+            vepp4E=4730
             n = int(vepp4E/440.648)
             energy = (n+freq/818924.)*440.648
         the_file.write('\t{0:>10.3f}\t{1:>10.3f}\t{2:>10.3f}\t'.format(freq,energy, vepp4E_nmr))
