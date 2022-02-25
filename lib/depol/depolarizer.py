@@ -1,4 +1,6 @@
-from lib.depol.DepolarizerMessage_pb2 import *
+import sys
+sys.path.append('../lib')
+from depol.DepolarizerMessage_pb2 import *
 import socket
 import struct
 import time

@@ -183,7 +183,7 @@ std::map<std::string, std::shared_ptr<TGraphErrors>  > GM;
 double GLOBAL_TIME_OFFSET;
 
 struct FitConfig_t {
-  std::string filename="/home/lsrp/polarimeter_dev/tmp/pol_fitres.txt";
+  std::string filename="/home/lsrp/Control/polarimeter_dev/tmp/pol_fitres_nocorr.txt";
   std::vector<int> run; //list of run numbers (jumps in the fit)
   double count_time=300;
   double speed = 0.01; //scan speed MeV/sec. The sign shows scan direction

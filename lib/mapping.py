@@ -162,13 +162,13 @@ def get_xy(ch, zone_id):
             x = 10 + raw_x
             y = 19 - raw_y  
         if not np.shape(raw_x)[0]:
-            print('Unable to find this raw channel at channel map')
-            print(f'zone: {zone_num:1.0f}, raw_ch: {raw_ch: 4.0f}')
+            #print('Unable to find this raw channel at channel map')
+            #print(f'zone: {zone_num:1.0f}, raw_ch: {raw_ch: 4.0f}')
             x = np.array([-1])
             y = np.array([-1])
     else:
-        print('Event does not match to the detector sensitive area')
-        print(f'zone: {zone_num:1.0f}, raw_ch: {raw_ch: 4.0f}')
+        #print('Event does not match to the detector sensitive area')
+        #print(f'zone: {zone_num:1.0f}, raw_ch: {raw_ch: 4.0f}')
         x = np.array([-1])
         y = np.array([-1])
     return [x[0],y[0]]

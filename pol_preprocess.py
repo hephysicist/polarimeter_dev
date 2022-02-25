@@ -1,15 +1,19 @@
 #!/usr/bin/env python3 
+import os 
+import sys
+sys.path.append('.')
+sys.path.append('./lib')
+
 import glob
 import numpy as np 
 import time
 import argparse
 import matplotlib.pyplot as plt
 import yaml
-import os
 
-from lib.mapping import get_side_ch_id, get_center_ch_id
-from lib.pol_lib import *
-from lib.pol_plot_lib import init_monitor_figure, plot_hitmap
+from mapping import get_side_ch_id, get_center_ch_id
+from pol_lib import *
+from pol_plot_lib import init_monitor_figure, plot_hitmap
 
 def get_evt_arr(in_fpath, out_fpath, f_name,amp_cut, save_raw=False):
     print('Reading file: ', f_name,'...')
@@ -132,7 +136,7 @@ def preprocess(config, regex_line, offline = False):
         if config['preprocess']['use_depolarizer']:
             depol_device = init_depol()
     file_count = 0
-    dfreq = np.zeros([1,2])
+    dfreq = np.zeros(2)
     try:
         while (file_count < np.shape(file_arr)[0] and offline) or (not offline):
             if(f_name_old != f_name):
@@ -140,9 +144,6 @@ def preprocess(config, regex_line, offline = False):
                      vepp4E = read_vepp4_stap()
                 if config['preprocess']['use_depolarizer']:
                     dfreq = get_depol_freq(depol_device, f_name)
-                else:
-                    dfreq = np.zeros([1,2])
-                
                 print(dfreq, end= '\n')
                 preprocess_single_file(config, f_name, vepp4E, dfreq, fig, ax)
                 f_name_old = f_name

@@ -1,4 +1,9 @@
-#!/usr/bin/env python3 
+#!/usr/bin/env python3
+import os 
+import sys
+sys.path.append('.')
+sys.path.append('../lib')
+
 import glob
 import numpy as np 
 import time
@@ -6,12 +11,11 @@ from numba import jit
 import argparse
 import matplotlib.pyplot as plt
 import yaml
-import os
 #from ROOT import TCanvas, TH2F
 
-from lib.mapping import get_side_ch_id, get_center_ch_id, get_xy
-from lib.pol_lib import *
-from lib.pol_plot_lib import init_monitor_figure, plot_hitmap
+from mapping import get_side_ch_id, get_center_ch_id, get_xy
+from pol_lib import *
+from pol_plot_lib import init_monitor_figure, plot_hitmap
 
 def read_raw_hits(fname, n_evt=None):
     data = []
@@ -178,7 +182,7 @@ def main():
     parser.add_argument('--offline', help='Use this key to preprocess iteratively all, starting from regrex_line',default=False, action="store_true")
     parser.add_argument('regex_line', nargs='?', help='Name of the file to start online preprocessing in regex format')
     args = parser.parse_args()
-    with open(os.getcwd()+'/'+str('pol_config.yml'), 'r') as conf_file:
+    with open(os.getcwd()+'/../'+str('pol_config.yml'), 'r') as conf_file:
         try:
             config = yaml.load(conf_file, Loader=yaml.Loader)
             config['bin_fpath'] = '/home/kudryavtsev/POLARIMETER/polarimeter_readout/run_view/2022-02-09_GEMPolarimeter/'

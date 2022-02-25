@@ -1,19 +1,22 @@
 #!/usr/bin/env python3 
-from iminuit import Minuit
+import os 
+import sys
+sys.path.append('.')
+sys.path.append('./lib')
 
+from iminuit import Minuit
 import numpy as np
 import glob
 import time
 from datetime import datetime
-import os
 import argparse
 import matplotlib.pyplot as plt
 import yaml
 
-from lib.pol_lib import *
-from lib.pol_fit_lib import *
-from lib.pol_plot_lib import *
-from lib.moments import get_moments
+from pol_lib import *
+from pol_fit_lib import *
+from pol_plot_lib import *
+from moments import get_moments
 
 def transform(h_dict):
     h_l = h_dict['hc_l']
@@ -155,6 +158,11 @@ def accum_data_and_make_fit(config, regex_line, offline = False):
                 h_dict = mask_hist(config, h_dict)
                 if config['need_blur']:
                     h_dict = eval(config['blur_type']+'(h_dict)')
+                if config['scale_hits']:
+                    scale_file = np.load(os.getcwd()+'/scale_array.npz', allow_pickle=True)
+                    scale_arr = scale_file['scale_arr']
+                    h_dict['hc_l'] *= scale_arr
+                    h_dict['hc_r'] *= scale_arr
                 fitres, ndf = make_fit(config, h_dict, vepp4E)
                 raw_stats = get_raw_stats(h_dict)
                 print_stats(raw_stats)
@@ -177,11 +185,14 @@ def accum_data_and_make_fit(config, regex_line, offline = False):
                 del h_dict
                 fit_counter += 1
                 files4point_count = 0
+                if not config['continue']:
+                    text = input()
             file_arr = np.array(glob.glob1(hist_fpath, regex_line))
             if not offline:
                 fname = file_arr[-2] #get 2nd last file
             else:
                 fname = file_arr[file_count] 
+            
            
 
     except KeyboardInterrupt:

@@ -5,7 +5,7 @@ from numba import jit
 
 import time
 from datetime import datetime
-from lib.depol.depolarizer import *
+from depol.depolarizer import *
 
 @jit(nopython=True)
 def convert_val(x):
