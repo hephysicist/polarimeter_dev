@@ -285,21 +285,10 @@ def read_batch(hist_fpath, file_arr):
                     'H':  vepp4H_nmr
                  }
     return h_dict, v4par_dict
-
-def accum_data_and_make_fit(config, start_time='2022-04-07T17:10:00', offline = False):
-    hist_fpath = config['hist_fpath']
-    n_files = config['n_files']
-    file_arr = np.array(glob.glob1(hist_fpath, '20*.npz')) #Choose only data files
-    unix_start_time = int(time.time())
-    if config['scale_hits']:
-        scale_file = np.load(os.getcwd()+'/scale_array.npz', allow_pickle=True)
-        scale_arr = scale_file['scale_arr']
-    fig_arr, ax_arr = init_figures()
-    db_obj = lsrp_pol()
-    fit_counter = 0
-    try:
-        while(1):
-            if np.shape(file_arr)[0]:
+    
+def make_file_list_online(hist_fpath, unix_start_time, n_files):
+    file_arr = np.array(glob.glob1(hist_fpath, '20*.npz'))
+    if np.shape(file_arr)[0]:
                 unix_time_arr = get_unix_time(file_arr)
                 buffer_size = 0
                 buffer_size_old = 0
@@ -316,9 +305,73 @@ def accum_data_and_make_fit(config, start_time='2022-04-07T17:10:00', offline = 
                         counter = 0
                     time.sleep(1)
                     counter +=1
-                    #print('Waiting for the new file: {:3d} seconds passed'.format(counter), end= '\r')
+    return file_buffer
+
+def make_file_list_offline( hist_fpath,
+                            unix_start_time,
+                            unix_stop_time,
+                            n_files=1):
+    file_arr = np.array(glob.glob1(hist_fpath, '20*.npz'))
+    
+    if np.shape(file_arr)[0]:
+        unix_time_arr = get_unix_time(file_arr)
+        time_cut = np.logical_and(unix_time_arr > unix_start_time, unix_time_arr < unix_stop_time)
+        file_buffer = file_arr[time_cut]
+        if np.shape(file_buffer)[0] >= n_files:
+            file_buffer = file_buffer[:n_files]
+    return file_buffer
+    
+def accum_data_and_make_fit(config, start_time, stop_time, offline = False):
+    hist_fpath = config['hist_fpath']
+    n_files = int(config['n_files'])
+    file_arr = np.array(glob.glob1(hist_fpath, '20*.npz')) #Choose only data files
+    
+    if not offline:
+        unix_start_time = int(time.time())
+    else: 
+        unix_start_time = get_unix_time(start_time)
+    unix_stop_time = get_unix_time(stop_time)
+    
+    if config['scale_hits']:
+        scale_file = np.load(os.getcwd()+'/scale_array.npz', allow_pickle=True)
+        scale_arr = scale_file['scale_arr']
+    fig_arr, ax_arr = init_figures()
+    db_obj = lsrp_pol()
+    fit_counter = 0
+    try:
+        while(1):
+#            if np.shape(file_arr)[0]:
+#                unix_time_arr = get_unix_time(file_arr)
+#                buffer_size = 0
+#                buffer_size_old = 0
+#                file_buffer = np.empty(0)
+#                counter = 0
+#                while (buffer_size < n_files):
+#                    file_arr = np.array(glob.glob1(hist_fpath, '20*.npz')) #Choose only data files
+#                    unix_time_arr = get_unix_time(file_arr)
+#                    file_buffer = file_arr[unix_time_arr > unix_start_time]
+#                    buffer_size = np.shape(file_buffer)[0]
+#                    if buffer_size_old != buffer_size:
+#                        print('Progress: ', int(buffer_size), '/', int(n_files), '\t\t\t\t\t', end='\r')
+#                        buffer_size_old = buffer_size
+#                        counter = 0
+#                    time.sleep(1)
+#                    counter +=1
+
+                if not offline:
+                    file_buffer = make_file_list_online(   hist_fpath,
+                                                                    unix_start_time,
+                                                                    n_files)
+                else:
+                    file_buffer = make_file_list_offline(  hist_fpath,
+                                                                    unix_start_time,
+                                                                    unix_stop_time,
+                                                                    n_files)
+                   
+                    if np.shape(file_buffer)[0] < n_files:
+                        print('Batch size [{:d}] is less than required number of files [{:d}]!\nExiting fit programm.'.format( np.shape(file_buffer)[0],n_files))
+                        break
                 file_buffer = np.sort(file_buffer)
-                print('Reading files: ', file_buffer)
                 unix_start_time = get_unix_time(file_buffer[-1])
                 h_dict, v4par_dict = read_batch(hist_fpath, file_buffer)
                 h_dict = mask_hist(config, h_dict)
@@ -327,6 +380,7 @@ def accum_data_and_make_fit(config, start_time='2022-04-07T17:10:00', offline = 
                 if config['scale_hits']:
                     h_dict['hc_l'] *= scale_arr
                     h_dict['hc_r'] *= scale_arr
+                print('Performing fit...')
                 fitres, ndf = make_fit(config, h_dict)
                 raw_stats = get_raw_stats(h_dict)
                 print_stats(raw_stats)
@@ -346,32 +400,23 @@ def main():
     np.set_printoptions(linewidth=360)
     parser = argparse.ArgumentParser("pol_fit.py")
     parser.add_argument('--offline', help='Use this key to fit iteratively all, starting from regrex_line', default=False, action="store_true")
-    parser.add_argument('regex_line', nargs='?', help='Name of the file to start offline  fit in regex format')
-    parser.add_argument('-i', help='Interactive mode', action='store_true')
+    parser.add_argument('start_time', nargs='?', help='Time of the file to start offline fit in regex format')
+    parser.add_argument('stop_time', nargs='?', help='Time of the file to start offline fit in regex format', default='2100-01-01T00:00:01')
     parser.add_argument('--noblur', help='Disable blur', action='store_true')
     parser.add_argument('--blur', help='Blur algorithm', type=str, default='default')
-    parser.add_argument('--plot3d', help='Plot 3D left right', action='store_true')
     
     args = parser.parse_args()
-    global INTERACTIVE_MODE
-    INTERACTIVE_MODE = args.i
-    print("Interactive mode ", INTERACTIVE_MODE)
+ 
     with open(os.getcwd()+'/pol_fit_config.yml', 'r') as conf_file:
         try:
             config = yaml.load(conf_file, Loader=yaml.Loader)
             config['need_blur'] = config['need_blur'] and not args.noblur
             config['blur']= args.blur
             print("blur = ", args.blur)
-            config['plot3d']=args.plot3d
         except yaml.YAMLError as exc:
             print('Error opening pol_config.yaml file:')
             print(exc)
         else:
-            if args.regex_line:
-                regex_line = str(args.regex_line)
-                print(regex_line)
-            else:
-                regex_line = str(config['regex_line'])
-            accum_data_and_make_fit(config, regex_line, args.offline) 
+            accum_data_and_make_fit(config, args.start_time, args.stop_time, args.offline) 
 if __name__ == '__main__':
     main()
