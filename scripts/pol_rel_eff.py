@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import yaml
 import statistics as st
 from ROOT import TCanvas, TH1D
+import ciso8601 #Converts string time to timestamp
 
 from mapping import get_side_ch_id, get_center_ch_id, get_xy
 from pol_lib import *
@@ -74,12 +75,22 @@ def read_raw_hits(fname, n_evt=None):
 #    ax3.set_aspect(1)
 #    plot_hist(xxc, yyc, n_evt_arr, ax3, None, fig)
 
-def get_occupancy_plots(regex_line):
+def get_ts_template(fname, timezone='+07:00'):
+    ts = ciso8601.parse_datetime(fname[:19]+timezone)
+    return(int(ts.timestamp()))
+
+get_ts = np.vectorize(get_ts_template)
+
+def get_occupancy_plots(start_line, stop_time='2100-01-01T00:00:00'):
     print('Caution: you are using relative efficiency measurement algorithm!')
     conf_file = open(os.getcwd()+'/../'+str('pol_config.yml'), 'r')
     config = yaml.load(conf_file, Loader=yaml.Loader)
-    hist_fpath = '/storage/pol_rel_eff/'
-    file_arr = np.sort(np.array(glob.glob1(hist_fpath, regex_line)))
+    hist_fpath = '/storage/hist/'
+    file_arr = np.sort(np.array(glob.glob1(hist_fpath, '2022*')))
+    start_ts = get_ts(start_line)
+    stop_ts = get_ts(stop_line)
+    ts_arr = get_ts(file_arr)
+    file_arr = file_arr[ts_arr>start_ts and ts_arr<=stop_ts]
     buf_dict = []
     h_dict = load_hist(hist_fpath,file_arr[0])
     fig, ax = init_monitor_figure()
@@ -92,25 +103,24 @@ def get_occupancy_plots(regex_line):
     filled_ch = 0
     try:
         for single_file in file_arr[1:]: 
+            print('loading file', single_file) 
             buf_dict = load_hist(hist_fpath, single_file)
             h_dict = accum_data(h_dict, buf_dict)
             print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
-        buf_dict = h_dict['hc_r']+h_dict['hc_l']
-        h_dict['hc_r'] = buf_dict
-        h_dict['hc_l'] = buf_dict
-        n_nonzero = np.count_nonzero(buf_dict > 10000)
-        mean_charge = sum(sum(np.where(buf_dict > 10000, buf_dict, 0)))/n_nonzero
+        hit_hist = h_dict['hc_r']+h_dict['hc_l'] 
+        n_nonzero = np.count_nonzero(hit_hist > 100)
+        mean_charge = sum(sum(np.where(hit_hist > 100, hit_hist, 0)))/n_nonzero
         print(n_nonzero, mean_charge)
-        scale_arr = mean_charge/ np.where(buf_dict > 0, buf_dict, 1)
+        scale_arr = mean_charge/ np.where(hit_hist > 0, hit_hist, 1)
         scale_arr = np.where(scale_arr < 2., scale_arr, 0)
-        for idy, idx in np.ndindex(buf_dict.shape):
+        for idy, idx in np.ndindex(hit_hist.shape):
             ch_id = get_center_ch_id(idx, idy, config['zone_id'])
-            if(buf_dict[idy,idx] > 10000):
+            if(hit_hist[idy,idx] > 100):
                 filled_ch +=1
-                hist.SetBinContent(hist.FindBin(ch_id), buf_dict[idy, idx]*scale_arr[idy,idx])
+                hist.SetBinContent(hist.FindBin(ch_id), hit_hist[idy, idx]) #*scale_arr[idy,idx]
             else:
                 empty_ch +=1
-            print('Coors: x = {:2d},y = {:2d}, n_hit = {:6.0f}'.format(idx, idy, buf_dict[idy, idx]))
+            print('Coors: x = {:2d},y = {:2d}, n_hit = {:6.0f}'.format(idx, idy, hit_hist[idy, idx]))
             #hist.Fill(h_dict['hc_r'][idy, idx])
         plot_hitmap(fig, ax, h_dict, block=False, norm=False)
         fig.canvas.draw_idle()
@@ -120,7 +130,7 @@ def get_occupancy_plots(regex_line):
         c1.Modified()
         c1.SaveAs('h1.pdf')
         print('Empty ch: ', empty_ch, 'nonempty ch: ', filled_ch)
-        np.savez(os.getcwd()+'/../scale_array', scale_arr = scale_arr)
+        np.savez(os.getcwd()+'/../scale_array_buf', scale_arr = scale_arr)
         text = input()
 
     except KeyboardInterrupt:
@@ -130,10 +140,12 @@ def get_occupancy_plots(regex_line):
 def main():
     np.set_printoptions(linewidth=360)
     parser = argparse.ArgumentParser("pol_cluster.py")
-    parser.add_argument('regex_line', nargs='?', help='Name of the file to start online preprocessing in regex format')
+    parser.add_argument('start_time', nargs='?', help='Name of the file to start online preprocessing')
+    parser.add_argument('stop_time', nargs='?', help='Name of the file to stop online preprocessing')
     args = parser.parse_args()
-    regex_line = str(args.regex_line)
-    get_occupancy_plots(regex_line) 
+    start_line = str(args.start_time)
+    stop_line = str(args.stop_time)
+    get_occupancy_plots(start_line) 
 
 if __name__ == '__main__':
     main()

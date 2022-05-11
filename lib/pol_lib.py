@@ -16,6 +16,10 @@ def convert_val(x):
     else:
         return -x
 
+#@jit(nopython=True)
+#def convert_val(charge):
+#     return ((-1*(0x2000 - (charge & 0x1FFF)))  if (charge >> 13 == 1) else charge)
+
 
 @jit(nopython=True)
 def translate_word(word):

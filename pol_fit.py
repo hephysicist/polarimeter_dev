@@ -12,11 +12,15 @@ from datetime import datetime
 import argparse
 import matplotlib.pyplot as plt
 import yaml
+import ciso8601 #Converts string time to timestamp
 
 from pol_lib import *
 from pol_fit_lib import *
 from pol_plot_lib import *
 from moments import get_moments
+from lsrp_pol import *
+
+my_timezone = '+07:00'
 
 def transform(h_dict):
     h_l = h_dict['hc_l']
@@ -34,12 +38,14 @@ def transform(h_dict):
                 'yc': h_dict['yc']}
     return buf_dict
 
-def make_fit(config, h_dict, vepp4E):
+def make_fit(config, h_dict):
     h_l = h_dict['hc_l']
     h_r = h_dict['hc_r']
     x = h_dict['xc']
     y = h_dict['yc']
+    vepp4E = h_dict['vepp4E']
     xrange = config['xrange']
+    
 
     h_l, h_r, x = arrange_region(h_l, h_r ,x ,lim = xrange)
 
@@ -108,93 +114,230 @@ def show_res(config, h_dict, fitres, Fig, Ax):
     plot_data3d(h_dict, fitres, xrange, Fig[3],  Ax[3], h_type='fr')
     plt.show(block=False)
     plt.pause(1)
+    
+def get_unix_time_template(fname, timezone='+07:00'):
+    unix_time = ciso8601.parse_datetime(fname[:19]+timezone)
+    return(int(unix_time.timestamp()))
 
-def accum_data_and_make_fit(config, regex_line, offline = False):
+get_unix_time = np.vectorize(get_unix_time_template)
+
+    
+def get_Edep (v4E, d_freq):
+    n = int(v4E/440.648)
+    return (n+d_freq/818924.)*440.648*(int(d_freq) != 0)
+
+def db_write(   db_obj,
+                config,
+                first_fname,
+                last_fname,
+                fitres,
+                chi2,
+                ndf,
+                v4_par_dict, fit_counter):
+    
+    db_obj.local_id = fit_counter
+    db_obj.begintime = get_unix_time(first_fname)
+    db_obj.endtime = get_unix_time(last_fname)+10 #TODO 10 means the time in seconds for the single file. Needs to be written automatically.
+    db_obj.measuretime = db_obj.endtime - db_obj.begintime
+    
+    db_obj.Eset = v4_par_dict['vepp4E']
+    db_obj.Fdep = v4_par_dict['dfreq']
+    db_obj.Edep = get_Edep(v4_par_dict['vepp4E'], v4_par_dict['dfreq'])
+    db_obj.H = v4_par_dict['H']
+    db_obj.chi2 = chi2
+    db_obj.ndf = ndf
+    db_obj.P.value = fitres.values['P']
+    db_obj.P.error = fitres.errors['P']
+    db_obj.V.value = fitres.values['V']
+    db_obj.V.error = fitres.errors['V']
+    db_obj.Q.value = fitres.values['Q']
+    db_obj.Q.error = fitres.errors['Q']
+    db_obj.NL.value = fitres.values['NL']
+    db_obj.NL.error = fitres.errors['NL']
+    db_obj.NR.value = fitres.values['NR']
+    db_obj.NR.error = fitres.errors['NR']
+    db_obj.write(dbname='test', user='nikolaev', host='127.0.0.1')
+
+
+
+#def accum_data_and_make_fit(config, regex_line, offline = False):
+#    hist_fpath = config['hist_fpath']
+#    n_files = config['n_files']
+#    file_arr = np.array(glob.glob1(hist_fpath, regex_line))
+#    if np.shape(file_arr)[0]:
+#        file_arr = np.sort(file_arr)
+#        if not offline:
+#            fname = file_arr[-2] #get 2nd last file
+#        else:
+#            fname = file_arr[0] 
+#    fname_prev = ''
+#    file_count = 0
+#    files4point_count = 0
+#    attempt_count = 0
+#    fig_arr, ax_arr = init_figures()
+#    fit_counter = 0
+#    try:
+#        while (file_count < np.shape(file_arr)[0] and offline) or (not offline):
+#            if fname_prev != fname:
+#                if files4point_count == 0: 
+#                    h_dict = load_hist(hist_fpath,fname)
+#                    vepp4E = h_dict['vepp4E']
+#                    buf_list = get_par_from_file('/mnt/vepp4/kadrs/nmr.dat', par_id_arr = [1])
+#                    vepp4E_nmr = float(buf_list[0])
+#                    first_fname = fname
+#                    buf_dict = h_dict
+#                    print('Enmr: ', vepp4E_nmr)
+#                    print('Dep freq: ', buf_dict['dfreq'])
+#                    print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
+#                    fname_prev = fname
+#                    
+#                else:
+#                    buf_dict = load_hist(hist_fpath,fname)
+#                    h_dict = accum_data(h_dict, buf_dict)
+#                    print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
+#                    print('Dep freq: ', buf_dict['dfreq'])
+#                files4point_count += 1
+#                file_count += 1
+#                attempt_count = 0
+#                fname_prev = fname
+#                print('Progress: ', int(files4point_count), '/', int(n_files))
+#            else:
+#                time.sleep(1)
+#                attempt_count +=1
+#                print('Waiting for the new file: {:3d} seconds passed'.format(attempt_count), end= '\r')
+#            if files4point_count == n_files:
+#                h_dict = mask_hist(config, h_dict)
+#                if config['need_blur']:
+#                    h_dict = eval(config['blur_type']+'(h_dict)')
+#                if config['scale_hits']:
+#                    scale_file = np.load(os.getcwd()+'/scale_array_buf.npz', allow_pickle=True)
+#                    scale_arr = scale_file['scale_arr']
+#                    h_dict['hc_l'] *= scale_arr
+#                    h_dict['hc_r'] *= scale_arr
+#                fitres, ndf = make_fit(config, h_dict, vepp4E)
+#                raw_stats = get_raw_stats(h_dict)
+#                print_stats(raw_stats)
+#                print_pol_stats_nik(fitres)
+#                moments = get_moments(h_dict)
+#                show_res(config, h_dict, fitres, fig_arr, ax_arr)
+#                chi2 = fitres.fval
+#                true_ndf = (ndf - fitres.npar)
+#                chi2_normed = chi2/true_ndf
+#                v4_par_dict = { 'd_freq': h_dict['dfreq'],
+#                                'v4E'   : h_dict['vepp4E'],
+#                                'v4Enmr': vepp4E_nmr}
+#                v4_par_list = [h_dict['dfreq'], vepp4E_nmr]
+##                db_write(   lsrp_pol_obj,
+##                            config,
+##                            first_fname,
+##                            fname,
+##                            fit_counter,
+##                            fitres,
+##                            v4_par_dict, 
+##                            raw_stats, 
+##                            moments, 
+##                            chi2_normed):
+#                write2file_nik( config['fitres_file'],
+#                            first_fname,
+#                            fitres,
+#                            v4_par_list,
+#                            raw_stats,
+#                            fit_counter,
+#                            moments,
+#                            chi2_normed)
+#                del buf_dict
+#                del h_dict
+#                fit_counter += 1
+#                files4point_count = 0
+#                if not config['continue']:
+#                    text = input()
+#            file_arr = np.array(glob.glob1(hist_fpath, regex_line))
+#            if not offline:
+#                fname = file_arr[-2] #get 2nd last file
+#                
+#            else:
+#                fname = file_arr[file_count]
+#                ts = ciso8601.parse_datetime(fname[:19]+timezone)
+#                t = ts.timestamp()
+#           
+
+#    except KeyboardInterrupt:
+#        print('\n***Exiting fit program***')
+#        pass
+
+def read_batch(hist_fpath, file_arr):
+    h_dict = load_hist(hist_fpath,file_arr[0])
+    buf_list = get_par_from_file('/mnt/vepp4/kadrs/nmr.dat', par_id_arr = [1])
+    vepp4H_nmr = float(buf_list[0])
+    first_fname = file_arr[0]
+    buf_dict = h_dict
+    print('Hnmr: ', vepp4H_nmr)
+    print('Dep freq: ', buf_dict['dfreq'])
+    print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
+    for file in file_arr[1:]:
+            buf_dict = load_hist(hist_fpath,file)
+            h_dict = accum_data(h_dict, buf_dict)
+            print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
+            print('Dep freq: ', buf_dict['dfreq'])
+    #time.sleep(15)
+    v4par_dict = {  'vepp4E' : h_dict['vepp4E'], 
+                    'dfreq': h_dict['dfreq'],
+                    'H':  vepp4H_nmr
+                 }
+    return h_dict, v4par_dict
+
+def accum_data_and_make_fit(config, start_time='2022-04-07T17:10:00', offline = False):
     hist_fpath = config['hist_fpath']
     n_files = config['n_files']
-    file_arr = np.array(glob.glob1(hist_fpath, regex_line))
-    if np.shape(file_arr)[0]:
-        file_arr = np.sort(file_arr)
-        if not offline:
-            fname = file_arr[-2] #get 2nd last file
-        else:
-            fname = file_arr[0] 
-    fname_prev = ''
-    file_count = 0
-    files4point_count = 0
-    attempt_count = 0
+    file_arr = np.array(glob.glob1(hist_fpath, '20*.npz')) #Choose only data files
+    unix_start_time = int(time.time())
+    if config['scale_hits']:
+        scale_file = np.load(os.getcwd()+'/scale_array.npz', allow_pickle=True)
+        scale_arr = scale_file['scale_arr']
     fig_arr, ax_arr = init_figures()
+    db_obj = lsrp_pol()
     fit_counter = 0
     try:
-        while (file_count < np.shape(file_arr)[0] and offline) or (not offline):
-            if fname_prev != fname:
-                if files4point_count == 0: 
-                    h_dict = load_hist(hist_fpath,fname)
-                    vepp4E = h_dict['vepp4E']
-                    buf_list = get_par_from_file('/mnt/vepp4/kadrs/nmr.dat', par_id_arr = [1])
-                    vepp4E_nmr = float(buf_list[0])
-                    first_fname = fname
-                    buf_dict = h_dict
-                    print('Enmr: ', vepp4E_nmr)
-                    print('Dep freq: ', buf_dict['dfreq'])
-                    print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
-                    fname_prev = fname
-                    
-                else:
-                    buf_dict = load_hist(hist_fpath,fname)
-                    h_dict = accum_data(h_dict, buf_dict)
-                    print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
-                    print('Dep freq: ', buf_dict['dfreq'])
-                files4point_count += 1
-                file_count += 1
-                attempt_count = 0
-                fname_prev = fname
-                print('Progress: ', int(files4point_count), '/', int(n_files))
-            else:
-                time.sleep(1)
-                attempt_count +=1
-                print('Waiting for the new file: {:3d} seconds passed'.format(attempt_count), end= '\r')
-            if files4point_count == n_files:
+        while(1):
+            if np.shape(file_arr)[0]:
+                unix_time_arr = get_unix_time(file_arr)
+                buffer_size = 0
+                buffer_size_old = 0
+                file_buffer = np.empty(0)
+                counter = 0
+                while (buffer_size < n_files):
+                    file_arr = np.array(glob.glob1(hist_fpath, '20*.npz')) #Choose only data files
+                    unix_time_arr = get_unix_time(file_arr)
+                    file_buffer = file_arr[unix_time_arr > unix_start_time]
+                    buffer_size = np.shape(file_buffer)[0]
+                    if buffer_size_old != buffer_size:
+                        print('Progress: ', int(buffer_size), '/', int(n_files), '\t\t\t\t\t', end='\r')
+                        buffer_size_old = buffer_size
+                        counter = 0
+                    time.sleep(1)
+                    counter +=1
+                    #print('Waiting for the new file: {:3d} seconds passed'.format(counter), end= '\r')
+                file_buffer = np.sort(file_buffer)
+                print('Reading files: ', file_buffer)
+                unix_start_time = get_unix_time(file_buffer[-1])
+                h_dict, v4par_dict = read_batch(hist_fpath, file_buffer)
                 h_dict = mask_hist(config, h_dict)
                 if config['need_blur']:
                     h_dict = eval(config['blur_type']+'(h_dict)')
                 if config['scale_hits']:
-                    scale_file = np.load(os.getcwd()+'/scale_array.npz', allow_pickle=True)
-                    scale_arr = scale_file['scale_arr']
                     h_dict['hc_l'] *= scale_arr
                     h_dict['hc_r'] *= scale_arr
-                fitres, ndf = make_fit(config, h_dict, vepp4E)
+                fitres, ndf = make_fit(config, h_dict)
                 raw_stats = get_raw_stats(h_dict)
                 print_stats(raw_stats)
                 print_pol_stats_nik(fitres)
-                moments=get_moments(h_dict)
-                calc_asymmetry(h_dict)
+                moments = get_moments(h_dict)
                 show_res(config, h_dict, fitres, fig_arr, ax_arr)
-                chi2_normed = fitres.fval / (ndf - fitres.npar)
-                print('chi2/ndf', chi2_normed)
-                par_list = [h_dict['dfreq'], vepp4E_nmr]
-                write2file_nik( config['fitres_file'],
-                            first_fname,
-                            fitres,
-                            par_list,
-                            raw_stats,
-                            fit_counter,
-                            moments,
-                            chi2_normed)
-                del buf_dict
-                del h_dict
-                fit_counter += 1
-                files4point_count = 0
-                if not config['continue']:
-                    text = input()
-            file_arr = np.array(glob.glob1(hist_fpath, regex_line))
-            if not offline:
-                fname = file_arr[-2] #get 2nd last file
-            else:
-                fname = file_arr[file_count] 
-            
-           
-
+                chi2 = fitres.fval
+                true_ndf = (ndf - fitres.npar)
+                chi2_normed = chi2/true_ndf
+                fit_counter +=1
+                db_write(db_obj, config, file_buffer[0], file_buffer[-1], fitres, chi2, true_ndf, v4par_dict, fit_counter)
     except KeyboardInterrupt:
         print('\n***Exiting fit program***')
         pass

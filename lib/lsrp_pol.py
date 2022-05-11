@@ -6,18 +6,18 @@ from datetime import datetime
 from contextlib import closing
 
 
-class valer_t:
+class phys_val_t:
     def __init__(self, v = 0.0, e = 0.0):
         self.value = v
         self.error = e
 
-class mean_t:
-    def __init__(self, l = valer_t(), r = valer_t()):
+class pol_val_t:
+    def __init__(self, l = phys_val_t(), r = phys_val_t()):
         self.left  = l
         self.right = r
 
 
-class LsrpPol:
+class lsrp_pol:
     local_id = 0
     begintime = 0
     endtime = 0
@@ -33,24 +33,24 @@ class LsrpPol:
     chi2 = -1.
     ndf  =  1
 
-    x = mean_t()
-    y = mean_t()
-    asym_x = valer_t()
-    asym_y = valer_t()
+    x = pol_val_t()
+    y = pol_val_t()
+    asym_x = phys_val_t()
+    asym_y = phys_val_t()
 
-    P = valer_t()
-    Q = valer_t()
-    V = valer_t()
-    NL = valer_t()
-    NR = valer_t()
-    beta = valer_t()
+    P = phys_val_t()
+    Q = phys_val_t()
+    V = phys_val_t()
+    NL = phys_val_t()
+    NR = phys_val_t()
+    beta = phys_val_t()
 
 
     def write(self, dbname='test', user='nikolaev', host='127.0.0.1'):
         with closing(psycopg2.connect(dbname=dbname, user=user, host=host)) as conn:
             with closing(conn.cursor()) as cursor:
                 lst = []
-                lst.append( ("begintime", time.strftime("'%Y-%m-%d %H:%M:%S'", time.localtime(self.begintime)) ))
+                lst.append( ("begintime", time.strftime("'%Y-%m-%d %H:%M:%S'", time.localtime(self.begintime))))
                 lst.append( ("endtime", time.strftime("'%Y-%m-%d %H:%M:%S'", time.localtime(self.endtime)) ))
                 lst.append( ("measuretime", "{:4f}".format(self.measuretime)) )
                 lst.append( ("eset", "{:.2f}".format(self.Eset)) )
@@ -98,6 +98,7 @@ class LsrpPol:
 
                 query = "insert into lsrp_pol ("
                 for i in range(0, len(lst) ):
+                    
                     query += lst[i][0]
                     if i < len(lst) - 1: query +=","
                 query += ") VALUES ("

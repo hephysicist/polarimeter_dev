@@ -75,18 +75,18 @@ def plot_hist(x, y, h, ax, cax, fig, diff=False):
             tmax = np.quantile(h_f, 0.95)
             tmed = 0
         else:
-            tmin = np.quantile(h_f, 0.01)
-            tmax = np.quantile(h_f, 0.99)
+            tmin = np.min(h_f)
+            tmax = np.max(h_f)
             tmed = np.quantile(h_f, 0.5)
         im = ax.pcolormesh(x,y,h,
                            vmin=tmin,#np.min(h_f),
                            vmax=tmax,#np.max(h_f),
-                           cmap=plt.cm.gist_gray)
+                           cmap=plt.cm.gnuplot2)
         #cbar = fig.colorbar(im, cax=cax,format=ticker.FuncFormatter(fmt))
         #cax.set_aspect(15)
         #cbar.set_ticks([tmin,tmed, tmax])
     else:
-        im = ax.pcolormesh(x,y,h, cmap=plt.cm.gist_gray)
+        im = ax.pcolormesh(x,y,h, cmap=plt.cm.grey)
         #cax.set_aspect(15)
         #cbar.set_ticks([0])
 
@@ -99,19 +99,16 @@ def plot_hitmap(fig, ax, h_dict, block=False, norm=False):
 
     xxs, yys = np.meshgrid(h_dict['xs'], h_dict['ys'])
     xxc, yyc = np.meshgrid(h_dict['xc'], h_dict['yc'])
-    #((ax1, ax2, ax3), (ax4, ax5, ax6), (ax7, ax8, ax9)) = ax
     (ax1, ax2, ax3) = ax
     ratio = 15
     for i in range(1,3):
         exec('ax{:d}.clear()'.format(i))
     ax1.set_title('Left')
     ax1.set_aspect(1)
-    #plot_hist(xxc, yyc, hc_l, ax1, ax3, fig)
     plot_hist(xxc, yyc, hc_l, ax1, None, fig)
 
     ax2.set_title('Right')
     ax2.set_aspect(1)
-    #plot_hist(xxc, yyc, hc_r, ax4, ax6, fig)
     plot_hist(xxc, yyc, hc_r, ax2, None, fig)
 
     ax3.set_title('L-R difference')
@@ -122,7 +119,6 @@ def plot_hitmap(fig, ax, h_dict, block=False, norm=False):
     else:
         hs_diff = hs_l-hs_r
         hc_diff = hc_l-hc_r
-    #plot_hist(xxc, yyc, hc_diff, ax7, ax9, fig, diff=True)
     plot_hist(xxc, yyc, hc_diff, ax3, None, fig, diff=True)
     
 

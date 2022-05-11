@@ -9,8 +9,8 @@ need_blur : False
 blur_type : general_blur
 fixQ : False
 double_gauss: True
-scale_hits: True
-continue: False
+scale_hits: False
+continue: True
 #Mask nozy channels if they exist [y, x]. Reference frame is associated with center of the detector and physical coordinates are used i.e [-9.5,-32] corresponds to bottom left pad
 mask:
   #    - [-0.5,-1]

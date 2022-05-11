@@ -11,7 +11,7 @@ from numba import jit
 import argparse
 import matplotlib.pyplot as plt
 import yaml
-#from ROOT import TCanvas, TH2F
+from ROOT import TCanvas, TH2F
 
 from mapping import get_side_ch_id, get_center_ch_id, get_xy
 from pol_lib import *
@@ -77,8 +77,11 @@ def get_cluster_center(cluster):
         xz += hit[1]*hit[4]
         yz += hit[1]*hit[5]
         z += hit[1]
-    xm = xz/z
-    ym = yz/z
+    xm = float(xz/z)
+    ym = float(yz/z)
+    #print(cluster)
+    #print(xm, ym)
+    #text = input()
     return [z, xm, ym]
 
 def preprocess_single_file(config, f_name, hist=None):
@@ -122,11 +125,12 @@ def preprocess_single_file(config, f_name, hist=None):
             if len(cluster)>1:
                 cl_coors = get_cluster_center(cluster)
                 #print(f'COG coordinates: xm={cl_coors[0]:2.2f}\tym={cl_coors[1]:2.2f}\tz={cl_coors[2]:8.0f}\n')
-                #hist.Fill(cl_coors[1], cl_coors[2])
+                if len(cluster)==2:
+                    hist.Fill(cl_coors[1], cl_coors[2])
                 cluster_coor_list.append([cluster[0][0]]+cl_coors)
             else:
                 #hist.Fill(cluster[0][4], cluster[0][5])
-                cluster_coor_list.append([cluster[0][0],cluster[0][1], cluster[0][4],cluster[0][5]])
+                cluster_coor_list.append([cluster[0][0],cluster[0][1], float(cluster[0][4]),float(cluster[0][5])])
         #print(f'Evt_count={len(cluster_coor_list):5d}\n')
         #for cluster in cluster_coor_list:
         #    print(cluster)
@@ -139,12 +143,12 @@ def preprocess(config, regex_line, offline = False):
     attempt_count = 0
     #fig, ax = init_monitor_figure()
     #plt.draw()
-    #c1 = TCanvas( 'c1', 'Monitor', 2560,800)
-    #c1.SetFillColor( 42 )
-    #c1.GetFrame().SetFillColor( 21 )
-    #c1.GetFrame().SetBorderSize( 6 )
-    #c1.GetFrame().SetBorderMode( -1 )
-    #hist = TH2F( 'monitor', 'monitor', 32, 0, 32, 20, 0, 20)
+    c1 = TCanvas( 'c1', 'Monitor', 2560,800)
+    c1.SetFillColor( 42 )
+    c1.GetFrame().SetFillColor( 21 )
+    c1.GetFrame().SetBorderSize( 6 )
+    c1.GetFrame().SetBorderMode( -1 )
+    hist = TH2F( 'monitor', 'monitor',640, 0, 32, 400, 0, 20)
     f_name_old = '' 
     file_arr = np.sort(np.array(glob.glob1(config['bin_fpath'] , regex_line)))
     if offline:
@@ -155,14 +159,14 @@ def preprocess(config, regex_line, offline = False):
     try:
         while (file_count < np.shape(file_arr)[0] and offline) or (not offline):
             if(f_name_old != f_name):
-                preprocess_single_file(config, f_name)
+                preprocess_single_file(config, f_name, hist)
                 f_name_old = f_name
                 attempt_count = 0
                 file_count +=1
-                #hist.Draw('colz')
-                #c1.Modified()
-                #c1.Update()
-#                text = input()
+                hist.Draw('colz')
+                c1.Modified()
+                c1.Update()
+                text = input()
             else:
                 time.sleep(1)
                 attempt_count +=1

@@ -7,7 +7,7 @@ channels:
 dependencies:
   - python=3.8
   - pip=20.1
-  - root=6.24
+  - root=6.24.4
   - uproot=3.12
   - iminuit=2.3
   - scikit-learn=0.23.2
@@ -22,4 +22,5 @@ dependencies:
   - pyyaml
   - cusignal
   - cudatoolkit
+  - psycopg2
 

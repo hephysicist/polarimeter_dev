@@ -30,6 +30,7 @@ def get_evt_arr(in_fpath, out_fpath, f_name,amp_cut, save_raw=False):
                              evt[3]]) #frame
     evt_arr = np.array(evt_list)
     n_evt = np.shape(evt_arr)[0]
+    #print(np.min(evt_arr), np.max(evt_arr))
     if  n_evt:
         print('Preprocessed '+str(n_evt)+' raw events')
         if save_raw:
@@ -40,6 +41,8 @@ def get_evt_arr(in_fpath, out_fpath, f_name,amp_cut, save_raw=False):
     return evt_arr
 
 def map_events(evt_arr, zone_id):
+    max_ch = 0
+    max_val = -1
     cut = evt_arr[:,3]==2 #Choose only second frame 
     cut_l = np.logical_and(cut, evt_arr[:,0]==-1)
     cut_r = np.logical_and(cut, evt_arr[:,0]==+1)
@@ -63,7 +66,10 @@ def map_events(evt_arr, zone_id):
             ch_id_c = get_center_ch_id(x,y, zone_id)
             hist_c_l[y,x] = ch_id_hist_l[ch_id_c]
             hist_c_r[y,x] = ch_id_hist_r[ch_id_c]
-
+            if max_val < (ch_id_hist_l[ch_id_c] + ch_id_hist_r[ch_id_c])/2.:
+                max_val = (ch_id_hist_l[ch_id_c] + ch_id_hist_r[ch_id_c])/2.
+                max_ch = ch_id_c
+    print('Channel with maximal load: ch={:4d}  n_evt={:5d}\n'.format(int((max_ch + 640)%1280),int(max_val)))
     grid = get_coor_grid()
     h_dict = { 'hc_l': hist_c_l,
                 'hc_r' : hist_c_r,
@@ -104,7 +110,8 @@ def preprocess_single_file(config, f_name, vepp4E, dfreq, fig, ax ):
                                       config['preprocess']['amp_cut'],
                                       config['preprocess']['save_raw_file'] )
         if np.shape(evt_arr)[0] != 0:
-            h_dict = map_events(evt_arr, config['zone_id']) 
+            h_dict = map_events(evt_arr, config['zone_id'])
+             
             save_mapped_hist(  config['hist_fpath'],
                                 h_dict,
                                 vepp4E,
