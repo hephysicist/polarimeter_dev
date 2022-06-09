@@ -10,6 +10,7 @@ import scipy.interpolate as spint
 
 from pol_lib import arrange_region
 from pol_fit_lib import get_fit_func
+from mapping import get_xy
 
 matplotlib.use('TkAgg')
 #matplotlib.use('Agg')
@@ -79,14 +80,14 @@ def plot_hist(x, y, h, ax, cax, fig, diff=False):
             tmax = np.max(h_f)
             tmed = np.quantile(h_f, 0.5)
         im = ax.pcolormesh(x,y,h,
-                           vmin=tmin,#np.min(h_f),
-                           vmax=tmax,#np.max(h_f),
-                           cmap=plt.cm.gnuplot2)
+                           vmin=tmin,
+                           vmax=tmax,
+                           cmap=plt.cm.gray)
         #cbar = fig.colorbar(im, cax=cax,format=ticker.FuncFormatter(fmt))
         #cax.set_aspect(15)
         #cbar.set_ticks([tmin,tmed, tmax])
     else:
-        im = ax.pcolormesh(x,y,h, cmap=plt.cm.grey)
+        im = ax.pcolormesh(x,y,h, cmap=plt.cm.gray)
         #cax.set_aspect(15)
         #cbar.set_ticks([0])
 
@@ -285,6 +286,18 @@ def plot_fit(h_dict, m_fitres, xrange, fig, ax, diff=True, pol='l'):
     ax_fit.grid()
     ax_fit.set_aspect(1)
     ax_fit.set_title('Fit')
+
+def draw_ch_numbers(ax, config):
+    for idx in range(0,1280):
+                x,y = get_xy(idx, config["zone_id"])
+                if (x >=0):
+                    tx="{}".format((idx+640)%1280) # create a label
+                    ax.text(2*x+1-32,y-10,
+                            tx,
+                            ha="center",
+                            color="magenta",
+                            va="bottom",
+                            fontsize=6)
     
 #Well, I don't use it. Please check that it works ok.
 def get_interp_hist(x,y,h,step_ratio=2):

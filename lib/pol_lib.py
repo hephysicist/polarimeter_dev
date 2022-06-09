@@ -6,6 +6,7 @@ from numba import jit
 import time
 from datetime import datetime
 from depol.depolarizer import *
+from mapping import get_xy
 
 @jit(nopython=True)
 def convert_val(x):
@@ -319,8 +320,44 @@ def mask_hist(config, h_dict):
         return buf_dict
     else:
         return h_dict
+        
+def impute_ch(x, y, hc_l, hc_r):
+    n_evt_center_l = 0
+    n_evt_center_r = 0
+    if x > -1:
+        x_arr = np.arange(x-1, x+2)
+        y_arr = np.arange(y-1, y+2)
+        x_arr = x_arr[np.logical_and(x_arr >= 0, x_arr <32)]
+        y_arr = y_arr[np.logical_and(y_arr >= 0, y_arr <20)]
+        #print('center: ',x,y)
+        count = 0
+        for idx in x_arr:
+            for idy in y_arr:
+                #print('side ch: ',idx,idy)
+                n_evt_center_l += hc_l[idy,idx]
+                n_evt_center_r += hc_r[idy,idx]
+                count += 1
+        if count:
+            n_evt_center_l /= count
+            n_evt_center_r /= count
+    return int(n_evt_center_l), int(n_evt_center_r)
     
-    
+def impute_hist(config, h_dict):
+    raw_ch_arr = config['broken_ch']
+    hc_l = np.array(h_dict['hc_l'])
+    hc_r = np.array(h_dict['hc_r'])
+    if raw_ch_arr is not None:
+        for raw_ch in raw_ch_arr:
+            [x,y] = get_xy((raw_ch+640)%1280, config['zone_id'])
+            n_l, n_r = impute_ch(x, y, hc_l, hc_r)
+            hc_l[y,x] = n_l
+            hc_r[y,x] = n_r
+        buf_dict = h_dict
+        buf_dict['hc_l'] = hc_l
+        buf_dict['hc_r'] = hc_r
+        return buf_dict
+
+
 def read_vepp4_stap():
     path2stap = '/mnt/vepp4/kadrs/stap.dat'
     with open(path2stap, 'r', encoding='UTF-8') as stap:
@@ -340,6 +377,7 @@ def get_par_from_file(path2file, par_id_arr):
             for par_id in par_id_arr:
                 data.append(lines[par_id])
         else:
+            data.append("-1")
             print('ERROR: stap file is empty!')
         return data
         
@@ -354,9 +392,10 @@ def init_depol():
     d.start_fmap()
     return d
 
-def get_depol_freq(device, fname):
+def get_depol_params(device, fname):
     ts = datetime.strptime(fname[:19], "%Y-%m-%dT%H:%M:%S").timestamp()
     fmap = device.get_fmap()
+    
     depol_pair = []
     if len(fmap) > 0:
         idx = -1
@@ -369,6 +408,19 @@ def get_depol_freq(device, fname):
             depol_pair = fmap[idx]
         else:
             print('No frequency for corresponding time found!')
-    return depol_pair
+    att = float(device.get_attenuation())
+    fspeed = float(device.get_speed())
+    if len(depol_pair):
+        return [depol_pair[0], depol_pair[1], att, fspeed]
+    else:
+        return [0, 0, fspeed, att]
+        
+def guess_real_energy(v4E, vepp4H_nmr):
+    v4E_nmr = 1.04277*vepp4H_nmr
+    if v4E_nmr < 1000:
+        return (v4E - 9.2)/1.0053
+    else:
+        return v4E_nmr
+
 
 

@@ -13,7 +13,7 @@ import yaml
 
 from mapping import get_side_ch_id, get_center_ch_id
 from pol_lib import *
-from pol_plot_lib import init_monitor_figure, plot_hitmap
+from pol_plot_lib import init_monitor_figure, plot_hitmap, draw_ch_numbers
 
 def get_evt_arr(in_fpath, out_fpath, f_name,amp_cut, save_raw=False):
     print('Reading file: ', f_name,'...')
@@ -81,13 +81,9 @@ def map_events(evt_arr, zone_id):
                 'yc' : grid['yc']}
     return h_dict
     
-def save_mapped_hist(hist_fpath, h_dict, vepp4E, dfreq, f_name):
-    #print('ENERGY IS:', vepp4E)
-    if np.shape(dfreq)[0]:
-        buf_freq = dfreq[1]
-    else:
-        buf_freq = 0
-        print('ERROR: Check depolarizer!')
+def save_mapped_hist(hist_fpath, h_dict, env_params, f_name):
+    if env_params['dfreq'] < 0:
+        print('No scan is running! Depolarizer is OFF.')
     np.savez(hist_fpath+f_name[:19]+'_hist',
             hc_l = h_dict['hc_l'],
             hc_r = h_dict['hc_r'],
@@ -97,13 +93,12 @@ def save_mapped_hist(hist_fpath, h_dict, vepp4E, dfreq, f_name):
             ys = h_dict['ys'],
             xc = h_dict['xc'],
             yc = h_dict['yc'],
-            vepp4E = vepp4E,
-            dfreq = buf_freq)
+            env_params=env_params)
 
     print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
     print('Saved mapped hist to the file: '+f_name[:19]+'_hist.npz\n')
 
-def preprocess_single_file(config, f_name, vepp4E, dfreq, fig, ax ):
+def preprocess_single_file(config, f_name, env_params, fig, ax ):
         evt_arr = get_evt_arr(config['bin_fpath'],
                                       config['raw_fpath'],
                                       f_name,
@@ -111,17 +106,19 @@ def preprocess_single_file(config, f_name, vepp4E, dfreq, fig, ax ):
                                       config['preprocess']['save_raw_file'] )
         if np.shape(evt_arr)[0] != 0:
             h_dict = map_events(evt_arr, config['zone_id'])
-             
+            if config['preprocess']['impute_broken_ch']:
+                h_dict = impute_hist(config, h_dict)
             save_mapped_hist(  config['hist_fpath'],
                                 h_dict,
-                                vepp4E,
-                                dfreq,
+                                env_params,
                                 f_name) 
             print_stats(get_raw_stats(h_dict))
             if config['preprocess']['draw']:
                 plot_hitmap(fig, ax, h_dict, block=False, norm=False)
+                draw_ch_numbers(ax[0], config)
                 fig.canvas.draw_idle()
                 plt.pause(0.1)
+                #text = input()
 
 def preprocess(config, regex_line, offline = False):
     bin_fpath = config['bin_fpath']
@@ -137,7 +134,10 @@ def preprocess(config, regex_line, offline = False):
     file_arr = np.sort(np.array(glob.glob1(bin_fpath , regex_line)))
     if offline:
         f_name = file_arr[0]
-        vepp4E = float(input('Enter VEPP4 energy in MeV: '))
+        vepp4E = float(input('Enter VEPP4 energy [MeV]: '))
+        vepp4H_nmr = float(input('Enter VEPP4 H field [Gauss]: '))
+        env_params = { 'vepp4E':vepp4E, 
+                       'vepp4H_nmr':vepp4H_nmr}
     else:
         f_name = file_arr[-2]
         if config['preprocess']['use_depolarizer']:
@@ -149,10 +149,23 @@ def preprocess(config, regex_line, offline = False):
             if(f_name_old != f_name):
                 if not offline:
                      vepp4E = read_vepp4_stap()
+                     buf_list = get_par_from_file('/mnt/vepp4/kadrs/nmr.dat', par_id_arr = [1])
+                     vepp4H_nmr = float(buf_list[0])
+                     real_E = guess_real_energy(vepp4E, vepp4H_nmr)
+                     env_params = { 'vepp4E':vepp4E, 
+                                    'vepp4H_nmr':vepp4H_nmr,
+                                    'real_E': real_E}
+                     print(env_params)
                 if config['preprocess']['use_depolarizer']:
-                    dfreq = get_depol_freq(depol_device, f_name)
-                print(dfreq, end= '\n')
-                preprocess_single_file(config, f_name, vepp4E, dfreq, fig, ax)
+                    [dtime, dfreq, att, fspeed] = get_depol_params(depol_device, f_name)
+                    env_params['dfreq'] = dfreq
+                    env_params['att']   = att
+                    env_params['fspeed']   = fspeed
+                else:
+                    env_params['dfreq'] = 0
+                    env_params['att']   = 0
+                    env_params['fspeed']   = 0
+                preprocess_single_file(config, f_name, env_params, fig, ax)
                 f_name_old = f_name
                 attempt_count = 0
                 file_count +=1

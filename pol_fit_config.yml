@@ -1,27 +1,28 @@
 hist_fpath : '/storage/hist/' #Path to store mapped event histograms
-fitres_file : '/home/lsrp/Control/polarimeter_dev/tmp/pol_fitres.txt'
+#fitres_file : '/home/lsrp/Control/polarimeter_dev/tmp/pol_fitres.txt'
 regex_line : '2022*'
 
 #Choose fit region (use physical coordinates and take in mind that each bin at the central region has length of 2 mm)
 xrange : [-32,32]
-n_files : 30
+n_files : 15
 need_blur : False
 blur_type : general_blur
 fixQ : False
 double_gauss: True
 scale_hits: False
 continue: True
-#Mask nozy channels if they exist [y, x]. Reference frame is associated with center of the detector and physical coordinates are used i.e [-9.5,-32] corresponds to bottom left pad
+
 mask:
-  #    - [-0.5,-1]
-  #    - [ 0.5,-1]
-  #    - [-0.5,2]
-  #    - [0.5,2]
-    
+    #- [-0.5,-1]
+    #- [ 0.5,-1]
+    #- [-0.5,2]
+    #- [0.5,2]
+
+
 initial_values:  
     E       : 4730 #MeV
     L       : 33000 #mm
-    P       : 0.
+    P       : 0.5
     V       : 1.
     Q       : 0.2024
     beta    : -2.413
@@ -42,8 +43,8 @@ initial_values:
     p1      : 0.0
     p2      : 0.0
     p3      : 0.0
-    NL      : 1000.0
-    NR      : 1000.0
+    NL      : 100
+    NR      : 100
     
 fix_par:
     E       : True
@@ -68,8 +69,8 @@ fix_par:
     phi     : False
     NL      : False
     NR      : False
-    p1      : False
-    p2      : False
+    p1      : True
+    p2      : True
     p3      : True
     
 par_err:  
@@ -88,21 +89,21 @@ par_err:
     alpha_x2 : 1.0
     alpha_y1 : 1.0
     alpha_y2 : 1.0
-    nx1     : 1.0
-    nx2     : 1.0
-    ny1     : 1.0
-    ny2     : 1.0
+    nx1     : 0.1
+    nx2     : 0.1
+    ny1     : 0.1
+    ny2     : 0.1
     phi     : 1.0
-    NL      : 100.0
-    NR      : 100.0
-    p1      : 0.1
-    p2      : 0.1
-    p3      : 0.1
+    NL      : 100
+    NR      : 100
+    p1      : 0.0
+    p2      : 0.0
+    p3      : 0.0
     
 par_lim:  
-    E       : [0.0, 10000]
+    E       : [0.0, 100000]
     L       : [0.0, 100000]
-    P       : [-10.0, 10.0]
+    P       : [-10, 10.0]
     V       : [-1.0, 1.0]
     Q       : [-1.0, 1.0]
     beta    : [-7.0, 7.0]
@@ -115,14 +116,14 @@ par_lim:
     alpha_x2 : [-10., 10.]
     alpha_y1 : [0.1, 10.]
     alpha_y2 : [-10., 10.]
-    nx1     : [0.1, 10.]
-    nx2     : [-10, 10.]
-    ny1     : [0.1, 10.]
-    ny2     : [-10, 10.]
-    phi     : [-3.14,+3.14]
+    nx1     : [-5., 5.]
+    nx2     : [-5., 5.]
+    ny1     : [-5., 5.]
+    ny2     : [-5., 5.]
+    phi     : [-3.15,+3.15]
     p1     : [0,7]
     p2     : [0,7]
     p3     : [-100.,+100.]
-    NL      : [0., 100000]
-    NR      : [0., 100000]
+    NL      : [1, 100000]
+    NR      : [1, 100000]
 

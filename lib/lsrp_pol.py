@@ -22,10 +22,12 @@ class lsrp_pol:
     begintime = 0
     endtime = 0
     measuretime = 300.
-    Eset = 4700.
-    Fdep = 400333.
-    Edep = 4700.
-    H    = 4500.
+    Eset = -9999.
+    Fdep = -9999.
+    Edep = -9999.
+    Adep = -9999
+    Fspeed = -9999
+    H    = -9999.
 
     method = 0
     version = 0
@@ -44,6 +46,8 @@ class lsrp_pol:
     NL = phys_val_t()
     NR = phys_val_t()
     beta = phys_val_t()
+    askewx = phys_val_t()
+    askewy = phys_val_t()
 
 
     def write(self, dbname='test', user='nikolaev', host='127.0.0.1'):
@@ -56,6 +60,8 @@ class lsrp_pol:
                 lst.append( ("eset", "{:.2f}".format(self.Eset)) )
                 lst.append( ("fdep", "{:.6f}".format(self.Fdep)) )
                 lst.append( ("edep", "{:.6f}".format(self.Edep)) )
+                lst.append( ("adep", "{:.1f}".format(self.Adep)) )
+                lst.append( ("fspeed", "{:.6f}".format(self.Fspeed)) )
                 lst.append( ("h", "{:.6f}".format(self.H)) )
 
                 lst.append( ("xl", "{:.4f}".format(self.x.left.value)) )
@@ -93,6 +99,10 @@ class lsrp_pol:
                 lst.append( ("dnl", "{:.4f}".format(self.NL.error)) )
                 lst.append( ("dnr", "{:.4f}".format(self.NR.error)) )
                 lst.append( ("dbeta", "{:.4f}".format(self.beta.error)) )
+                lst.append( ("askewx", "{:.4f}".format(self.askewx.value)) )
+                lst.append( ("askewy", "{:.4f}".format(self.askewy.value)) )
+                lst.append( ("daskewx", "{:.4f}".format(self.askewx.error)) )
+                lst.append( ("daskewy", "{:.4f}".format(self.askewy.error)) )
                 #for l in lst:
                 #    print( l[0], "         ", l[1])
 
@@ -103,7 +113,10 @@ class lsrp_pol:
                     if i < len(lst) - 1: query +=","
                 query += ") VALUES ("
                 for i in range(0, len(lst) ):
-                    query += lst[i][1]
+                    if lst[i][1] != 'nan':
+                        query += lst[i][1]
+                    else:
+                        query += "-9999"
                     if i < len(lst) - 1: query +=","
                 query += ");"
                 cursor.execute(query)

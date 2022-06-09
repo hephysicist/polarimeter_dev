@@ -1,5 +1,5 @@
 bin_fpath :  '/online/' #Path to binary files
-raw_fpath  : '/home/lsrp/raw_events' #Path to store events dumped to .npz files 
+raw_fpath  : '/storage/hist/' #Path to store events dumped to .npz files 
 hist_fpath : '/storage/hist/' #Path to store mapped event histograms
 regex_line : '2022*' #Specify regex line to choose files for preprocessing
 
@@ -7,7 +7,8 @@ preprocess:
     save_raw_file : False 
     amp_cut : 10 #Cut on the signal value to perform background rejection
     draw : Draw
-    use_depolarizer : True
+    use_depolarizer  : True
+    impute_broken_ch : True
 
 zone_id: 
 #Specify position of the hybrid board and its id starting from 0. If the region isn't connected put id=-1  
@@ -27,6 +28,17 @@ zone_id:
     
     sbl : -1
     sbr : -1
-#Mask nozy channels if they exist [y, x]. Reference frame is associated with center of the detector and physical coordinates are used i.e [-9.5,-32] corresponds to bottom left pad.
-mask:
+
+broken_ch:
+    - 833
+    - 832
+    - 192
+    - 769
+    - 193
+    - 1
+    - 641
+    - 129
+    - 1025
+    - 672
+    - 674
 
