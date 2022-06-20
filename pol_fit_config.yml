@@ -10,7 +10,8 @@ blur_type : general_blur
 fixQ : False
 double_gauss: True
 scale_hits: False
-continue: True
+continue: False
+
 
 mask:
     #- [-0.5,-1]
@@ -48,7 +49,7 @@ initial_values:
     
 fix_par:
     E       : True
-    L       : True
+    L       : False
     P       : False
     V       : True
     Q       : False
@@ -75,7 +76,7 @@ fix_par:
     
 par_err:  
     E       : 0.
-    L       : 0.
+    L       : 1000.0
     P       : 0.5
     V       : 0.1
     Q       : 0.5
@@ -102,7 +103,7 @@ par_err:
     
 par_lim:  
     E       : [0.0, 100000]
-    L       : [0.0, 100000]
+    L       : [25000.0, 40000.0]
     P       : [-10, 10.0]
     V       : [-1.0, 1.0]
     Q       : [-1.0, 1.0]

@@ -21,6 +21,8 @@ from pol_plot_lib import *
 from moments import get_moments
 from lsrp_pol import *
 from my_stat import stat_calc_effect
+from FitMethod1 import *
+from pol_plot_lib_new import *
 
 my_timezone = '+07:00'
 
@@ -29,77 +31,41 @@ def make_fit(config, h_dict):
     h_r = h_dict['hc_r']
     x = h_dict['xc']
     y = h_dict['yc']
-    xrange = config['xrange']
-    
-    h_l, h_r, x = arrange_region(h_l, h_r ,x ,lim = xrange)
-
-    n_evt_l = np.sum(np.sum(h_l))
-    n_evt_r = np.sum(np.sum(h_r))
-
-    hprof_xl = np.sum(h_l, axis=0)
-    hprof_yl = np.sum(h_l, axis=1)
-    hprof_xr = np.sum(h_r, axis=0)
-    hprof_yr = np.sum(h_r, axis=1)
-
-    mx_l = get_mean(x,hprof_xl)
-    mx_r = get_mean(x,hprof_xr)
-    my_l = get_mean(y,hprof_yl)
-    my_r = get_mean(y,hprof_yr)
-
-
+    #h_l, h_r, x = arrange_region(h_l,h_r, x, config['xrange'])
     x_mid = (x[1:] + x[:-1])/2
     y_mid = (y[1:] + y[:-1])/2
-
     ndf = np.shape(x_mid)[0]*np.shape(y_mid)[0]
-
     X = [x_mid,y_mid]
-    chi2_2d = Chi2(get_fit_func_, X, h_l, h_r)
-    initial_values = config['initial_values']
-    if 'real E' in h_dict['env_params'].item():
-        initial_values['E'] = h_dict['env_params'].item()['real_E']
-    print('Energy is set to: {:4.2f}'.format(initial_values['E']))
-    fix_par = config['fix_par']
-    par_err = config['par_err']
-    par_lim = config['par_lim']
+
+    fm = FitMethod1(X, h_l, h_r)
+    fm.fit(config)
+    data_fields = fm.get_fit_result(config)
+
+    return fm, data_fields
+
+def show_res(fitres, data_fields, ax):
+    for the_ax in ax:
+        the_ax.cla()
+    print_fit_results(ax[0], fitres.minuit)
+    data_fields['data_sum'].draw(ax[3])
+    data_fields['data_diff'].draw(ax[6])
     
-    m2d = Minuit(chi2_2d, **initial_values)
-    for p_key in initial_values.keys():
-        m2d.fixed[p_key]  = fix_par[p_key]
-        m2d.errors[p_key] = par_err[p_key]
-        m2d.limits[p_key] = par_lim[p_key]
-    m2d.print_level = 0
-    m2d.errordef=1
-    begin_time = time.time()
-    m2d.migrad()
-    m2d.hesse()
-    print(m2d)
-    if not m2d.valid:
-       #for name in  ['sx', 'sy', 'alpha_x1', 'alpha_x2', 'alpha_y1', 'alpha_y2', 'nx1','nx2', 'ny1','ny2', 'phi', 'p1', 'p2', 'p3']:
-       for name in  ['alpha_x2', 'alpha_y2', 'nx2', 'ny2', 'phi', 'p1', 'p2', 'p3']:
-            m2d.fixed[name]=True
-       m2d.migrad()
-       m2d.hesse()
-       print(m2d)
-    end_time = time.time()
-    #print("Fit time: ", end_time-begin_time, " s")
-    return m2d, ndf
-
-def init_figures():
-    fig_l, ax_l = init_fit_figure(label = 'L', title='Left')
-    fig_r, ax_r = init_fit_figure(label = 'R', title='Right')
-    fig_d, ax_d = init_fit_figure(label = 'Diff', title='Diff')
-    #fig_3d, ax_3d = init_data_figure(label = '3d')
-    return [fig_l, fig_r, fig_d], [ax_l, ax_r, ax_d]
-
-def show_res(config, h_dict, fitres, Fig, Ax):
-    xrange = config['xrange']
-    plot_fit(h_dict, fitres, xrange, Fig[0], Ax[0], diff=False, pol='l')
-    plot_fit(h_dict, fitres, xrange, Fig[1], Ax[1], diff=False, pol='r')
-    plot_fit(h_dict, fitres, xrange, Fig[2], Ax[2], diff=True)
-    #plot_data3d(h_dict, fitres, xrange, Fig[3],  Ax[3], h_type='fl')
-    #plot_data3d(h_dict, fitres, xrange, Fig[3],  Ax[3], h_type='fr')
+    data_fields['data_sum_py'].draw(ax[1])
+    data_fields['fit_sum_py'].draw(ax[1])
+    ax[1].grid()
+    data_fields['data_sum_px'].draw(ax[2])
+    data_fields['fit_sum_px'].draw(ax[2])
+    ax[2].grid()
+    
+    data_fields['data_diff_py'].draw(ax[4])
+    data_fields['fit_diff_py'].draw(ax[4])
+    ax[4].grid()
+    data_fields['data_diff_px'].draw(ax[5])
+    data_fields['fit_diff_px'].draw(ax[5])
+    ax[5].grid()
     plt.show(block=False)
     plt.pause(1)
+        
     
 def get_unix_time_template(fname, timezone='+07:00'):
     unix_time = ciso8601.parse_datetime(fname[:19]+timezone)
@@ -220,7 +186,8 @@ def accum_data_and_make_fit(config, start_time, stop_time, vepp4E, offline = Fal
     if config['scale_hits']:
         scale_file = np.load(os.getcwd()+'/scale_array.npz', allow_pickle=True)
         scale_arr = scale_file['scale_arr']
-    fig_arr, ax_arr = init_figures()
+    #fig_arr, ax_arr = init_figures()
+    fig, ax = init_figure('test')
     db_obj = lsrp_pol()
     fit_counter = 0
     try:
@@ -251,14 +218,14 @@ def accum_data_and_make_fit(config, start_time, stop_time, vepp4E, offline = Fal
                 skew_l, skew_r = stat_calc_effect(h_dict)
                 skew = [skew_l[0]-skew_r[0], skew_l[1]-skew_r[1]]
                 print('skew_ly:{:1.4f}\tskew_ry:{:1.4f} \tsly-sry:{:1.3f}'.format(skew_l[1], skew_r[1], skew_l[1]-skew_r[1]))
-                fitres, ndf = make_fit(config, h_dict)
+                fitter, data_fields = make_fit(config, h_dict)
                 raw_stats = get_raw_stats(h_dict)
                 print_stats(raw_stats)
-                print_pol_stats_nik(fitres)
+                print_pol_stats_nik(fitter.minuit)
                 moments = get_moments(h_dict)
-                show_res(config, h_dict, fitres, fig_arr, ax_arr)
-                chi2 = fitres.fval
-                true_ndf = (ndf - fitres.npar)
+                show_res(fitter, data_fields, ax)
+                chi2 = fitter.minuit.fval
+                true_ndf = (fitter.ndf - fitter.minuit.npar)
                 chi2_normed = chi2/true_ndf
                 fit_counter +=1
                 is_db_write = True
@@ -267,7 +234,7 @@ def accum_data_and_make_fit(config, start_time, stop_time, vepp4E, offline = Fal
                     if text!="y":
                         is_db_write=False
                 if is_db_write:
-                    db_write(db_obj, config, file_buffer[0], file_buffer[-1], fitres, chi2, true_ndf, h_dict['env_params'].item(), fit_counter, skew, version)
+                    db_write(db_obj, config, file_buffer[0], file_buffer[-1], fitter.minuit, chi2, true_ndf, h_dict['env_params'].item(), fit_counter, skew, version)
     except KeyboardInterrupt:
         print('\n***Exiting fit program***')
         pass

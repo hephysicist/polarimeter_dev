@@ -13,59 +13,87 @@ from pol_fit_lib import get_fit_func
 from mapping import get_xy
 
 matplotlib.use('TkAgg')
-#matplotlib.use('Agg')
 plt.rcParams.update({'errorbar.capsize': 2})
 RGI = spint.RegularGridInterpolator
+
+class data_field:
+    def __init__(self, coors, data, data_err = None, label=None, data_type='dat'):
+        self.x = coors[0]
+        self.y = coors[1]
+        self.data = data
+        self.data_err = data_err
+        self.label = label
+        self.data_type = data_type
+        
+        
+    def draw_profilex(self, ax):
+        x = (self.x[1:]+self.x[:-1])/2
+        y = self.data
+        ax.bar(x, y,
+                  yerr=self.data_err,
+                  color='white',#color='lightseagreen',
+                  edgecolor='white',
+                  linewidth=1,
+                  width=2,
+                  zorder=1)
+        if self.data_type == 'dat':
+            ax.plot(x, y, marker="o", markersize=5, linestyle="", alpha=0.8, color="blue",zorder=3, label = self.label)
+        else:
+            ax.plot(x, y, color = 'red', zorder=4, label = self.label)
+        ax.grid(zorder=0)
+        ax.set_xlabel(r'x [mm]')
+        ax.legend()
+    
+    def draw_profiley(self, ax):
+        y = (self.y[1:]+self.y[:-1])/2
+        x = self.data #We need to change x <-> y because of using barh
+        ax.barh(y, 
+                   x,
+                   xerr=self.data_err,
+                   color='white',
+                   edgecolor='white',
+                   linewidth=1,
+                   height=1,
+                   zorder=1)
+        if self.data_type == 'dat':
+            ax.plot(x, y, marker="o", markersize=5, linestyle="", alpha=0.8, color="blue",zorder=3, label = self.label)
+        else:
+            ax.plot(x,y, color = 'red', zorder=4, label = self.label)
+        ax.grid(zorder=0)
+        ax.set_ylabel(r'y [mm]')
+        ax.legend()
+        
+    def draw_2d_plot(self, ax):
+        im_dat = ax.imshow( self.data, 
+                            cmap=plt.cm.viridis,
+                            interpolation='none',
+                            extent=[self.x[0],self.x[-1],self.y[0],self.y[-1]],
+                            origin='lower')
+        #cbar_dat = fig.colorbar(im_dat, ax=ax)
+        #ax.grid()
+        ax.set_aspect(1)
+        ax.set_title(self.label)
+        ax.set_xlabel(r'x [mm]')
+        ax.set_ylabel(r'y [mm]')
+
+    def draw(self, ax):
+        if self.y is None:
+            self.draw_profilex(ax)
+        elif self.x is None: 
+            self.draw_profiley(ax)
+        else:
+            self.draw_2d_plot(ax)
 
 def init_monitor_figure():
     plt.ion()
     fig, ax = plt.subplots(
-        #nrows=3, ncols=3, sharex=False, sharey=False,
+       
         nrows=3, ncols=1, sharex=False, sharey=False,  
-        #gridspec_kw={'width_ratios':[1,0.07,0.07], 'height_ratios':[1,1,1]}
         gridspec_kw={'width_ratios':[1], 'height_ratios':[1,1,1]})
     fig.set_tight_layout(True)
     fig.tight_layout(rect=[0, 0, 1, 1])
     fig.set_size_inches(8,8)
     return fig, ax
-
-def init_fit_figure(label, title):
-    fig = plt.figure(figsize=(7, 5))
-    fig.canvas.set_window_title(title)
-    fig.set_tight_layout(True)
-    fig.tight_layout(rect=[0, 0, 1, 1])
-    fig.suptitle(label)
-    # Define the positions of the subplots.
-    gs = gridspec.GridSpec(2, 2,
-                           width_ratios=[ 1., 1.],
-                           height_ratios=[1., 1.])
-    ax_py = plt.subplot(gs[0])
-    ax_dat = plt.subplot(gs[1])
-    ax_fit = plt.subplot(gs[3])
-    ax_px = plt.subplot(gs[2])
-    ax = [ax_py,ax_dat, ax_fit, ax_px]
-
-    return fig, ax
-
-def init_data_figure(label):
-    fig = plt.figure(figsize=(10, 5))
-    fig.set_tight_layout(True)
-    fig.tight_layout(rect=[0, 0, 1, 1])
-    fig.suptitle(label)
-    # Define the positions of the subplots.
-    gs = gridspec.GridSpec(1, 2, width_ratios=[ 1., 1.])
-    ax_l = fig.add_subplot(gs[0], projection='3d')
-    ax_r = fig.add_subplot(gs[1], projection='3d')
-    #ax_diff = fig.add_subplot(gs[2], projection='3d')
-    ax_l.set_title('Left')
-    ax_r.set_title('Right')
-    ax = [ax_l,ax_r]
-    return fig, ax
-
-def fmt(x, pos):
-    a, b = '{:.0e}'.format(x).split('e')
-    b = int(b)
-    return r'${} \cdot 10^{{{}}}$'.format(a, b)
 
 def plot_hist(x, y, h, ax, cax, fig, diff=False):
     ax.set_aspect(1)
@@ -90,8 +118,7 @@ def plot_hist(x, y, h, ax, cax, fig, diff=False):
         im = ax.pcolormesh(x,y,h, cmap=plt.cm.gray)
         #cax.set_aspect(15)
         #cbar.set_ticks([0])
-
-
+        
 def plot_hitmap(fig, ax, h_dict, block=False, norm=False):
     hc_l = h_dict['hc_l']
     hc_r = h_dict['hc_r']
@@ -121,171 +148,6 @@ def plot_hitmap(fig, ax, h_dict, block=False, norm=False):
         hs_diff = hs_l-hs_r
         hc_diff = hc_l-hc_r
     plot_hist(xxc, yyc, hc_diff, ax3, None, fig, diff=True)
-    
-
-def plot_data3d(h_dict, m_fitres, xrange, fig,  ax, h_type='l'):
-    fit_pars = np.array(m_fitres.values)
-    h_l = h_dict['hc_l']
-    h_r = h_dict['hc_r']
-
-    x = h_dict['xc']
-    y = h_dict['yc']
-    NL = m_fitres.values['NL']
-    NR = m_fitres.values['NR']
-
-    h_l, h_r, x = arrange_region(h_l, h_r ,x ,lim = xrange)
-    xx, yy = np.meshgrid((x[1:]+x[:-1])/2,(y[1:]+y[:-1])/2)
-    ax_dat = None
-    ax_l, ax_r = ax
-    if h_type == 'dl':
-        h_data = h_l
-        ax_dat = ax_l
-    elif h_type == 'dr':
-        h_data = h_r
-        ax_dat = ax_r
-    elif h_type == 'fl':
-        h_data = np.where(h_l > 0, get_fit_func(x, y, fit_pars), 0)
-        ax_dat = ax_l
-    elif h_type == 'fr':
-        h_data = np.where(h_r > 0, get_fit_func(x, y, fit_pars), 0)
-        ax_dat = ax_r
-    else:
-        pass
-
-    ax_dat.set_xlabel(r'x [mm]')
-    ax_dat.set_ylabel(r'y [mm]')
-    xpos, ypos = np.meshgrid(x[:-1]+x[1:], y[:-1]+y[1:])
-
-    xpos = xpos.flatten()/2.
-    ypos = ypos.flatten()/2.
-    zpos = np.zeros_like(xpos)
-    dx = x[1] - x[0]
-    dy = y[1] - y[0]
-
-    '''Draw histogram'''
-    dz = h_data.flatten()
-    cmap = cm.get_cmap('jet')	# Get desired colormap - you can change this!
-    max_height = np.max(dz)   # get range of colorbars so we can normalize
-    min_height = np.min(dz)
-    # scale each z to [0,1], and get their rgb values
-    rgba = [cmap((k-min_height)/max_height) for k in dz] 
-    ax_dat.bar3d(xpos, ypos, zpos, dx, dy, dz, color=rgba, zsort='average')
-
-def plot_fit(h_dict, m_fitres, xrange, fig, ax, diff=True, pol='l'):
-    fit_pars = np.array(m_fitres.values)
-    NL = m_fitres.values['NL']
-    NR = m_fitres.values['NR']
-
-    h_l = h_dict['hc_l']/NL
-    h_r = h_dict['hc_r']/NR
-    x = h_dict['xc']
-    y = h_dict['yc']
-    #print(h_l)
-    xx, yy = np.meshgrid((x[1:]+x[:-1])/2,(y[1:]+y[:-1])/2)
-    h_l, h_r, x = arrange_region(h_l, h_r ,x ,lim = xrange)
-
-    for axs in ax:
-        axs.cla()
-
-    ax_py, ax_dat, ax_fit, ax_px = ax
-
-    n_evt_l = np.sum(np.sum(h_l))
-    n_evt_r = np.sum(np.sum(h_r))
-
-    h_lx, h_ly = h_l.sum(axis=0), h_l.sum(axis=1)
-    h_rx, h_ry = h_r.sum(axis=0), h_r.sum(axis=1)
-
-    fit_l = np.where(h_l>0, get_fit_func(x, y, fit_pars),0)
-    fit_r = np.where(h_r>0, get_fit_func(x, y, fit_pars, inverse_pol=True), 0)
-
-    fit_lx, fit_ly = fit_l.sum(axis=0), fit_l.sum(axis=1)
-    fit_rx, fit_ry = fit_r.sum(axis=0), fit_r.sum(axis=1)
-    
-    if diff:
-        h_data = h_l - h_r
-        h_fit = fit_l-fit_r 
-        h_data_x = h_lx-h_rx
-        h_fit_x = fit_lx-fit_rx
-        h_data_y = h_ly-h_ry
-        h_fit_y = fit_ly-fit_ry
-
-    elif pol == 'r' :
-        h_data = h_r
-        h_fit = fit_r 
-        h_data_x = h_rx
-        h_fit_x = fit_rx
-        h_data_y = h_ry
-        h_fit_y = fit_ry
-    elif pol == 'l' :
-        h_data = h_l
-        h_fit = fit_l 
-        h_data_x = h_lx
-        h_fit_x = fit_lx
-        h_data_y = h_ly
-        h_fit_y = fit_ly
-    else:
-        pass
-
-    '''Draw 2d data histogram (top right)'''
-
-    im_dat = ax_dat.imshow(h_data, 
-                           cmap=plt.cm.viridis,
-                           interpolation='none',
-                           extent=[x[0],x[-1],y[0],y[-1]],
-                           origin='lower')#
-    #cbar_dat = fig.colorbar(im_dat, ax=ax_dat)
-    ax_dat.grid()
-    ax_dat.set_aspect(1)
-    ax_dat.set_title('Data')
-    ax_dat.set_xlabel(r'x [mm]')
-
-    '''Draw  Y-profile histogram (top left)'''
-
-    h_yerr =  np.sqrt(h_ly/NL+h_ry/NR)
-    ax_py.barh((y[1:]+y[:-1])/2, 
-               h_data_y,
-               xerr=h_yerr,
-               color='white',#color='lightseagreen',
-               edgecolor='white',
-               linewidth=1,
-               height=1,
-               zorder=1)
-    ax_py.plot(h_data_y,(y[1:]+y[:-1])/2,  marker="o", markersize=5, linestyle="", alpha=0.8, color="blue",zorder=3, label = 'Data')
-
-    ax_py.plot(h_fit_y, (y[1:]+y[:-1])/2, color = 'red', zorder=4, label = 'Fit')
-    ax_py.set_ylabel(r'y [mm]')
-    ax_py.set_ylim(ax_dat.get_ylim())
-    ax_py.invert_xaxis()
-    ax_py.grid(zorder=0)
-    ax_py.set_title('Y-profile')
-    ax_py.legend()
-    '''Draw  X-profile histogram (bottom left)'''
-    h_xerr =  np.sqrt(h_lx/NL+h_rx/NR)
-    ax_px.bar((x[1:]+x[:-1])/2, h_data_x,
-              yerr=h_xerr,
-              color='white',#color='lightseagreen',
-              edgecolor='white',
-              linewidth=1,
-              width=2,
-              zorder=1)
-    ax_px.plot((x[1:]+x[:-1])/2, h_data_x, marker="o", markersize=5, linestyle="", alpha=0.8, color="blue",zorder=3, label = 'Data')
-
-    ax_px.plot((x[1:]+x[:-1])/2, h_fit_x, color = 'red', zorder=4, label = 'Fit')
-    ax_px.set_xlim(ax_dat.get_xlim())
-    ax_px.grid(zorder=0)
-    ax_px.set_title('X-profile')
-    ax_px.set_xlabel(r'x [mm]')
-    ax_px.legend()
-    '''Draw  2d Fit histogram (bottom right)'''
-    im_fit = ax_fit.imshow(h_fit, 
-                           cmap=plt.cm.viridis,
-                           interpolation='none',
-                           extent=[x[0],x[-1],y[0],y[-1]],
-                           origin='lower')#
-    #cbar_fit = fig.colorbar(im_fit, ax=ax_fit)
-    ax_fit.grid()
-    ax_fit.set_aspect(1)
-    ax_fit.set_title('Fit')
 
 def draw_ch_numbers(ax, config):
     for idx in range(0,1280):
@@ -298,20 +160,43 @@ def draw_ch_numbers(ax, config):
                             color="magenta",
                             va="bottom",
                             fontsize=6)
-    
-#Well, I don't use it. Please check that it works ok.
-def get_interp_hist(x,y,h,step_ratio=2):
-    x_new = np.linspace(x[0], x[-1], num = np.shape(x)[0]*step_ratio)
-    y_new = np.linspace(y[0], y[-1], num = np.shape(y)[0]*step_ratio)
-    x_mid = (x[1:] + x[:-1])/2
-    y_mid = (y[1:] + y[:-1])/2
-    xx, yy = np.meshgrid(x_mid, y_mid)
-    intrep_f = RGI((y_mid, x_mid), values=h)
-
-    x_mid = (x_new[1:] + x_new[:-1])/2
-    y_mid = (y_new[1:] + y_new[:-1])/2
-    xx_mid, yy_mid = np.meshgrid(x_mid, y_mid)
-    pts = np.array([])
-    h_new = intrep_f(y_mid, x_mid)
-    print(np.shape(h_new),np.shape(xx_new))
-    return xx_new, yy_new, h_new.T
+   
+def init_figure(label): 
+        fig = plt.figure(figsize=(15, 8))
+        fig.set_tight_layout(True)
+        fig.tight_layout(rect=[0, 0, 1, 1])
+        fig.suptitle(label)
+        gs0 = gridspec.GridSpec(1, 2, figure=fig)
+        
+        gs00 = gridspec.GridSpecFromSubplotSpec(3, 2, subplot_spec=gs0[0], height_ratios = [1,1,1])
+        ax01 = fig.add_subplot(gs00[:-1,:-1])
+        ax02 = fig.add_subplot(gs00[0,-1])
+        ax03 = fig.add_subplot(gs00[1,-1])
+        ax04 = fig.add_subplot(gs00[-1, :])
+        
+        gs10 = gridspec.GridSpecFromSubplotSpec(2, 2, subplot_spec=gs0[1], height_ratios = [2,1])
+        ax11 = fig.add_subplot(gs10[0,0])
+        ax12 = fig.add_subplot(gs10[0,1])
+        ax13 = fig.add_subplot(gs10[1, :])
+        ax = [ax01,ax02, ax03, ax04, ax11, ax12, ax13]
+        return fig, ax
+        
+def print_fit_results(ax, fitres):
+    ax.set_title('Fit results')
+    ax.set(xlim=(0., 1.25), ylim=(-0.25, 1.25), xticks=[], yticks=[])
+    ax.axis('off')
+    par_list = ['P','Q','mx', 'my','sx', 'sy', 'NL', 'NR']
+    important_pars = ['P', 'NL', 'NR']
+    line_size = 0.13
+    lc = 0 
+    x = 0.
+    y = 1.
+    for par in par_list:
+        text = r'${:s} = {:1.2f} \pm {:1.2f}$'.format(par, fitres.values[par], fitres.errors[par])
+        if par in important_pars:
+            color = 'red'
+        else:
+            color = 'black'
+        ax.text(x, y+lc, text, size=14, ha='left', va='center', color=color)
+        lc -= line_size
+    return ax
