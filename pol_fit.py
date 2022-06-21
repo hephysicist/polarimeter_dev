@@ -22,7 +22,8 @@ from moments import get_moments
 from lsrp_pol import *
 from my_stat import stat_calc_effect
 from FitMethod1 import *
-from pol_plot_lib_new import *
+from FitMethod2 import *
+from pol_plot_lib import *
 
 my_timezone = '+07:00'
 
@@ -36,8 +37,8 @@ def make_fit(config, h_dict):
     y_mid = (y[1:] + y[:-1])/2
     ndf = np.shape(x_mid)[0]*np.shape(y_mid)[0]
     X = [x_mid,y_mid]
-
-    fm = FitMethod1(X, h_l, h_r)
+    config['initial_values']['E'] = h_dict['env_params'].item()['vepp4E']
+    fm = FitMethod2(X, h_l, h_r)
     fm.fit(config)
     data_fields = fm.get_fit_result(config)
 
@@ -126,7 +127,9 @@ def read_batch(hist_fpath, file_arr, vepp4E):
     print('v4E : ', env_params['vepp4E'])
     if 'real E' in env_params:
         print('real E : ', env_params['real_E'])
+       
     print('Dep freq: ', env_params['dfreq'])
+   
     print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
     if env_params['vepp4E'] < 1000:
         env_params['vepp4E'] = vepp4E

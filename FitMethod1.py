@@ -5,7 +5,7 @@ from iminuit.util import make_func_code
 from pol_fit_lib import wrap_array
 from scipy import signal
 from math import cos, sin
-from pol_plot_lib_new import *
+from pol_plot_lib import *
 from pol_lib import get_coor_grid
 
 class FitResult:
