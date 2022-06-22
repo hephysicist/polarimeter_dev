@@ -116,6 +116,11 @@ class FitMethod2:
         D = np.hstack([D[:,16:],D[:,0:16]])
         return D
 
+    def smooth(self, his, window=3): 
+        smooth_kernel = np.blackman(window)
+        smooth_kernel = [x*smooth_kernel  for x in smooth_kernel]
+        return  signal.fftconvolve(his, smooth_kernel, 'same')
+
 
 
 
@@ -188,6 +193,22 @@ class FitMethod2:
         self.data_left_error  = np.sqrt(self.data_left/self.minuit.values['NL'])
         self.data_right_error = np.sqrt(self.data_right/self.minuit.values['NR'])
 
+
+    def calc_beam_pdf(self):
+        self.compton_fit_sum = self.compton_fit_sum.reshape(self.shape)
+        fC0  = np.fft.fft2(self.compton_fit_sum)
+        fD0  = np.fft.fft2(self.data_sum)
+        s = np.abs(np.sum(fC0))
+        k=1e-3
+        k=0
+        fB = fD0/(fC0 + k*s)
+
+        self.data_sum =  np.abs(np.fft.ifft2(fB))
+        self.data_sum =  self.fft_fix(self.data_sum)
+        #self.data_sum = self.smooth(self.data_sum, 7)
+
+
+
     def get_fit_result(self, cfg):
         grids = get_coor_grid()
         coors = [grids['xc'],grids['yc']]
@@ -197,6 +218,9 @@ class FitMethod2:
         data_error_names = ['data_sum_error', 'data_diff_error', 'data_left_error', 'data_right_error']
         for field_name in chain(data_field_names, data_error_names):
             setattr(self, field_name, getattr(self, field_name).reshape(shape))
+
+        #self.calc_beam_pdf()
+
 
 
         data_field_dict = {}
@@ -248,26 +272,40 @@ class FitMethod2:
             self.minuit.limits[parname] = par_lim[parname]
         #first fit is to find beam shape
 
+        self.tied_VQ =  self.minuit.fixed['V'] and np.abs(self.minuit.values['V'])<0.00001
+
         self.fix(['psum'])
         self.minuit.values['psum']=0.5
         self.minuit.values['P']=0
         self.minuit.values['Q']=0
         pol_par_list  = ['P','Q']
-        beam_par_list = [ 'mx', 'my', 'sx', 'sy', 'ax', 'dax', 'ay', 'day', 'nx', 'dnx', 'ny', 'dny', 'alpha_s', 'alpha_a', 'alpha_n', 'NL', 'NR']
-        self.unfix(beam_par_list)
+        #self.unfix(beam_par_list)
         print(self.minuit)
         self.minuit.migrad()
+        if self.tied_VQ:
+            Q = self.minuit.values['Q']
+            V = np.sqrt( 1.0 - Q**2)
+            self.minuit.values['V']  = V
+            self.minuit.errors['V'] = np.abs(Q/V*self.minuit.errors['Q']) 
+
         print(self.minuit)
 
 
         #second fit is to determine polarization. Beam parameters are fixed
         self.minuit.values['psum']=0
+        beam_par_list = [ 'sx','sy', 'ax', 'dax', 'ay', 'day', 'nx', 'dnx', 'ny', 'dny', 'alpha_s', 'alpha_a', 'alpha_n', 'NL']
         self.fix(beam_par_list)
         self.unfix(pol_par_list)
         self.unfix(['NR'])
 
         self.minuit.migrad()
         self.minuit.hesse()
+
+        if self.tied_VQ:
+            Q = self.minuit.values['Q']
+            V = np.sqrt( 1.0 - Q**2)
+            self.minuit.values['V']  = V
+            self.minuit.errors['V'] = np.abs(Q/V*self.minuit.errors['Q']) 
 
         print(self.minuit)
         self.set_result()
