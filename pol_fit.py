@@ -118,6 +118,8 @@ def db_write(   db_obj,
 
 
 def read_batch(hist_fpath, file_arr, vepp4E):
+    print('Reading ', len(file_arr), ' files.')
+    count = 0
     h_dict = load_hist(hist_fpath,file_arr[0])
     first_fname = file_arr[0]
     buf_dict = h_dict
@@ -130,14 +132,22 @@ def read_batch(hist_fpath, file_arr, vepp4E):
        
     print('Dep freq: ', env_params['dfreq'])
    
-    print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
     if env_params['vepp4E'] < 1000:
         env_params['vepp4E'] = vepp4E
         print('Setting v4E parameter to: ', env_params['vepp4E'])
+
+    def print_stat(count):
+        print('{:5} {:>30} {:10} {:10}'.format( count+1, file_arr[count], int(sum(sum(h_dict['hc_l']))), int(sum(sum(h_dict['hc_r']))) ))
+
+    print_stat(count)
+    count+=1
     for file in file_arr[1:]:
             buf_dict = load_hist(hist_fpath,file)
             h_dict = accum_data(h_dict, buf_dict)
-            print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
+            print_stat(count)
+            count+=1
+            #print(file, end=' ')
+            #print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
     return h_dict
     
 def make_file_list_online(hist_fpath, unix_start_time, n_files):

@@ -154,7 +154,6 @@ def print_pol_stats_nik(fitres):
     print('V={:>6.2f} ± {:1.2f}'.format(fitres.values['V'],fitres.errors['V']))
 
 def load_hist(hist_fpath, fname):
-    print('Reading histogram file: ', fname)
     h_dict = dict(np.load(hist_fpath+fname, allow_pickle=True))
     return h_dict
 
