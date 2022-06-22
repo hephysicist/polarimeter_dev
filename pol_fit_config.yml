@@ -21,7 +21,7 @@ mask:
 
 
 initial_values:  
-    E       : 4730 #MeV
+    E       : 0.0 #MeV #the value will be taken from data of pol_preprocess or from command line
     L       : 33000 #mm
     P       : 0.5
     V       : 1.

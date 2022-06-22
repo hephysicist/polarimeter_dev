@@ -37,7 +37,7 @@ def make_fit(config, h_dict):
     y_mid = (y[1:] + y[:-1])/2
     ndf = np.shape(x_mid)[0]*np.shape(y_mid)[0]
     X = [x_mid,y_mid]
-    config['initial_values']['E'] = h_dict['env_params'].item()['vepp4E']
+    if  config['initial_values']['E'] < 1000 : config['initial_values']['E'] = h_dict['env_params'].item()['vepp4E']
     fm = FitMethod2(X, h_l, h_r)
     fm.fit(config)
     data_fields = fm.get_fit_result(config)
@@ -175,7 +175,8 @@ def make_file_list_offline( hist_fpath,
             file_buffer = file_buffer[:n_files]
     return file_buffer
     
-def accum_data_and_make_fit(config, start_time, stop_time, vepp4E, offline = False, version=0):
+def accum_data_and_make_fit(config, start_time, stop_time, offline = False, version=0):
+    vepp4E = config['initial_values']['E']
     hist_fpath = config['hist_fpath']
     n_files = int(config['n_files'])
     file_arr = np.array(glob.glob1(hist_fpath, '20*.npz')) #Choose only data files
@@ -258,13 +259,11 @@ def main():
         try:
             config = yaml.load(conf_file, Loader=yaml.Loader)
             if args.E:
-                vepp4E = float(args.E)
-            else:
-                vepp4E = config['initial_values']['E']
+                config['initial_values']['E'] = float(args.E)
         except yaml.YAMLError as exc:
             print('Error opening pol_config.yaml file:')
             print(exc)
         else:
-            accum_data_and_make_fit(config, args.start_time, args.stop_time, vepp4E, args.offline, args.version) 
+            accum_data_and_make_fit(config, args.start_time, args.stop_time, args.offline, args.version) 
 if __name__ == '__main__':
     main()
