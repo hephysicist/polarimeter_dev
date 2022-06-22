@@ -11,6 +11,7 @@ fixQ : False
 double_gauss: True
 scale_hits: False
 continue: True
+fit_method: 1
 
 
 mask:

@@ -38,7 +38,14 @@ def make_fit(config, h_dict):
     ndf = np.shape(x_mid)[0]*np.shape(y_mid)[0]
     X = [x_mid,y_mid]
     if  config['initial_values']['E'] < 1000 : config['initial_values']['E'] = h_dict['env_params'].item()['vepp4E']
-    fm = FitMethod2(X, h_l, h_r)
+
+    fit_method = config['fit_method']
+
+    if  fit_method == 1:
+        fm = FitMethod1(X, h_l, h_r)
+    elif fit_method == 2:
+        fm = FitMethod2(X, h_l, h_r)
+
     fm.fit(config)
     data_fields = fm.get_fit_result(config)
 
@@ -264,6 +271,8 @@ def main():
     parser.add_argument('--config', help='Name of the config file to use while performing fit',nargs='?', default='pol_fit_config.yml')
     parser.add_argument('--E', help='vepp4 E', default=0)
     parser.add_argument('--L', help='photon flight length', default=0)
+    parser.add_argument('--method', help='photon flight length', default=0)
+
     args = parser.parse_args()
     print('\nReading config file: ', os.getcwd()+'/'+args.config +'\n')
     with open(os.getcwd()+'/'+args.config, 'r') as conf_file:
