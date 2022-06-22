@@ -249,7 +249,7 @@ def main():
     parser.add_argument('--offline', help='Parameter to distinguish offline fits (db vesrion).', default=False, action='store_true')
     parser.add_argument('start_time', nargs='?', help='Time of the file to start offline fit in regex format')
     parser.add_argument('stop_time', nargs='?', help='Time of the file to start offline fit in regex format', default='2100-01-01T00:00:01')
-    parser.add_argument('--noblur', help='Disable blur', action='store_true')
+    parser.add_argument('--blur', help='Apply blur (general_blur, nonzero_blur), default: none', default='none')
     parser.add_argument('--version', help='Parameter to distinguish offline fits (db vesrion).',nargs='?', default=0)
     parser.add_argument('--config', help='Name of the config file to use while performing fit',nargs='?', default='pol_fit_config.yml')
     parser.add_argument('--E', help='vepp4 E', default=0)
@@ -263,6 +263,11 @@ def main():
                 config['initial_values']['E'] = float(args.E)
             if args.L:
                 config['initial_values']['L'] = float(args.L)
+            if args.blur != 'none':
+                print ("Set blur: ", args.blur)
+                config['need_blur'] = True
+                config['blur_type'] = args.blur
+
         except yaml.YAMLError as exc:
             print('Error opening pol_config.yaml file:')
             print(exc)
