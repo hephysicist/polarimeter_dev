@@ -253,6 +253,7 @@ def main():
     parser.add_argument('--version', help='Parameter to distinguish offline fits (db vesrion).',nargs='?', default=0)
     parser.add_argument('--config', help='Name of the config file to use while performing fit',nargs='?', default='pol_fit_config.yml')
     parser.add_argument('--E', help='vepp4 E', default=0)
+    parser.add_argument('--L', help='photon flight length', default=0)
     args = parser.parse_args()
     print('\nReading config file: ', os.getcwd()+'/'+args.config +'\n')
     with open(os.getcwd()+'/'+args.config, 'r') as conf_file:
@@ -260,6 +261,8 @@ def main():
             config = yaml.load(conf_file, Loader=yaml.Loader)
             if args.E:
                 config['initial_values']['E'] = float(args.E)
+            if args.L:
+                config['initial_values']['L'] = float(args.L)
         except yaml.YAMLError as exc:
             print('Error opening pol_config.yaml file:')
             print(exc)
