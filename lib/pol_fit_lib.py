@@ -314,19 +314,11 @@ def blur_nonzero_pixels(h,radius):
 	return result
 
 def nonzero_blur(h_dict):
-	hc_l = np.array(h_dict['hc_l'])
-	hc_r = np.array(h_dict['hc_r'])
-	hc_l = blur_nonzero_pixels(hc_l,1)
-	hc_r = blur_nonzero_pixels(hc_r,1)
-	return {'hc_l': hc_l,
-				'hc_r': hc_r,
-				'hs_l': h_dict['hs_l'],
-				'hs_r': h_dict['hs_r'],
-				'xs': h_dict['xs'],
-				'ys': h_dict['ys'],
-				'xc': h_dict['xc'],
-				'yc': h_dict['yc'],
-				'vepp4E': h_dict['vepp4E'],
-				'dfreq': h_dict['dfreq']}
-				
-				
+    hc_l = np.array(h_dict['hc_l'])
+    hc_r = np.array(h_dict['hc_r'])
+    hc_l = blur_nonzero_pixels(hc_l,1)
+    hc_r = blur_nonzero_pixels(hc_r,1)
+    res = h_dict
+    res['hc_l']=hc_l
+    res['hc_r']=hc_r
+    return res
