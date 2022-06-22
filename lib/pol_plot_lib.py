@@ -66,7 +66,9 @@ class data_field:
     def draw_2d_plot(self, ax):
         im_dat = ax.imshow( self.data, 
                             cmap=plt.cm.viridis,
+                            #interpolation='bicubic',
                             interpolation='none',
+                            #interpolation='none',
                             extent=[self.x[0],self.x[-1],self.y[0],self.y[-1]],
                             origin='lower')
         #cbar_dat = fig.colorbar(im_dat, ax=ax)
@@ -185,7 +187,7 @@ def print_fit_results(ax, fitres):
     ax.set_title('Fit results')
     ax.set(xlim=(0., 1.25), ylim=(-0.25, 1.25), xticks=[], yticks=[])
     ax.axis('off')
-    par_list = ['P','Q','mx', 'my','sx', 'sy', 'NL', 'NR']
+    par_list = ['P','V', 'Q','mx', 'my','sx', 'sy', 'NL', 'NR']
     important_pars = ['P', 'NL', 'NR']
     line_size = 0.13
     lc = 0 
