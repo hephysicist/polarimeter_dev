@@ -294,17 +294,10 @@ def general_blur(h_dict):
     filter_ = gaussian_filter
     hc_l = filter_(hc_l, sigma=0.5, mode='nearest')
     hc_r = filter_(hc_r, sigma=0.5, mode='nearest')
-    return {'hc_l': hc_l,
-                'hc_r': hc_r,
-                'hs_l': h_dict['hs_l'],
-                'hs_r': h_dict['hs_r'],
-                'xs': h_dict['xs'],
-                'ys': h_dict['ys'],
-                'xc': h_dict['xc'],
-                'yc': h_dict['yc'],
-                'vepp4E': h_dict['vepp4E'],
-                'dfreq': h_dict['dfreq']}
-
+    res = h_dict
+    res['hc_l']=hc_l
+    res['hc_r']=hc_r
+    return res
 
 #Make blur among only nonzero pixels
 def blur_nonzero_pixels(h,radius):
