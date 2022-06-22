@@ -219,6 +219,12 @@ class FitMethod2:
         for field_name in chain(data_field_names, data_error_names):
             setattr(self, field_name, getattr(self, field_name).reshape(shape))
 
+        #remove fit values when there is no data
+        self.fit_sum[np.abs(self.data_sum)<1e-15]=0.0
+        self.fit_diff[np.abs(self.data_sum)<1e-15]=0.0
+        self.fit_left[np.abs(self.data_sum)<1e-15]=0.0
+        self.fit_right[np.abs(self.data_sum)<1e-15]=0.0
+
         #self.calc_beam_pdf()
 
 
@@ -282,6 +288,8 @@ class FitMethod2:
         #self.unfix(beam_par_list)
         print(self.minuit)
         self.minuit.migrad()
+
+        #in order to print first fit result
         if self.tied_VQ:
             Q = self.minuit.values['Q']
             V = np.sqrt( 1.0 - Q**2)
@@ -289,11 +297,15 @@ class FitMethod2:
             self.minuit.errors['V'] = np.abs(Q/V*self.minuit.errors['Q']) 
 
         print(self.minuit)
+        #return it back
+        if self.tied_VQ:
+            self.minuit.values['V']  = 0.0
+            self.minuit.errors['V'] =  0.1
 
 
         #second fit is to determine polarization. Beam parameters are fixed
         self.minuit.values['psum']=0
-        beam_par_list = [ 'sx','sy', 'ax', 'dax', 'ay', 'day', 'nx', 'dnx', 'ny', 'dny', 'alpha_s', 'alpha_a', 'alpha_n', 'NL']
+        beam_par_list = [ 'mx','my', 'sx','sy', 'ax', 'dax', 'ay', 'day', 'nx', 'dnx', 'ny', 'dny', 'alpha_s', 'alpha_a', 'alpha_n', 'NL']
         self.fix(beam_par_list)
         self.unfix(pol_par_list)
         self.unfix(['NR'])
