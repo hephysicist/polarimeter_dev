@@ -164,9 +164,10 @@ def draw_ch_numbers(ax, config):
    
 def init_figure(label): 
         fig = plt.figure(figsize=(15, 8))
+        fig.canvas.set_window_title(label)
         fig.set_tight_layout(True)
         fig.tight_layout(rect=[0, 0, 1, 1])
-        fig.suptitle(label)
+        #fig.suptitle(label)
         gs0 = gridspec.GridSpec(1, 2, figure=fig)
         
         gs00 = gridspec.GridSpecFromSubplotSpec(3, 2, subplot_spec=gs0[0], height_ratios = [1,1,1])

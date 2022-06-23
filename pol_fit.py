@@ -236,7 +236,7 @@ def accum_data_and_make_fit(config, start_time, stop_time, offline = False, vers
         scale_file = np.load(os.getcwd()+'/scale_array.npz', allow_pickle=True)
         scale_arr = scale_file['scale_arr']
     #fig_arr, ax_arr = init_figures()
-    fig, ax = init_figure('Polarimeter 2D fit')
+    fig, ax = init_figure('Laser Polarimeter 2D Fit')
     db_obj = lsrp_pol()
     fit_counter = 0
     try:
