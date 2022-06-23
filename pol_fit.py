@@ -128,34 +128,47 @@ def db_write(   db_obj,
 
 
 def read_batch(hist_fpath, file_arr, vepp4E):
-    print('Reading ', len(file_arr), ' files.')
-    count = 0
-    h_dict = load_hist(hist_fpath,file_arr[0])
-    first_fname = file_arr[0]
-    buf_dict = h_dict
+    print('Reading ', len(file_arr), ' files: ', file_arr[0], ' ... ', file_arr[-1])
+
+    def print_stat(count, filename, D):
+        env = D['env_params'].item()
+        nl = int(sum(sum(D['hc_l'])))
+        nr = int(sum(sum(D['hc_r'])))
+        print('{:>5} {:>30} {:12} {:12} {:>15} {:>15.2f} {:>15.2f} {:15.3f}'.format( 
+            count, 
+            filename, 
+            nl , nr ,
+            '{:.2f} +- {:.2f}'.format( (nl-nr)/(nl+nr)*2*100., 4./(nl+nr)**2*np.sqrt(nl*nl*nr + nr*nr*nl)*100. ) ,
+            env['vepp4E'],
+            env['vepp4H_nmr'],
+            env['dfreq']
+            )
+            )
+
+    print(''.rjust(125,'-'))
+    print('{:>5} {:^30} {:>12} {:>12} {:^15} {:>15} {:>15} {:>15}'.format(
+        '#', 'file', 'Evt left', 'Evt right', 'nl-nr,%',  'Eset, MeV', 'H, Gs', 'Fdep, Hz'
+        ) )
+    print(''.rjust(125,'-'))
+    buf_dict_list = []
+    count  = 0 
+    for file in file_arr:
+            buf_dict = load_hist(hist_fpath,file)
+            buf_dict_list.append(buf_dict)
+            print_stat(count+1, file, buf_dict)
+            count+=1
+
+    h_dict = buf_dict_list[0]
     env_params = h_dict['env_params'].item()
-    print('Hnmr: ', env_params['vepp4H_nmr'])
-    
-    print('v4E : ', env_params['vepp4E'])
-    if 'real E' in env_params:
-        print('real E : ', env_params['real_E'])
-       
-    print('Dep freq: ', env_params['dfreq'])
-   
     if env_params['vepp4E'] < 1000:
         env_params['vepp4E'] = vepp4E
-        print('Setting v4E parameter to: ', env_params['vepp4E'])
 
-    def print_stat(count):
-        print('{:5} {:>30} {:10} {:10}'.format( count+1, file_arr[count], int(sum(sum(h_dict['hc_l']))), int(sum(sum(h_dict['hc_r']))) ))
+    for bd in buf_dict_list[1:]:
+        h_dict = accum_data(h_dict, bd)
+    print(''.rjust(125,'-'))
 
-    print_stat(count)
-    count+=1
-    for file in file_arr[1:]:
-            buf_dict = load_hist(hist_fpath,file)
-            h_dict = accum_data(h_dict, buf_dict)
-            print_stat(count)
-            count+=1
+    print_stat('', 'all {} files'.format(len(buf_dict_list)),  h_dict)
+
     return h_dict
     
 def make_file_list_online(hist_fpath, unix_start_time, n_files):
@@ -218,6 +231,7 @@ def make_file_list_nik( hist_fpath,
         print(ln, end='\r' ) 
         count+=1
         time.sleep(1)
+    print('')
     return file_buffer[:n_files]
     
 def accum_data_and_make_fit(config, start_time, stop_time, offline = False, version=0):
@@ -289,16 +303,18 @@ def main():
     parser.add_argument('--L', help='photon flight length', default=0)
 
     args = parser.parse_args()
-    print('\nReading config file: ', os.getcwd()+'/'+args.config +'\n')
+    print('Reading config file: ', os.getcwd()+'/'+args.config +'\n')
     with open(os.getcwd()+'/'+args.config, 'r') as conf_file:
         try:
             config = yaml.load(conf_file, Loader=yaml.Loader)
             if args.E:
                 config['initial_values']['E'] = float(args.E)
+                print ("Set default VEPP4 energy ", args.E, " MeV")
             if args.L:
                 config['initial_values']['L'] = float(args.L)
+                print ("Set default photon flight length ", args.L, " mm")
             if args.blur != 'none':
-                print ("Set blur: ", args.blur)
+                print ("Set blur algorithm: ", args.blur)
                 config['need_blur'] = True
                 config['blur_type'] = args.blur
 
