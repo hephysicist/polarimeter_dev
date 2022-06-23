@@ -4,7 +4,7 @@ regex_line : '2022*'
 
 #Choose fit region (use physical coordinates and take in mind that each bin at the central region has length of 2 mm)
 xrange : [-32,32]
-n_files : 2
+n_files : 30
 need_blur : False
 blur_type : general_blur
 fixQ : False
@@ -23,7 +23,7 @@ mask:
 
 initial_values:  
     E       : 0.0 #MeV #the value will be taken from data of pol_preprocess or from command line
-    L       : 33000 #mm
+    L       : 28000 #mm
     P       : 0.5
     V       : 1.
     Q       : 0.2024
@@ -50,7 +50,7 @@ initial_values:
     
 fix_par:
     E       : True
-    L       : False
+    L       : True
     P       : False
     V       : True
     Q       : False
