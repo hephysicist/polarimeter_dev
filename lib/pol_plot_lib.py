@@ -24,6 +24,7 @@ class data_field:
         self.data_err = data_err
         self.label = label
         self.data_type = data_type
+        self.interpolation = 'none'
         
         
     def draw_profilex(self, ax):
@@ -66,8 +67,7 @@ class data_field:
     def draw_2d_plot(self, ax):
         im_dat = ax.imshow( self.data, 
                             cmap=plt.cm.viridis,
-                            #interpolation='bicubic',
-                            interpolation='none',
+                            interpolation=self.interpolation,
                             extent=[self.x[0],self.x[-1],self.y[0],self.y[-1]],
                             origin='lower')
         #cbar_dat = fig.colorbar(im_dat, ax=ax)

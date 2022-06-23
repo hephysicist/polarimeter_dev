@@ -203,8 +203,8 @@ class FitMethod2:
         k=0
         fB = fD0/(fC0 + k*s)
 
-        self.data_sum =  np.abs(np.fft.ifft2(fB))
-        self.data_sum =  self.fft_fix(self.data_sum)
+        tmp =  np.abs(np.fft.ifft2(fB))
+        self.data_diff =  self.fft_fix(tmp)
         #self.data_sum = self.smooth(self.data_sum, 7)
 
 
@@ -225,7 +225,7 @@ class FitMethod2:
         self.fit_left[np.abs(self.data_sum)<1e-15]=0.0
         self.fit_right[np.abs(self.data_sum)<1e-15]=0.0
 
-        #self.calc_beam_pdf()
+        self.calc_beam_pdf()
 
 
 
@@ -256,6 +256,7 @@ class FitMethod2:
                                                         data_err = this_data_err_py,
                                                         label=field_name+'_py',
                                                         data_type = this_data_type)
+        data_field_dict['data_diff'].interpolation='bicubic'
         return data_field_dict
 
     def fix(self, parlist):
@@ -286,7 +287,9 @@ class FitMethod2:
         self.minuit.values['Q']=0
         pol_par_list  = ['P','Q']
         #self.unfix(beam_par_list)
+        print("Fit parameters initial configuration...")
         print(self.minuit)
+        print("Performing first fit for beam shape determination...")
         self.minuit.migrad()
 
         #in order to print first fit result
@@ -309,6 +312,7 @@ class FitMethod2:
         self.fix(beam_par_list)
         self.unfix(pol_par_list)
         self.unfix(['NR'])
+        print("Performing second fit with fixed beam shape and free polarization")
 
         self.minuit.migrad()
         self.minuit.hesse()
