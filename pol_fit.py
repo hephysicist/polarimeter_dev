@@ -24,6 +24,7 @@ from my_stat import stat_calc_effect
 from FitMethod1 import *
 from FitMethod2 import *
 from pol_plot_lib import *
+import copy
 
 my_timezone = '+07:00'
 
@@ -37,17 +38,19 @@ def make_fit(config, h_dict):
     y_mid = (y[1:] + y[:-1])/2
     ndf = np.shape(x_mid)[0]*np.shape(y_mid)[0]
     X = [x_mid,y_mid]
-    if  config['initial_values']['E'] < 1000 : config['initial_values']['E'] = h_dict['env_params'].item()['vepp4E']
+    cfg = copy.deepcopy(config)
+    if  cfg['initial_values']['E'] < 1000 : 
+        cfg['initial_values']['E'] = h_dict['env_params'].item()['vepp4E']
 
-    fit_method = config['fit_method']
+    fit_method = cfg['fit_method']
 
     if  fit_method == 1:
         fm = FitMethod1(X, h_l, h_r)
     elif fit_method == 2:
         fm = FitMethod2(X, h_l, h_r)
 
-    fm.fit(config)
-    data_fields = fm.get_fit_result(config)
+    fm.fit(cfg)
+    data_fields = fm.get_fit_result(cfg)
 
     return fm, data_fields
 
@@ -153,8 +156,6 @@ def read_batch(hist_fpath, file_arr, vepp4E):
             h_dict = accum_data(h_dict, buf_dict)
             print_stat(count)
             count+=1
-            #print(file, end=' ')
-            #print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
     return h_dict
     
 def make_file_list_online(hist_fpath, unix_start_time, n_files):
@@ -191,6 +192,33 @@ def make_file_list_offline( hist_fpath,
         if np.shape(file_buffer)[0] >= n_files:
             file_buffer = file_buffer[:n_files]
     return file_buffer
+
+def make_file_list_nik( hist_fpath,
+                            unix_start_time,
+                            unix_stop_time,
+                            n_files=1):
+    buffer_size = 0
+    old_buffer_size = 0
+    count = 0
+    clock = ['|','/','-','\\','|','/','-','\\']
+    while (buffer_size < n_files):
+        file_arr = np.array(glob.glob1(hist_fpath, '20*.npz')) #Choose only data files
+        unix_time_arr = get_unix_time(file_arr) 
+        time_cut = np.logical_and(unix_time_arr >= unix_start_time, unix_time_arr <= unix_stop_time)
+        file_buffer = file_arr[time_cut]
+        buffer_size = np.shape(file_buffer)[0]
+        t  =  time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+        last_file_name = file_buffer[-1] if buffer_size>0 else ''
+        first_file_name = file_buffer[0] if buffer_size>0 else ''
+        ln = '{:<19} Progress: {} {:>3}/{:<3}: {} ... {}'.format( 
+            t,
+            clock[count%len(clock)],
+            int(buffer_size), int(n_files),
+                first_file_name, last_file_name)
+        print(ln, end='\r' ) 
+        count+=1
+        time.sleep(1)
+    return file_buffer[:n_files]
     
 def accum_data_and_make_fit(config, start_time, stop_time, offline = False, version=0):
     vepp4E = config['initial_values']['E']
@@ -199,7 +227,7 @@ def accum_data_and_make_fit(config, start_time, stop_time, offline = False, vers
     file_arr = np.array(glob.glob1(hist_fpath, '20*.npz')) #Choose only data files
     
     if not offline:
-        unix_start_time = int(time.time())
+        unix_start_time = int(time.time())-10*(n_files+1)
     else: 
         unix_start_time = get_unix_time(start_time)
     unix_stop_time = get_unix_time(stop_time)
@@ -208,26 +236,14 @@ def accum_data_and_make_fit(config, start_time, stop_time, offline = False, vers
         scale_file = np.load(os.getcwd()+'/scale_array.npz', allow_pickle=True)
         scale_arr = scale_file['scale_arr']
     #fig_arr, ax_arr = init_figures()
-    fig, ax = init_figure('test')
+    fig, ax = init_figure('Polarimeter 2D fit')
     db_obj = lsrp_pol()
     fit_counter = 0
     try:
         while(1):
-                if not offline:
-                    file_buffer = make_file_list_online(   hist_fpath,
-                                                                    unix_start_time,
-                                                                    n_files)
-                else:
-                    file_buffer = make_file_list_offline(  hist_fpath,
-                                                                    unix_start_time,
-                                                                    unix_stop_time,
-                                                                    n_files)
-                   
-                    if np.shape(file_buffer)[0] < n_files:
-                        print('Batch size [{:d}] is less than required number of files [{:d}]!\nExiting fit programm.'.format( np.shape(file_buffer)[0],n_files))
-                        break
+                file_buffer = make_file_list_nik(hist_fpath, unix_start_time, unix_stop_time, n_files)
                 file_buffer = np.sort(file_buffer)
-                unix_start_time = get_unix_time(file_buffer[-1])
+                unix_start_time = get_unix_time(file_buffer[-1])+1
                 h_dict = read_batch(hist_fpath, file_buffer, vepp4E)
                 h_dict = mask_hist(config, h_dict)
                 if config['need_blur']:
@@ -238,7 +254,7 @@ def accum_data_and_make_fit(config, start_time, stop_time, offline = False, vers
                 print('Performing fit...')
                 skew_l, skew_r = stat_calc_effect(h_dict)
                 skew = [skew_l[0]-skew_r[0], skew_l[1]-skew_r[1]]
-                print('skew_ly:{:1.4f}\tskew_ry:{:1.4f} \tsly-sry:{:1.3f}'.format(skew_l[1], skew_r[1], skew_l[1]-skew_r[1]))
+                #print('skew_ly:{:1.4f}\tskew_ry:{:1.4f} \tsly-sry:{:1.3f}'.format(skew_l[1], skew_r[1], skew_l[1]-skew_r[1]))
                 fitter, data_fields = make_fit(config, h_dict)
                 raw_stats = get_raw_stats(h_dict)
                 print_stats(raw_stats)
@@ -271,7 +287,6 @@ def main():
     parser.add_argument('--config', help='Name of the config file to use while performing fit',nargs='?', default='pol_fit_config.yml')
     parser.add_argument('--E', help='vepp4 E', default=0)
     parser.add_argument('--L', help='photon flight length', default=0)
-    parser.add_argument('--method', help='photon flight length', default=0)
 
     args = parser.parse_args()
     print('\nReading config file: ', os.getcwd()+'/'+args.config +'\n')
