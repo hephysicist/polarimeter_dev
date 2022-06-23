@@ -134,11 +134,13 @@ def read_batch(hist_fpath, file_arr, vepp4E):
         env = D['env_params'].item()
         nl = int(sum(sum(D['hc_l'])))
         nr = int(sum(sum(D['hc_r'])))
+        delta_n = (nl-nr)/(nl+nr)*2 if (nl+nr)>0 else 0.0
+        delta_n_error = 4./(nl+nr)**2*np.sqrt(nl*nl*nr + nr*nr*nl) if (nl+nr) > 0 else 0.0
         print('{:>5} {:>30} {:12} {:12} {:>15} {:>15.2f} {:>15.2f} {:15.3f}'.format( 
             count, 
             filename, 
             nl , nr ,
-            '{:.2f} +- {:.2f}'.format( (nl-nr)/(nl+nr)*2*100., 4./(nl+nr)**2*np.sqrt(nl*nl*nr + nr*nr*nl)*100. ) ,
+            '{:.2f} +- {:.2f}'.format( delta_n*100., delta_n_error*100.) ,
             env['vepp4E'],
             env['vepp4H_nmr'],
             env['dfreq']

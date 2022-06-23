@@ -199,12 +199,19 @@ class FitMethod2:
         fC0  = np.fft.fft2(self.compton_fit_sum)
         fD0  = np.fft.fft2(self.data_sum)
         s = np.abs(np.sum(fC0))
-        k=1e-3
         k=0
+        fC0 = fC0/np.sum(np.abs(fC0))
+        fD0 = fD0/np.sum(np.abs(fD0))
         fB = fD0/(fC0 + k*s)
 
+        phi_fB = np.sum( np.angle(fB[0:self.shape[0]//2, 0:self.shape[1]//2]) )/(self.shape[0]*self.shape[1]/4)
+        print("average complex phase for fB degree", phi_fB/3.1415926*180.0)
         tmp =  np.abs(np.fft.ifft2(fB))
-        self.data_diff =  self.fft_fix(tmp)
+        if abs(phi_fB) < np.pi/2:
+            self.data_diff =  self.fft_fix(tmp)
+        else:
+            self.data_diff =  tmp
+        #self.data_diff= np.abs(fB)
         #self.data_sum = self.smooth(self.data_sum, 7)
 
 
@@ -257,6 +264,7 @@ class FitMethod2:
                                                         label=field_name+'_py',
                                                         data_type = this_data_type)
         data_field_dict['data_diff'].interpolation='bicubic'
+        #data_field_dict['data_sum'].interpolation='bicubic'
         return data_field_dict
 
     def fix(self, parlist):
