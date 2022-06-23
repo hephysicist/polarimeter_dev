@@ -241,7 +241,7 @@ def accum_data_and_make_fit(config, start_time, stop_time, offline = False, vers
     file_arr = np.array(glob.glob1(hist_fpath, '20*.npz')) #Choose only data files
     
     if not offline:
-        unix_start_time = int(time.time())-10*(n_files+1)
+        unix_start_time = int(time.time())-10*(n_files+2)
     else: 
         unix_start_time = get_unix_time(start_time)
     unix_stop_time = get_unix_time(stop_time)
@@ -301,6 +301,7 @@ def main():
     parser.add_argument('--config', help='Name of the config file to use while performing fit',nargs='?', default='pol_fit_config.yml')
     parser.add_argument('--E', help='vepp4 E', default=0)
     parser.add_argument('--L', help='photon flight length', default=0)
+    parser.add_argument('--N', help='Number of preprocessed files to fit', default=30)
 
     args = parser.parse_args()
     print('Reading config file: ', os.getcwd()+'/'+args.config +'\n')
@@ -317,6 +318,9 @@ def main():
                 print ("Set blur algorithm: ", args.blur)
                 config['need_blur'] = True
                 config['blur_type'] = args.blur
+            if args.N:
+                print("Set number of preprocessed files: ", args.N)
+                config['n_files'] = args.N
 
         except yaml.YAMLError as exc:
             print('Error opening pol_config.yaml file:')
