@@ -68,7 +68,6 @@ class data_field:
                             cmap=plt.cm.viridis,
                             #interpolation='bicubic',
                             interpolation='none',
-                            #interpolation='none',
                             extent=[self.x[0],self.x[-1],self.y[0],self.y[-1]],
                             origin='lower')
         #cbar_dat = fig.colorbar(im_dat, ax=ax)
