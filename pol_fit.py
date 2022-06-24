@@ -149,7 +149,7 @@ def read_batch(hist_fpath, file_arr, vepp4E):
 
     print(''.rjust(125,'-'))
     print('{:>5} {:^30} {:>12} {:>12} {:^15} {:>15} {:>15} {:>15}'.format(
-        '#', 'file', 'Evt left', 'Evt right', 'nl-nr,%',  'Eset, MeV', 'H, Gs', 'Fdep, Hz'
+        '#', 'file', 'Nl', 'Nr', '(Nl-Nr)/(Nl+Nr),%',  'Eset, MeV', 'H, Gs', 'Fdep, Hz'
         ) )
     print(''.rjust(125,'-'))
     buf_dict_list = []
@@ -215,18 +215,18 @@ def make_file_list_nik( hist_fpath,
     buffer_size = 0
     old_buffer_size = 0
     count = 0
-    clock = ['|','/','-','\\','|','/','-','\\']
+    clock = ['|','/','─','\\','|','/','─','\\']
     while (buffer_size < n_files):
         file_arr = np.array(glob.glob1(hist_fpath, '20*.npz')) #Choose only data files
         unix_time_arr = get_unix_time(file_arr) 
         time_cut = np.logical_and(unix_time_arr >= unix_start_time, unix_time_arr <= unix_stop_time)
         file_buffer = file_arr[time_cut]
         buffer_size = np.shape(file_buffer)[0]
-        t  =  time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+        current_timestamp  =  time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
         last_file_name = file_buffer[-1] if buffer_size>0 else ''
         first_file_name = file_buffer[0] if buffer_size>0 else ''
         ln = '{:<19} Progress: {} {:>3}/{:<3}: {} ... {}'.format( 
-            t,
+            current_timestamp,
             clock[count%len(clock)],
             int(buffer_size), int(n_files),
                 first_file_name, last_file_name)
@@ -235,6 +235,30 @@ def make_file_list_nik( hist_fpath,
         time.sleep(1)
     print('')
     return file_buffer[:n_files]
+
+def get_unixtime_smart(time_string):
+    def from_today(t1):
+        t0 = datetime.now()
+        return  datetime(t0.year, t0.month, t0.day, t1.hour, t1.minute, t1.second)
+
+    try:
+        t = datetime.strptime(time_string, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        try:
+            t = datetime.strptime(time_string, "%Y-%m-%dT%H:%M:%S")
+        except ValueError:
+            try:
+                t = from_today(datetime.strptime(time_string, "%H:%M:%S"))
+            except ValueError:
+                try:
+                    t = from_today(datetime.strptime(time_string, "%H:%M"))
+                except ValueError:
+                    print("ERROR: Unable to parse time: ", time_strin)
+                    exit(1)
+    
+    print("datetime = ", t)
+    return datetime.timestamp(t)
+
     
 def accum_data_and_make_fit(config, start_time, stop_time, offline = False, version=0):
     vepp4E = config['initial_values']['E']
@@ -242,11 +266,12 @@ def accum_data_and_make_fit(config, start_time, stop_time, offline = False, vers
     n_files = int(config['n_files'])
     file_arr = np.array(glob.glob1(hist_fpath, '20*.npz')) #Choose only data files
     
-    if not offline:
-        unix_start_time = int(time.time())-10*(n_files+2)
+    if offline:
+        unix_start_time = get_unixtime_smart(start_time)
     else: 
-        unix_start_time = get_unix_time(start_time)
-    unix_stop_time = get_unix_time(stop_time)
+        unix_start_time = int(time.time())-10*(n_files+2)
+
+    unix_stop_time = get_unixtime_smart(stop_time)
     
     if config['scale_hits']:
         scale_file = np.load(os.getcwd()+'/scale_array.npz', allow_pickle=True)
