@@ -9,7 +9,7 @@ import numpy as np
 np.seterr(divide='ignore', invalid='ignore')
 import glob
 import time
-from datetime import datetime
+from datetime import datetime,timedelta
 import argparse
 import matplotlib.pyplot as plt
 import yaml
@@ -132,11 +132,15 @@ def read_batch(hist_fpath, file_arr, vepp4E):
 
     def print_stat(count, filename, D):
         env = D['env_params'].item()
-        nl = int(sum(sum(D['hc_l'])))
-        nr = int(sum(sum(D['hc_r'])))
-        delta_n = (nl-nr)/(nl+nr)*2 if (nl+nr)>0 else 0.0
-        delta_n_error = 4./(nl+nr)**2*np.sqrt(nl*nl*nr + nr*nr*nl) if (nl+nr) > 0 else 0.0
-        print('{:>5} {:>30} {:12} {:12} {:>15} {:>15.2f} {:>15.2f} {:15.3f}'.format( 
+        nl = float(sum(sum(D['hc_l'])))
+        nr = float(sum(sum(D['hc_r'])))
+        if (nl+nr) > 0:
+            delta_n = (nl-nr)/(nl+nr)*2
+            delta_n_error = 4./(nl+nr)**2*np.sqrt(nl*nr*(nl+nr))
+        else:
+            delta_n, delta_n_error = 0.0, 0.0
+
+        print('{:>5} {:>30} {:12.0f} {:12.0f} {:>15} {:>15.2f} {:>15.2f} {:15.3f}'.format( 
             count, 
             filename, 
             nl , nr ,
@@ -173,45 +177,8 @@ def read_batch(hist_fpath, file_arr, vepp4E):
 
     return h_dict
     
-def make_file_list_online(hist_fpath, unix_start_time, n_files):
-    file_arr = np.array(glob.glob1(hist_fpath, '20*.npz'))
-    if np.shape(file_arr)[0]:
-                unix_time_arr = get_unix_time(file_arr)
-                buffer_size = 0
-                buffer_size_old = 0
-                file_buffer = np.empty(0)
-                counter = 0
-                while (buffer_size < n_files):
-                    file_arr = np.array(glob.glob1(hist_fpath, '20*.npz')) #Choose only data files
-                    unix_time_arr = get_unix_time(file_arr)
-                    file_buffer = file_arr[unix_time_arr >= unix_start_time]
-                    buffer_size = np.shape(file_buffer)[0]
-                    if buffer_size_old != buffer_size:
-                        print('Progress: ', int(buffer_size), '/', int(n_files), '\t\t\t\t\t', end='\r')
-                        buffer_size_old = buffer_size
-                        counter = 0
-                    time.sleep(1)
-                    counter +=1
-    return file_buffer
 
-def make_file_list_offline( hist_fpath,
-                            unix_start_time,
-                            unix_stop_time,
-                            n_files=1):
-    file_arr = np.array(glob.glob1(hist_fpath, '20*.npz'))
-    
-    if np.shape(file_arr)[0]:
-        unix_time_arr = get_unix_time(file_arr)
-        time_cut = np.logical_and(unix_time_arr >= unix_start_time, unix_time_arr <= unix_stop_time)
-        file_buffer = file_arr[time_cut]
-        if np.shape(file_buffer)[0] >= n_files:
-            file_buffer = file_buffer[:n_files]
-    return file_buffer
-
-def make_file_list_nik( hist_fpath,
-                            unix_start_time,
-                            unix_stop_time,
-                            n_files=1):
+def make_file_list( hist_fpath,   unix_start_time,    unix_stop_time,    n_files=1):
     buffer_size = 0
     old_buffer_size = 0
     count = 0
@@ -239,50 +206,55 @@ def make_file_list_nik( hist_fpath,
 def get_unixtime_smart(time_string):
     def from_today(t1):
         t0 = datetime.now()
-        return  datetime(t0.year, t0.month, t0.day, t1.hour, t1.minute, t1.second)
+        t = datetime(t0.year, t0.month, t0.day, t1.hour, t1.minute, t1.second)
+        if t>t0:
+            t = t-timedelta(seconds=86400)
+        return t
 
     try:
         t = datetime.strptime(time_string, "%Y-%m-%d %H:%M:%S")
     except ValueError:
         try:
-            t = datetime.strptime(time_string, "%Y-%m-%dT%H:%M:%S")
+            t = datetime.strptime(time_string, "%Y-%m-%d")
         except ValueError:
             try:
-                t = from_today(datetime.strptime(time_string, "%H:%M:%S"))
+                t = datetime.strptime(time_string, "%Y-%m-%dT%H:%M:%S")
             except ValueError:
                 try:
-                    t = from_today(datetime.strptime(time_string, "%H:%M"))
+                    t = from_today(datetime.strptime(time_string, "%H:%M:%S"))
                 except ValueError:
-                    print("ERROR: Unable to parse time: ", time_strin)
-                    exit(1)
+                    try:
+                        t = from_today(datetime.strptime(time_string, "%H:%M"))
+                    except ValueError:
+                        print("ERROR: Unable to parse time: ", time_strin)
+                        exit(1)
     
-    print("datetime = ", t)
+    #print("datetime = ", t)
     return datetime.timestamp(t)
 
     
-def accum_data_and_make_fit(config, start_time, stop_time, offline = False, version=0):
+def accum_data_and_make_fit(config, start_time, stop_time):
     vepp4E = config['initial_values']['E']
     hist_fpath = config['hist_fpath']
     n_files = int(config['n_files'])
     file_arr = np.array(glob.glob1(hist_fpath, '20*.npz')) #Choose only data files
     
-    if offline:
+    if config['offline']:
         unix_start_time = get_unixtime_smart(start_time)
     else: 
-        unix_start_time = int(time.time())-10*(n_files+2)
+        unix_start_time = get_unix_time( file_arr[-n_files] )
 
     unix_stop_time = get_unixtime_smart(stop_time)
     
     if config['scale_hits']:
         scale_file = np.load(os.getcwd()+'/scale_array.npz', allow_pickle=True)
         scale_arr = scale_file['scale_arr']
-    #fig_arr, ax_arr = init_figures()
     fig, ax = init_figure('Laser Polarimeter 2D Fit')
     db_obj = lsrp_pol()
     fit_counter = 0
     try:
         while(1):
-                file_buffer = make_file_list_nik(hist_fpath, unix_start_time, unix_stop_time, n_files)
+                file_buffer = make_file_list(hist_fpath, unix_start_time, unix_stop_time, n_files)
                 file_buffer = np.sort(file_buffer)
                 unix_start_time = get_unix_time(file_buffer[-1])+1
                 h_dict = read_batch(hist_fpath, file_buffer, vepp4E)
@@ -312,7 +284,7 @@ def accum_data_and_make_fit(config, start_time, stop_time, offline = False, vers
                     if text!="y":
                         is_db_write=False
                 if is_db_write:
-                    db_write(db_obj, config, file_buffer[0], file_buffer[-1], fitter.minuit, chi2, true_ndf, h_dict['env_params'].item(), fit_counter, skew, version)
+                    db_write(db_obj, config, file_buffer[0], file_buffer[-1], fitter.minuit, chi2, true_ndf, h_dict['env_params'].item(), fit_counter, skew, config['version'])
     except KeyboardInterrupt:
         print('\n***Exiting fit program***')
         pass
@@ -353,10 +325,21 @@ def main():
                 config['continue']=False
                 print ("Set interactive mode (continue = False)")
 
+            if args.version:
+                config['version'] = args.version
+
+            if args.offline or args.start_time:
+                config['offline'] = True
+                print ("Starting from  date ", args.start_time, '...')
+            else:
+                config['offline'] = False
+                print ("Starting from  now...")
+
+
         except yaml.YAMLError as exc:
             print('Error opening pol_config.yaml file:')
             print(exc)
         else:
-            accum_data_and_make_fit(config, args.start_time, args.stop_time, args.offline, args.version) 
+            accum_data_and_make_fit(config, args.start_time, args.stop_time) 
 if __name__ == '__main__':
     main()
