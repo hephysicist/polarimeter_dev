@@ -304,6 +304,7 @@ def main():
     parser.add_argument('--E', help='vepp4 E', default=0)
     parser.add_argument('--L', help='photon flight length', default=0)
     parser.add_argument('--N', help='Number of preprocessed files to fit', default=30)
+    parser.add_argument('-i', help='Interactive mode',action='store_true')
 
     args = parser.parse_args()
     print('Reading config file: ', os.getcwd()+'/'+args.config +'\n')
@@ -323,6 +324,9 @@ def main():
             if args.N:
                 print("Set number of preprocessed files: ", args.N)
                 config['n_files'] = args.N
+            if args.i:
+                config['continue']=False
+                print ("Set interactive mode (continue = False)")
 
         except yaml.YAMLError as exc:
             print('Error opening pol_config.yaml file:')
