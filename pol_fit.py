@@ -178,13 +178,13 @@ def read_batch(hist_fpath, file_arr, vepp4E):
     return h_dict
     
 
-def make_file_list( hist_fpath,   unix_start_time,    unix_stop_time,    n_files=1):
+def make_file_list( hist_fpath, regex_line,  unix_start_time,    unix_stop_time,    n_files=1):
     buffer_size = 0
     old_buffer_size = 0
     count = 0
     clock = ['|','/','─','\\','|','/','─','\\']
     while (buffer_size < n_files):
-        file_arr = np.array(glob.glob1(hist_fpath, '20*.npz')) #Choose only data files
+        file_arr = np.array(glob.glob1(hist_fpath, regex_line)) #Choose only data files
         unix_time_arr = get_unix_time(file_arr) 
         time_cut = np.logical_and(unix_time_arr >= unix_start_time, unix_time_arr <= unix_stop_time)
         file_buffer = file_arr[time_cut]
@@ -203,11 +203,11 @@ def make_file_list( hist_fpath,   unix_start_time,    unix_stop_time,    n_files
     print('')
     return file_buffer[:n_files]
 
-def get_unixtime_smart(time_string):
+def get_unixtime_smart(time_string, fix_future=False):
     def from_today(t1):
         t0 = datetime.now()
         t = datetime(t0.year, t0.month, t0.day, t1.hour, t1.minute, t1.second)
-        if t>t0:
+        if t>t0 or fix_future:
             t = t-timedelta(seconds=86400)
         return t
 
@@ -237,12 +237,20 @@ def accum_data_and_make_fit(config, start_time, stop_time):
     vepp4E = config['initial_values']['E']
     hist_fpath = config['hist_fpath']
     n_files = int(config['n_files'])
-    file_arr = np.array(glob.glob1(hist_fpath, '20*.npz')) #Choose only data files
     
     if config['offline']:
-        unix_start_time = get_unixtime_smart(start_time)
+        unix_start_time = get_unixtime_smart(start_time, fix_future=True)
     else: 
-        unix_start_time = get_unix_time( file_arr[-n_files] )
+        file_arr = glob.glob1(hist_fpath, config['regex_line'])
+        size = len(file_arr)
+        print("size = ", size)
+        if size < n_files:
+            if size == 0:
+                unix_start_time = datetime.timestamp(datetime.now())
+            else:
+                unix_start_time = get_unix_time( file_arr[0] )
+        else:
+            unix_start_time = get_unix_time( file_arr[-n_files] )
 
     unix_stop_time = get_unixtime_smart(stop_time)
     
@@ -254,7 +262,7 @@ def accum_data_and_make_fit(config, start_time, stop_time):
     fit_counter = 0
     try:
         while(1):
-                file_buffer = make_file_list(hist_fpath, unix_start_time, unix_stop_time, n_files)
+                file_buffer = make_file_list(config['hist_fpath'], config['regex_line'],  unix_start_time, unix_stop_time, n_files)
                 file_buffer = np.sort(file_buffer)
                 unix_start_time = get_unix_time(file_buffer[-1])+1
                 h_dict = read_batch(hist_fpath, file_buffer, vepp4E)
