@@ -1,6 +1,6 @@
 hist_fpath : '/storage/hist/' #Path to store mapped event histograms
 #fitres_file : '/home/lsrp/Control/polarimeter_dev/tmp/pol_fitres.txt'
-regex_line : '2022*'
+regex_line : '*-*-*.npz'
 
 #Choose fit region (use physical coordinates and take in mind that each bin at the central region has length of 2 mm)
 xrange : [-32,32]
@@ -12,6 +12,7 @@ double_gauss: True
 scale_hits: False
 continue: True
 fit_method: 1
+version: 0
 
 
 mask:

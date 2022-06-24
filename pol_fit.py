@@ -236,12 +236,13 @@ def get_unixtime_smart(time_string, fix_future=False):
 def accum_data_and_make_fit(config, start_time, stop_time):
     vepp4E = config['initial_values']['E']
     hist_fpath = config['hist_fpath']
+    regex_line = config['regex_line']
     n_files = int(config['n_files'])
     
     if config['offline']:
         unix_start_time = get_unixtime_smart(start_time, fix_future=True)
     else: 
-        file_arr = glob.glob1(hist_fpath, config['regex_line'])
+        file_arr = glob.glob1(hist_fpath, regex_line)
         size = len(file_arr)
         print("size = ", size)
         if size < n_files:
@@ -262,7 +263,7 @@ def accum_data_and_make_fit(config, start_time, stop_time):
     fit_counter = 0
     try:
         while(1):
-                file_buffer = make_file_list(config['hist_fpath'], config['regex_line'],  unix_start_time, unix_stop_time, n_files)
+                file_buffer = make_file_list(hist_fpath, regex_line,  unix_start_time, unix_stop_time, n_files)
                 file_buffer = np.sort(file_buffer)
                 unix_start_time = get_unix_time(file_buffer[-1])+1
                 h_dict = read_batch(hist_fpath, file_buffer, vepp4E)

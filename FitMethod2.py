@@ -12,7 +12,13 @@ from itertools import chain
 class FitMethod2:
 
     def __init__(self, x, z_l, z_r):
+        with  open('shift.txt','r') as f:
+            self.shift_x = float(f.readline())
+            self.shift_y = float(f.readline())
+            self.smooth_value = float(f.readline())
         self.x = x
+        z_l = self.smooth(z_l,self.smooth_value)
+        z_r = self.smooth(z_r,self.smooth_value)
         self.data_l = z_l.flatten()
         self.data_r = z_r.flatten()
         self.shape = np.shape(z_l)
@@ -193,24 +199,88 @@ class FitMethod2:
         self.data_left_error  = np.sqrt(self.data_left/self.minuit.values['NL'])
         self.data_right_error = np.sqrt(self.data_right/self.minuit.values['NR'])
 
+    #def calc_phase(self, data):
+    #    return np.sum( np.angle(data[0:self.shape[0]//2, 0:self.shape[1]//2]) )/(self.shape[0]*self.shape[1]/4)
+
+    def calc_phase_y(self, data):
+        return np.sum( np.angle( data[ 0 : self.shape[0]//2 ,0 :] ) )/(self.shape[0]*self.shape[1]/2)
+
+    def calc_phase_x(self, data):
+        return np.sum( np.angle(data[0:self.shape[0] , 0:self.shape[1]//2]) )/(self.shape[0]*self.shape[1]/2)
+
+    def calc_phase(self, data):
+        shape = np.shape(data)
+        N0 = shape[0]//2
+        N1 = shape[1]//2
+        N = 2*N0*N1
+        return [ np.sum( np.angle(data[0:N0, 0:]) )/N, np.sum( np.angle(data[0: , 0:N1]) )/N ]
+
+    def shift_phase(self, data, phases):
+        shape = np.shape(data)
+        idx =  np.indices(shape)
+        z = np.exp ( - 1j* ( idx[0]*phases[0]/shape[0] +  idx[1]*phases[1]/shape[1] ) )
+        return data*z
+
+    def shift_phase2(self, data, phases):
+        shape = np.shape(data)
+        idx =  np.indices(shape)
+        z = np.exp ( - 1.0j*np.pi*( idx[0]*phases[0] +  idx[1]*phases[1] ) )
+        return data*z
+
+    #def gaus_filter(self,data):
+    #    def gaus(x,sx):
+    #        return np.exp( - 0.5*np.power(x/sx) )/(np.sqrt(2.0*np.pi)*sx)
+
+    #    def prepare_idx(i, N):
+    #        if i 
+
+            
+        shape = np.shape(data)
+        idx =  np.indices(shape)
+
+
+
+
 
     def calc_beam_pdf(self):
         self.compton_fit_sum = self.compton_fit_sum.reshape(self.shape)
+        #fC0  = np.fft.fft2(self.compton_fit_sum)
+        #fD0  = np.fft.fft2(self.data_sum)
         fC0  = np.fft.fft2(self.compton_fit_sum)
-        fD0  = np.fft.fft2(self.data_sum)
+        fD0  = np.fft.fft2(self.fit_sum)
         s = np.abs(np.sum(fC0))
-        k=0
-        fC0 = fC0/np.sum(np.abs(fC0))
-        fD0 = fD0/np.sum(np.abs(fD0))
-        fB = fD0/(fC0 + k*s)
+        #k=1e-3
+        k=1e-1
+        fC0 = fC0
+        fD0 = fD0
+        #def reg_gaus(data):
+        #    shape = np.shape(data)
+        #    idx = np.indices(shape)
+        #    idx[0] = np.where(idx[0]>shape[0]/2, idx[
+        #    return data*np.where( idx[0]>shep[0]/2
+        fB = fD0/(np.abs(fC0) + k*s)*np.exp( -1j*np.angle(fC0))
 
-        phi_fB = np.sum( np.angle(fB[0:self.shape[0]//2, 0:self.shape[1]//2]) )/(self.shape[0]*self.shape[1]/4)
-        print("average complex phase for fB degree", phi_fB/3.1415926*180.0)
-        tmp =  np.abs(np.fft.ifft2(fB))
-        if abs(phi_fB) < np.pi/2:
-            self.data_diff =  self.fft_fix(tmp)
-        else:
-            self.data_diff =  tmp
+        phi_fB = self.calc_phase(fB)
+        def print_phase(title, data):
+            print("average complex phase for {:^10} degree [{:10.3f} , {:10.3f} ] degree".format(title, self.calc_phase_x(data)*180.0/np.pi, self.calc_phase_x(data)*180.0/np.pi) )
+        print_phase("fB", fB)
+        print_phase("fC0", fC0)
+        print_phase("fD0", fD0)
+        #self.data_sum = np.abs(np.fft.ifft2(fB))
+
+
+        #fB = self.shift_phase(fB, [self.shape[0]*np.pi, self.shape[1]*np.pi])
+        fB = self.shift_phase2(fB,[self.shift_y,self.shift_x])
+
+        #print_phase("modif fB", fB)
+
+            
+        #self.data_diff =  np.abs(np.fft.ifft2(fB))
+        #self.data_diff = np.log(1.0 + np.abs(fB))
+        #self.data_diff =  self.fft_fix(tmp)
+        #if abs(phi_fB) < np.pi/2:
+        #else:
+        #    self.data_diff =  tmp
         #self.data_diff= np.abs(fB)
         #self.data_sum = self.smooth(self.data_sum, 7)
 
@@ -298,6 +368,8 @@ class FitMethod2:
         print("Fit parameters initial configuration...")
         print(self.minuit)
         print("Performing first fit for beam shape determination...")
+        beam_par_list = [ 'mx','my', 'sx','sy', 'ax', 'dax', 'ay', 'day', 'nx', 'dnx', 'ny', 'dny', 'alpha_s', 'alpha_a', 'alpha_n']
+        #self.fix(beam_par_list)
         self.minuit.migrad()
 
         #in order to print first fit result
