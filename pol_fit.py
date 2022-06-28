@@ -151,11 +151,12 @@ def read_batch(hist_fpath, file_arr, vepp4E):
             )
             )
 
-    print(''.rjust(125,'-'))
+    line_size = 129
+    print(''.rjust(line_size,'━'))
     print('{:>5} {:^30} {:>12} {:>12} {:^15} {:>15} {:>15} {:>15}'.format(
         '#', 'file', 'Nl', 'Nr', '(Nl-Nr)/(Nl+Nr),%',  'Eset, MeV', 'H, Gs', 'Fdep, Hz'
         ) )
-    print(''.rjust(125,'-'))
+    print(''.rjust(line_size,'─'))
     buf_dict_list = []
     count  = 0 
     for file in file_arr:
@@ -171,7 +172,7 @@ def read_batch(hist_fpath, file_arr, vepp4E):
 
     for bd in buf_dict_list[1:]:
         h_dict = accum_data(h_dict, bd)
-    print(''.rjust(125,'-'))
+    print(''.rjust(line_size,'─'))
 
     print_stat('', 'all {} files'.format(len(buf_dict_list)),  h_dict)
 
@@ -211,25 +212,16 @@ def get_unixtime_smart(time_string, fix_future=False):
             t = t-timedelta(seconds=86400)
         return t
 
-    try:
-        t = datetime.strptime(time_string, "%Y-%m-%d %H:%M:%S")
-    except ValueError:
+    for time_format in ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d", "%H:%M:%S", "%H:%M"]:
         try:
-            t = datetime.strptime(time_string, "%Y-%m-%d")
+            t = datetime.strptime(time_string, time_format)
+            if time_format ==  "%H:%M:%S" or time_format == "%H:%M":
+                t = from_today(t)
+            break
         except ValueError:
-            try:
-                t = datetime.strptime(time_string, "%Y-%m-%dT%H:%M:%S")
-            except ValueError:
-                try:
-                    t = from_today(datetime.strptime(time_string, "%H:%M:%S"))
-                except ValueError:
-                    try:
-                        t = from_today(datetime.strptime(time_string, "%H:%M"))
-                    except ValueError:
-                        print("ERROR: Unable to parse time: ", time_strin)
-                        exit(1)
-    
-    #print("datetime = ", t)
+            if time_format == "%H:%M":
+                print("pol_fit: ERROR: Unable to parse time: ", time_string)
+                exit(1)
     return datetime.timestamp(t)
 
     
@@ -244,7 +236,7 @@ def accum_data_and_make_fit(config, start_time, stop_time):
     else: 
         file_arr = glob.glob1(hist_fpath, regex_line)
         size = len(file_arr)
-        print("size = ", size)
+        #print("size = ", size)
         if size < n_files:
             if size == 0:
                 unix_start_time = datetime.timestamp(datetime.now())
