@@ -9,7 +9,7 @@ import numpy as np
 np.seterr(divide='ignore', invalid='ignore')
 import glob
 import time
-from datetime import datetime
+from datetime import datetime,timedelta
 import argparse
 import matplotlib.pyplot as plt
 import yaml
@@ -21,6 +21,10 @@ from pol_plot_lib import *
 from moments import get_moments
 from lsrp_pol import *
 from my_stat import stat_calc_effect
+from FitMethod1 import *
+from FitMethod2 import *
+from pol_plot_lib import *
+import copy
 
 my_timezone = '+07:00'
 
@@ -29,77 +33,50 @@ def make_fit(config, h_dict):
     h_r = h_dict['hc_r']
     x = h_dict['xc']
     y = h_dict['yc']
-    xrange = config['xrange']
-    
-    h_l, h_r, x = arrange_region(h_l, h_r ,x ,lim = xrange)
-
-    n_evt_l = np.sum(np.sum(h_l))
-    n_evt_r = np.sum(np.sum(h_r))
-
-    hprof_xl = np.sum(h_l, axis=0)
-    hprof_yl = np.sum(h_l, axis=1)
-    hprof_xr = np.sum(h_r, axis=0)
-    hprof_yr = np.sum(h_r, axis=1)
-
-    mx_l = get_mean(x,hprof_xl)
-    mx_r = get_mean(x,hprof_xr)
-    my_l = get_mean(y,hprof_yl)
-    my_r = get_mean(y,hprof_yr)
-
-
+    #h_l, h_r, x = arrange_region(h_l,h_r, x, config['xrange'])
     x_mid = (x[1:] + x[:-1])/2
     y_mid = (y[1:] + y[:-1])/2
-
     ndf = np.shape(x_mid)[0]*np.shape(y_mid)[0]
-
     X = [x_mid,y_mid]
-    chi2_2d = Chi2(get_fit_func_, X, h_l, h_r)
-    initial_values = config['initial_values']
-    if 'real E' in h_dict['env_params'].item():
-        initial_values['E'] = h_dict['env_params'].item()['real_E']
-    print('Energy is set to: {:4.2f}'.format(initial_values['E']))
-    fix_par = config['fix_par']
-    par_err = config['par_err']
-    par_lim = config['par_lim']
+    cfg = copy.deepcopy(config)
+    if  cfg['initial_values']['E'] < 1000 : 
+        cfg['initial_values']['E'] = h_dict['env_params'].item()['vepp4E']
+
+    fit_method = cfg['fit_method']
+
+    if  fit_method == 1:
+        fm = FitMethod1(X, h_l, h_r)
+    elif fit_method == 2:
+        fm = FitMethod2(X, h_l, h_r)
+
+    fm.fit(cfg)
+    data_fields = fm.get_fit_result(cfg)
+
+    return fm, data_fields
+
+def show_res(fitres, data_fields, ax):
+    for the_ax in ax:
+        the_ax.cla()
+    print_fit_results(ax[0], fitres.minuit)
+    data_fields['data_sum'].draw(ax[3])
+    data_fields['data_diff'].draw(ax[6])
     
-    m2d = Minuit(chi2_2d, **initial_values)
-    for p_key in initial_values.keys():
-        m2d.fixed[p_key]  = fix_par[p_key]
-        m2d.errors[p_key] = par_err[p_key]
-        m2d.limits[p_key] = par_lim[p_key]
-    m2d.print_level = 0
-    m2d.errordef=1
-    begin_time = time.time()
-    m2d.migrad()
-    m2d.hesse()
-    print(m2d)
-    if not m2d.valid:
-       #for name in  ['sx', 'sy', 'alpha_x1', 'alpha_x2', 'alpha_y1', 'alpha_y2', 'nx1','nx2', 'ny1','ny2', 'phi', 'p1', 'p2', 'p3']:
-       for name in  ['alpha_x2', 'alpha_y2', 'nx2', 'ny2', 'phi', 'p1', 'p2', 'p3']:
-            m2d.fixed[name]=True
-       m2d.migrad()
-       m2d.hesse()
-       print(m2d)
-    end_time = time.time()
-    #print("Fit time: ", end_time-begin_time, " s")
-    return m2d, ndf
-
-def init_figures():
-    fig_l, ax_l = init_fit_figure(label = 'L', title='Left')
-    fig_r, ax_r = init_fit_figure(label = 'R', title='Right')
-    fig_d, ax_d = init_fit_figure(label = 'Diff', title='Diff')
-    #fig_3d, ax_3d = init_data_figure(label = '3d')
-    return [fig_l, fig_r, fig_d], [ax_l, ax_r, ax_d]
-
-def show_res(config, h_dict, fitres, Fig, Ax):
-    xrange = config['xrange']
-    plot_fit(h_dict, fitres, xrange, Fig[0], Ax[0], diff=False, pol='l')
-    plot_fit(h_dict, fitres, xrange, Fig[1], Ax[1], diff=False, pol='r')
-    plot_fit(h_dict, fitres, xrange, Fig[2], Ax[2], diff=True)
-    #plot_data3d(h_dict, fitres, xrange, Fig[3],  Ax[3], h_type='fl')
-    #plot_data3d(h_dict, fitres, xrange, Fig[3],  Ax[3], h_type='fr')
+    data_fields['data_sum_py'].draw(ax[1])
+    data_fields['fit_sum_py'].draw(ax[1])
+    ax[1].grid()
+    data_fields['data_sum_px'].draw(ax[2])
+    data_fields['fit_sum_px'].draw(ax[2])
+    ax[2].grid()
+    
+    data_fields['data_diff_py'].draw(ax[4])
+    data_fields['fit_diff_py'].draw(ax[4])
+    ax[4].grid()
+    data_fields['data_diff_px'].draw(ax[5])
+    data_fields['fit_diff_px'].draw(ax[5])
+    ax[5].grid()
     plt.show(block=False)
     plt.pause(1)
+        
     
 def get_unix_time_template(fname, timezone='+07:00'):
     unix_time = ciso8601.parse_datetime(fname[:19]+timezone)
@@ -151,95 +128,136 @@ def db_write(   db_obj,
 
 
 def read_batch(hist_fpath, file_arr, vepp4E):
-    h_dict = load_hist(hist_fpath,file_arr[0])
-    first_fname = file_arr[0]
-    buf_dict = h_dict
+    print('Reading ', len(file_arr), ' files: ', file_arr[0], ' ... ', file_arr[-1])
+
+    def print_stat(count, filename, D):
+        env = D['env_params'].item()
+        nl = float(sum(sum(D['hc_l'])))
+        nr = float(sum(sum(D['hc_r'])))
+        if (nl+nr) > 0:
+            delta_n = (nl-nr)/(nl+nr)*2
+            delta_n_error = 4./(nl+nr)**2*np.sqrt(nl*nr*(nl+nr))
+        else:
+            delta_n, delta_n_error = 0.0, 0.0
+
+        print('{:>5} {:>30} {:12.0f} {:12.0f} {:>15} {:>15.2f} {:>15.2f} {:15.3f}'.format( 
+            count, 
+            filename, 
+            nl , nr ,
+            '{:.2f} +- {:.2f}'.format( delta_n*100., delta_n_error*100.) ,
+            env['vepp4E'],
+            env['vepp4H_nmr'],
+            env['dfreq']
+            )
+            )
+
+    line_size = 129
+    print(''.rjust(line_size,'━'))
+    print('{:>5} {:^30} {:>12} {:>12} {:^15} {:>15} {:>15} {:>15}'.format(
+        '#', 'file', 'Nl', 'Nr', '(Nl-Nr)/(Nl+Nr),%',  'Eset, MeV', 'H, Gs', 'Fdep, Hz'
+        ) )
+    print(''.rjust(line_size,'─'))
+    buf_dict_list = []
+    count  = 0 
+    for file in file_arr:
+            buf_dict = load_hist(hist_fpath,file)
+            buf_dict_list.append(buf_dict)
+            print_stat(count+1, file, buf_dict)
+            count+=1
+
+    h_dict = buf_dict_list[0]
     env_params = h_dict['env_params'].item()
-    print('Hnmr: ', env_params['vepp4H_nmr'])
-    
-    print('v4E : ', env_params['vepp4E'])
-    if 'real E' in env_params:
-        print('real E : ', env_params['real_E'])
-    print('Dep freq: ', env_params['dfreq'])
-    print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
     if env_params['vepp4E'] < 1000:
         env_params['vepp4E'] = vepp4E
-        print('Setting v4E parameter to: ', env_params['vepp4E'])
-    for file in file_arr[1:]:
-            buf_dict = load_hist(hist_fpath,file)
-            h_dict = accum_data(h_dict, buf_dict)
-            print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
+
+    for bd in buf_dict_list[1:]:
+        h_dict = accum_data(h_dict, bd)
+    print(''.rjust(line_size,'─'))
+
+    print_stat('', 'all {} files'.format(len(buf_dict_list)),  h_dict)
+
     return h_dict
     
-def make_file_list_online(hist_fpath, unix_start_time, n_files):
-    file_arr = np.array(glob.glob1(hist_fpath, '20*.npz'))
-    if np.shape(file_arr)[0]:
-                unix_time_arr = get_unix_time(file_arr)
-                buffer_size = 0
-                buffer_size_old = 0
-                file_buffer = np.empty(0)
-                counter = 0
-                while (buffer_size < n_files):
-                    file_arr = np.array(glob.glob1(hist_fpath, '20*.npz')) #Choose only data files
-                    unix_time_arr = get_unix_time(file_arr)
-                    file_buffer = file_arr[unix_time_arr >= unix_start_time]
-                    buffer_size = np.shape(file_buffer)[0]
-                    if buffer_size_old != buffer_size:
-                        print('Progress: ', int(buffer_size), '/', int(n_files), '\t\t\t\t\t', end='\r')
-                        buffer_size_old = buffer_size
-                        counter = 0
-                    time.sleep(1)
-                    counter +=1
-    return file_buffer
 
-def make_file_list_offline( hist_fpath,
-                            unix_start_time,
-                            unix_stop_time,
-                            n_files=1):
-    file_arr = np.array(glob.glob1(hist_fpath, '20*.npz'))
-    
-    if np.shape(file_arr)[0]:
-        unix_time_arr = get_unix_time(file_arr)
+def make_file_list( hist_fpath, regex_line,  unix_start_time,    unix_stop_time,    n_files=1):
+    buffer_size = 0
+    old_buffer_size = 0
+    count = 0
+    clock = ['|','/','─','\\','|','/','─','\\']
+    while (buffer_size < n_files):
+        file_arr = np.array(glob.glob1(hist_fpath, regex_line)) #Choose only data files
+        unix_time_arr = get_unix_time(file_arr) 
         time_cut = np.logical_and(unix_time_arr >= unix_start_time, unix_time_arr <= unix_stop_time)
         file_buffer = file_arr[time_cut]
-        if np.shape(file_buffer)[0] >= n_files:
-            file_buffer = file_buffer[:n_files]
-    return file_buffer
+        buffer_size = np.shape(file_buffer)[0]
+        current_timestamp  =  time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+        last_file_name = file_buffer[-1] if buffer_size>0 else ''
+        first_file_name = file_buffer[0] if buffer_size>0 else ''
+        ln = '{:<19} Progress: {} {:>3}/{:<3}: {} ... {}'.format( 
+            current_timestamp,
+            clock[count%len(clock)],
+            int(buffer_size), int(n_files),
+                first_file_name, last_file_name)
+        print(ln, end='\r' ) 
+        count+=1
+        time.sleep(1)
+    print('')
+    return file_buffer[:n_files]
+
+def get_unixtime_smart(time_string, fix_future=False):
+    def from_today(t1):
+        t0 = datetime.now()
+        t = datetime(t0.year, t0.month, t0.day, t1.hour, t1.minute, t1.second)
+        if t>t0 or fix_future:
+            t = t-timedelta(seconds=86400)
+        return t
+
+    for time_format in ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d", "%H:%M:%S", "%H:%M"]:
+        try:
+            t = datetime.strptime(time_string, time_format)
+            if time_format ==  "%H:%M:%S" or time_format == "%H:%M":
+                t = from_today(t)
+            break
+        except ValueError:
+            if time_format == "%H:%M":
+                print("pol_fit: ERROR: Unable to parse time: ", time_string)
+                exit(1)
+    return datetime.timestamp(t)
+
     
-def accum_data_and_make_fit(config, start_time, stop_time, vepp4E, offline = False, version=0):
+def accum_data_and_make_fit(config, start_time, stop_time):
+    vepp4E = config['initial_values']['E']
     hist_fpath = config['hist_fpath']
+    regex_line = config['regex_line']
     n_files = int(config['n_files'])
-    file_arr = np.array(glob.glob1(hist_fpath, '20*.npz')) #Choose only data files
     
-    if not offline:
-        unix_start_time = int(time.time())
+    if config['offline']:
+        unix_start_time = get_unixtime_smart(start_time, fix_future=True)
     else: 
-        unix_start_time = get_unix_time(start_time)
-    unix_stop_time = get_unix_time(stop_time)
+        file_arr = glob.glob1(hist_fpath, regex_line)
+        size = len(file_arr)
+        #print("size = ", size)
+        if size < n_files:
+            if size == 0:
+                unix_start_time = datetime.timestamp(datetime.now())
+            else:
+                unix_start_time = get_unix_time( file_arr[0] )
+        else:
+            unix_start_time = get_unix_time( file_arr[-n_files] )
+
+    unix_stop_time = get_unixtime_smart(stop_time)
     
     if config['scale_hits']:
         scale_file = np.load(os.getcwd()+'/scale_array.npz', allow_pickle=True)
         scale_arr = scale_file['scale_arr']
-    fig_arr, ax_arr = init_figures()
+    fig, ax = init_figure('Laser Polarimeter 2D Fit')
     db_obj = lsrp_pol()
     fit_counter = 0
     try:
         while(1):
-                if not offline:
-                    file_buffer = make_file_list_online(   hist_fpath,
-                                                                    unix_start_time,
-                                                                    n_files)
-                else:
-                    file_buffer = make_file_list_offline(  hist_fpath,
-                                                                    unix_start_time,
-                                                                    unix_stop_time,
-                                                                    n_files)
-                   
-                    if np.shape(file_buffer)[0] < n_files:
-                        print('Batch size [{:d}] is less than required number of files [{:d}]!\nExiting fit programm.'.format( np.shape(file_buffer)[0],n_files))
-                        break
+                file_buffer = make_file_list(hist_fpath, regex_line,  unix_start_time, unix_stop_time, n_files)
                 file_buffer = np.sort(file_buffer)
-                unix_start_time = get_unix_time(file_buffer[-1])
+                unix_start_time = get_unix_time(file_buffer[-1])+1
                 h_dict = read_batch(hist_fpath, file_buffer, vepp4E)
                 h_dict = mask_hist(config, h_dict)
                 if config['need_blur']:
@@ -250,15 +268,15 @@ def accum_data_and_make_fit(config, start_time, stop_time, vepp4E, offline = Fal
                 print('Performing fit...')
                 skew_l, skew_r = stat_calc_effect(h_dict)
                 skew = [skew_l[0]-skew_r[0], skew_l[1]-skew_r[1]]
-                print('skew_ly:{:1.4f}\tskew_ry:{:1.4f} \tsly-sry:{:1.3f}'.format(skew_l[1], skew_r[1], skew_l[1]-skew_r[1]))
-                fitres, ndf = make_fit(config, h_dict)
+                #print('skew_ly:{:1.4f}\tskew_ry:{:1.4f} \tsly-sry:{:1.3f}'.format(skew_l[1], skew_r[1], skew_l[1]-skew_r[1]))
+                fitter, data_fields = make_fit(config, h_dict)
                 raw_stats = get_raw_stats(h_dict)
                 print_stats(raw_stats)
-                print_pol_stats_nik(fitres)
+                print_pol_stats_nik(fitter.minuit)
                 moments = get_moments(h_dict)
-                show_res(config, h_dict, fitres, fig_arr, ax_arr)
-                chi2 = fitres.fval
-                true_ndf = (ndf - fitres.npar)
+                show_res(fitter, data_fields, ax)
+                chi2 = fitter.minuit.fval
+                true_ndf = (fitter.ndf - fitter.minuit.npar)
                 chi2_normed = chi2/true_ndf
                 fit_counter +=1
                 is_db_write = True
@@ -267,7 +285,7 @@ def accum_data_and_make_fit(config, start_time, stop_time, vepp4E, offline = Fal
                     if text!="y":
                         is_db_write=False
                 if is_db_write:
-                    db_write(db_obj, config, file_buffer[0], file_buffer[-1], fitres, chi2, true_ndf, h_dict['env_params'].item(), fit_counter, skew, version)
+                    db_write(db_obj, config, file_buffer[0], file_buffer[-1], fitter.minuit, chi2, true_ndf, h_dict['env_params'].item(), fit_counter, skew, config['version'])
     except KeyboardInterrupt:
         print('\n***Exiting fit program***')
         pass
@@ -278,23 +296,51 @@ def main():
     parser.add_argument('--offline', help='Parameter to distinguish offline fits (db vesrion).', default=False, action='store_true')
     parser.add_argument('start_time', nargs='?', help='Time of the file to start offline fit in regex format')
     parser.add_argument('stop_time', nargs='?', help='Time of the file to start offline fit in regex format', default='2100-01-01T00:00:01')
-    parser.add_argument('--noblur', help='Disable blur', action='store_true')
+    parser.add_argument('--blur', help='Apply blur (general_blur, nonzero_blur), default: none', default='none')
     parser.add_argument('--version', help='Parameter to distinguish offline fits (db vesrion).',nargs='?', default=0)
     parser.add_argument('--config', help='Name of the config file to use while performing fit',nargs='?', default='pol_fit_config.yml')
     parser.add_argument('--E', help='vepp4 E', default=0)
+    parser.add_argument('--L', help='photon flight length', default=0)
+    parser.add_argument('--N', help='Number of preprocessed files to fit', default=30)
+    parser.add_argument('-i', help='Interactive mode',action='store_true')
+
     args = parser.parse_args()
-    print('\nReading config file: ', os.getcwd()+'/'+args.config +'\n')
+    print('Reading config file: ', os.getcwd()+'/'+args.config +'\n')
     with open(os.getcwd()+'/'+args.config, 'r') as conf_file:
         try:
             config = yaml.load(conf_file, Loader=yaml.Loader)
             if args.E:
-                vepp4E = float(args.E)
+                config['initial_values']['E'] = float(args.E)
+                print ("Set default VEPP4 energy ", args.E, " MeV")
+            if args.L:
+                config['initial_values']['L'] = float(args.L)
+                print ("Set default photon flight length ", args.L, " mm")
+            if args.blur != 'none':
+                print ("Set blur algorithm: ", args.blur)
+                config['need_blur'] = True
+                config['blur_type'] = args.blur
+            if args.N:
+                print("Set number of preprocessed files: ", args.N)
+                config['n_files'] = args.N
+            if args.i:
+                config['continue']=False
+                print ("Set interactive mode (continue = False)")
+
+            if args.version:
+                config['version'] = args.version
+
+            if args.offline or args.start_time:
+                config['offline'] = True
+                print ("Starting from  date ", args.start_time, '...')
             else:
-                vepp4E = config['initial_values']['E']
+                config['offline'] = False
+                print ("Starting from  now...")
+
+
         except yaml.YAMLError as exc:
             print('Error opening pol_config.yaml file:')
             print(exc)
         else:
-            accum_data_and_make_fit(config, args.start_time, args.stop_time, vepp4E, args.offline, args.version) 
+            accum_data_and_make_fit(config, args.start_time, args.stop_time) 
 if __name__ == '__main__':
     main()
