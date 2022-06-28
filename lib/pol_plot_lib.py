@@ -25,6 +25,7 @@ class data_field:
         self.label = label
         self.data_type = data_type
         self.interpolation = 'none'
+        self.palette = plt.cm.viridis
         
         
     def draw_profilex(self, ax):
@@ -66,7 +67,7 @@ class data_field:
         
     def draw_2d_plot(self, ax):
         im_dat = ax.imshow( self.data, 
-                            cmap=plt.cm.viridis,
+                            cmap=self.palette,
                             interpolation=self.interpolation,
                             extent=[self.x[0],self.x[-1],self.y[0],self.y[-1]],
                             origin='lower')

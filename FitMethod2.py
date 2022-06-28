@@ -336,8 +336,13 @@ class FitMethod2:
                                                         data_err = this_data_err_py,
                                                         label=field_name+'_py',
                                                         data_type = this_data_type)
+        data_field_dict['data_sum'].interpolation='bicubic'
         data_field_dict['data_diff'].interpolation='bicubic'
-        #data_field_dict['data_sum'].interpolation='bicubic'
+        data_field_dict['data_sum'].palette=plt.cm.magma
+        #data_field_dict['data_diff'].palette=plt.cm.viridis
+        data_field_dict['data_diff'].palette=plt.cm.seismic
+        #data_field_dict['data_diff'].palette=plt.cm.coolwarm
+        #data_field_dict['data_diff'].palette=plt.cm.PRGn
         return data_field_dict
 
     def fix(self, parlist):
