@@ -12,10 +12,13 @@ from itertools import chain
 class FitMethod2:
 
     def __init__(self, x, z_l, z_r):
-        with  open('shift.txt','r') as f:
-            self.shift_x = float(f.readline())
-            self.shift_y = float(f.readline())
-            self.smooth_value = float(f.readline())
+        self.shift_x = 0.0
+        self.shift_y = 0.0
+        self.smooth_value=3
+        #with  open('shift.txt','r') as f:
+        #    self.shift_x = float(f.readline())
+        #    self.shift_y = float(f.readline())
+        #    self.smooth_value = float(f.readline())
         self.x = x
         z_l = self.smooth(z_l,self.smooth_value)
         z_r = self.smooth(z_r,self.smooth_value)
