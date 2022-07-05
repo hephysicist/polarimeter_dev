@@ -329,17 +329,20 @@ def nonzero_blur(h_dict):
 
 def blur_zero_pixels(h,radius):
 	result = np.array(h)
-	Nx, Ny = h.shape
-	for x in range(0, Nx):
-		for y in range(0, Ny):
-			if h[x,y] == 0: 
-				window = np.array(h[max(0,x-radius):min(x+radius+1, Nx), max(0,y-radius):min(y+radius+1, Ny)])
-				result[x,y] = np.sum(np.where(window>0, window, 0.))/np.sum(np.where(window>0, 1, 0.))
+	Ny, Nx= h.shape
+	for y in range(0, Ny):
+		for x in range(0, Nx):
+			if np.abs(h[y,x]) < 1:
+				window = np.array(h[max(0,y-radius):min(y+radius+1, Ny), max(0,x-radius):min(x+radius+1, Nx)])
+				s = np.sum(np.where(window>0, window, 0.))
+				n = np.sum(np.where(window>0, 1, 0.))
+				result[y,x] =  s/n
 	return result
 
 def zero_blur(h_dict):
-    hc_l = np.array(h_dict['hc_l'])
-    hc_r = np.array(h_dict['hc_r'])
+    print("zero_blur")
+    hc_l = np.array(h_dict['hc_l']).copy()
+    hc_r = np.array(h_dict['hc_r']).copy()
     hc_l = blur_zero_pixels(hc_l,1)
     hc_r = blur_zero_pixels(hc_r,1)
     res = h_dict
