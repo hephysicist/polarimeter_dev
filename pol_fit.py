@@ -260,11 +260,11 @@ def accum_data_and_make_fit(config, start_time, stop_time):
                 unix_start_time = get_unix_time(file_buffer[-1])+1
                 h_dict = read_batch(hist_fpath, file_buffer, vepp4E)
                 h_dict = mask_hist(config, h_dict)
-                if config['need_blur']:
-                    h_dict = eval(config['blur_type']+'(h_dict)')
                 if config['scale_hits']:
                     h_dict['hc_l'] *= scale_arr
                     h_dict['hc_r'] *= scale_arr
+                if config['need_blur']:
+                    h_dict = eval(config['blur_type']+'(h_dict)')
                 print('Performing fit...')
                 skew_l, skew_r = stat_calc_effect(h_dict)
                 skew = [skew_l[0]-skew_r[0], skew_l[1]-skew_r[1]]
