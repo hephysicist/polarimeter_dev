@@ -194,11 +194,13 @@ def print_fit_results(ax, fitres):
     x = 0.
     y = 1.
     for par in par_list:
-        text = r'${:s} = {:1.2f} \pm {:1.2f}$'.format(par, fitres.values[par], fitres.errors[par])
-        if par in important_pars:
-            color = 'red'
-        else:
-            color = 'black'
-        ax.text(x, y+lc, text, size=14, ha='left', va='center', color=color)
-        lc -= line_size
+        try:
+            text = r'${:s} = {:1.2f} \pm {:1.2f}$'.format(par, fitres.values[par], fitres.errors[par])
+            if par in important_pars:
+                color = 'red'
+            else:
+                color = 'black'
+            ax.text(x, y+lc, text, size=14, ha='left', va='center', color=color)
+            lc -= line_size
+        except KeyError: pass
     return ax

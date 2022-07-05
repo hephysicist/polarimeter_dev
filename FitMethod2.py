@@ -15,10 +15,10 @@ class FitMethod2:
         self.shift_x = 0.0
         self.shift_y = 0.0
         self.smooth_value=3
-        #with  open('shift.txt','r') as f:
-        #    self.shift_x = float(f.readline())
-        #    self.shift_y = float(f.readline())
-        #    self.smooth_value = float(f.readline())
+        with  open('shift.txt','r') as f:
+            self.shift_x = float(f.readline())
+            self.shift_y = float(f.readline())
+            self.smooth_value = float(f.readline())
         self.x = x
         z_l = self.smooth(z_l,self.smooth_value)
         z_r = self.smooth(z_r,self.smooth_value)
@@ -100,25 +100,46 @@ class FitMethod2:
         n = self.Oval(nx,dnx, ny,dny, c*cos(alpha_n) + s*sin(alpha_n), s*cos(alpha_n) - c*sin(alpha_n))
         return self.CrystalBall(Z, a, n, n)
 
+    def extend_grid1(self, x, n):
+        #    ...+9....#########...+9.... extend region +9+9
+        step = x[1]-x[0]
+        x_left  = np.linspace(x[0]-n*step,x[0], num=n, endpoint=False)
+        x_right = np.linspace(x[-1]+step, x[-1]+(n+1)*step, num=n, endpoint=False)
+        return np.concatenate((x_left, x, x_right))
+
+    def extend_grid2(self, y, x, add_shape):
+        return  np.meshgrid(
+                self.extend_grid1(x,add_shape[1]),
+                self.extend_grid1(y,add_shape[0]
+                ) )
+
+    def extend(self, data, add_shape):
+        new  = np.zeros( ( data.shape[0]+add_shape[0]*2, data.shape[1]+add_shape[1]*2 ) )
+        new[ add_shape[0]:-add_shape[0], add_shape[1]: -add_shape[1] ] = data
+        return new
+
+
+    def shrink(self, data, minus_shape):
+        return data[minus_shape[0]:-minus_shape[0], minus_shape[1]:-minus_shape[1]]
+
+
+
 
     def PDF(self, E, L, P, V, Q, beta, alpha_d,  mx, my, sx, sy, ax, dax,  ay, day, nx, dnx, ny, dny, alpha_s, alpha_a, alpha_n):
         x_mid = self.x[0]-mx
         y_mid = self.x[1]-my
 
-        n_sp_x = 12
-        n_sp_y = 20
+        shape_diff = (20,32)
+        x, y =  self.extend_grid2(y_mid,x_mid, shape_diff)
 
-        x_wrapped = wrap_array(x_mid,n_sp_x)
-        y_wrapped = wrap_array(y_mid,n_sp_y)
-        xx,yy = np.meshgrid(x_wrapped, y_wrapped)
+        C = self.ComptonPDF(x, y, E, L, P, V, Q, beta)
+        B =    self.BeamPDF(x, y, sx, sy, ax, dax,  ay, day, nx, dnx, ny, dny, alpha_s, alpha_a, alpha_n)
 
-        x_sec = self.ComptonPDF(xx, yy, E, L, P, V, Q, beta)
-        core = self.BeamPDF(xx, yy,  sx,  sy, ax, dax,  ay, day, nx, dnx, ny, dny, alpha_s, alpha_a, alpha_n)
-        res = signal.fftconvolve(x_sec, core, mode = 'same')
-        res = res[n_sp_y:-n_sp_y, n_sp_x:-n_sp_x]
-        self.beam_fit = core[n_sp_y:-n_sp_y, n_sp_x:-n_sp_x]
-        self.compton_fit = x_sec[n_sp_y:-n_sp_y, n_sp_x:-n_sp_x]
-        return res
+        CB = signal.fftconvolve(C, B, mode = 'same')
+
+        self.compton_fit = self.shrink(C, shape_diff) 
+        self.beam_fit    = self.shrink(B, shape_diff) 
+        return self.shrink(CB, shape_diff)
 
     def fft_fix(self, D):
         D = np.vstack([D[10:,],D[0:10,]])
@@ -206,10 +227,10 @@ class FitMethod2:
     #    return np.sum( np.angle(data[0:self.shape[0]//2, 0:self.shape[1]//2]) )/(self.shape[0]*self.shape[1]/4)
 
     def calc_phase_y(self, data):
-        return np.sum( np.angle( data[ 0 : self.shape[0]//2 ,0 :] ) )/(self.shape[0]*self.shape[1]/2)
+        return np.sum( np.angle( data[ 0 : data.shape[0]//2 ,0 :] ) )/(data.shape[0]*data.shape[1]/2)
 
     def calc_phase_x(self, data):
-        return np.sum( np.angle(data[0:self.shape[0] , 0:self.shape[1]//2]) )/(self.shape[0]*self.shape[1]/2)
+        return np.sum( np.angle(data[0:data.shape[0] , 0:data.shape[1]//2]) )/(data.shape[0]*data.shape[1]/2)
 
     def calc_phase(self, data):
         shape = np.shape(data)
@@ -237,31 +258,33 @@ class FitMethod2:
     #    def prepare_idx(i, N):
     #        if i 
 
-            
-        shape = np.shape(data)
-        idx =  np.indices(shape)
-
+#            
+#        shape = np.shape(data)
+#        idx =  np.indices(shape)
+#
 
 
 
 
     def calc_beam_pdf(self):
+        self.data_diff = self.data_sum.copy()
         self.compton_fit_sum = self.compton_fit_sum.reshape(self.shape)
-        #fC0  = np.fft.fft2(self.compton_fit_sum)
-        #fD0  = np.fft.fft2(self.data_sum)
+        self.is_extend = True
+        #self.add_shape = (40,64)
+        self.add_shape = (100,100)
+        D0 = self.data_sum
+        if self.is_extend:
+            self.compton_fit_sum = self.extend(self.compton_fit_sum, self.add_shape)
+            D0 = self.extend(D0, self.add_shape)
+
         fC0  = np.fft.fft2(self.compton_fit_sum)
-        fD0  = np.fft.fft2(self.fit_sum)
-        s = np.abs(np.sum(fC0))
-        #k=1e-3
-        k=1e-1
-        fC0 = fC0
-        fD0 = fD0
-        #def reg_gaus(data):
-        #    shape = np.shape(data)
-        #    idx = np.indices(shape)
-        #    idx[0] = np.where(idx[0]>shape[0]/2, idx[
-        #    return data*np.where( idx[0]>shep[0]/2
-        fB = fD0/(np.abs(fC0) + k*s)*np.exp( -1j*np.angle(fC0))
+        fD0  = np.fft.fft2(D0)
+        sum2 = np.sum(np.abs(fC0*fC0))
+        k=6e-4
+        eps=1e-9
+        eps = 1e-14
+        reg = np.abs(fC0*fC0) / ( np.abs(fC0*fC0) + k*sum2)
+        fB = fD0/( fC0 + eps)*reg
 
         phi_fB = self.calc_phase(fB)
         def print_phase(title, data):
@@ -269,22 +292,13 @@ class FitMethod2:
         print_phase("fB", fB)
         print_phase("fC0", fC0)
         print_phase("fD0", fD0)
-        #self.data_sum = np.abs(np.fft.ifft2(fB))
 
-
-        #fB = self.shift_phase(fB, [self.shape[0]*np.pi, self.shape[1]*np.pi])
         fB = self.shift_phase2(fB,[self.shift_y,self.shift_x])
 
-        #print_phase("modif fB", fB)
+        self.data_sum = np.abs(np.fft.ifft2(fB))
 
-            
-        #self.data_diff =  np.abs(np.fft.ifft2(fB))
-        #self.data_diff = np.log(1.0 + np.abs(fB))
-        #self.data_diff =  self.fft_fix(tmp)
-        #if abs(phi_fB) < np.pi/2:
-        #else:
-        #    self.data_diff =  tmp
-        #self.data_diff= np.abs(fB)
+        if self.is_extend:
+            self.data_sum  = self.shrink(self.data_sum,self.add_shape)
         #self.data_sum = self.smooth(self.data_sum, 7)
 
 
@@ -340,9 +354,14 @@ class FitMethod2:
         data_field_dict['data_diff'].interpolation='bicubic'
         data_field_dict['data_sum'].palette=plt.cm.magma
         #data_field_dict['data_diff'].palette=plt.cm.viridis
-        data_field_dict['data_diff'].palette=plt.cm.seismic
+        #data_field_dict['data_diff'].palette=plt.cm.seismic
+        data_field_dict['data_diff'].palette=plt.cm.magma
         #data_field_dict['data_diff'].palette=plt.cm.coolwarm
         #data_field_dict['data_diff'].palette=plt.cm.PRGn
+        #data_field_dict['data_sum'].x = self.extend_grid1(grids['xc'],self.add_shape[1])
+        #data_field_dict['data_sum'].y = self.extend_grid1(grids['yc'], self.add_shape[0])
+        #print( data_field_dict['data_diff'].y)
+        #data_field_dict['data_diff'].x = self.grids['xc']
         return data_field_dict
 
     def fix(self, parlist):
@@ -402,8 +421,8 @@ class FitMethod2:
         self.unfix(['NR'])
         print("Performing second fit with fixed beam shape and free polarization")
 
-        self.minuit.migrad()
-        self.minuit.hesse()
+        #self.minuit.migrad()
+        #self.minuit.hesse()
 
         if self.tied_VQ:
             Q = self.minuit.values['Q']

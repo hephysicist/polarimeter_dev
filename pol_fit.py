@@ -23,6 +23,7 @@ from lsrp_pol import *
 from my_stat import stat_calc_effect
 from FitMethod1 import *
 from FitMethod2 import *
+from FitMethod3 import *
 from pol_plot_lib import *
 import copy
 
@@ -44,10 +45,14 @@ def make_fit(config, h_dict):
 
     fit_method = cfg['fit_method']
 
-    if  fit_method == 1:
-        fm = FitMethod1(X, h_l, h_r)
-    elif fit_method == 2:
-        fm = FitMethod2(X, h_l, h_r)
+    eval('print("Eval print")')
+    fm = eval('FitMethod'+str(fit_method)+'(X,h_l,h_r)')
+    #if  fit_method == 1:
+    #    fm = FitMethod1(X, h_l, h_r)
+    #elif fit_method == 2:
+    #    fm = FitMethod2(X, h_l, h_r)
+    #elif fit_method == 3:
+    #    fm = FitMethod3(X, h_l, h_r)
 
     fm.fit(cfg)
     data_fields = fm.get_fit_result(cfg)

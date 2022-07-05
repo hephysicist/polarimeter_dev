@@ -339,6 +339,8 @@ def blur_zero_pixels(h,radius):
 				result[y,x] =  s/n
 	return result
 
+
+
 def zero_blur(h_dict):
     print("zero_blur")
     hc_l = np.array(h_dict['hc_l']).copy()
@@ -349,3 +351,40 @@ def zero_blur(h_dict):
     res['hc_l']=hc_l
     res['hc_r']=hc_r
     return res
+
+
+def make_blur_window(h, y, x, radius):
+	Ny, Nx= h.shape
+	return np.array( h[ max(0, y-radius) : min(y+radius+1, Ny), max(0,x-radius) : min(x+radius+1, Nx)] )
+
+def low_blur(h_dict):
+	print("low_blur")
+	def blur(h,radius):
+		Ny, Nx= h.shape
+		fltr = np.array(h)
+		for y in range(0, Ny):
+			for x in range(0, Nx):
+				window = make_blur_window(h, y, x, radius)
+				mean  = np.average( window[window>0] )
+				sigma = np.std( window[window>0] )
+				if  np.abs(h[y,x]-mean) > 3*sigma:
+					#print (y,x, h[y,x], mean, sigma)
+					fltr[y,x] = 1
+				else:
+					fltr[y,x] = 0
+		result = np.zeros(h.shape)
+		for y in range(0, Ny):
+			for x in range(0, Nx):
+				if fltr[y,x]==1:
+					window = make_blur_window(h, y, x, radius)
+					f =      make_blur_window(fltr, y,x, radius)
+					mean = np.average( window[f==0] )
+					#print( y, x, h[y,x], mean)
+					result[y,x] = mean
+				else:
+					result[y,x] = h[y,x]
+		return result
+	res = h_dict.copy()
+	res['hc_l'] = blur( np.array(h_dict['hc_l']), 1)
+	res['hc_r'] = blur( np.array(h_dict['hc_r']), 1)
+	return res
