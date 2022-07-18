@@ -29,40 +29,28 @@ import copy
 
 my_timezone = '+07:00'
 
+fit_state = None
+
 def make_fit(config, h_dict):
-    h_l = h_dict['hc_l']
-    h_r = h_dict['hc_r']
-    x = h_dict['xc']
-    y = h_dict['yc']
-    #h_l, h_r, x = arrange_region(h_l,h_r, x, config['xrange'])
-    x_mid = (x[1:] + x[:-1])/2
-    y_mid = (y[1:] + y[:-1])/2
-    ndf = np.shape(x_mid)[0]*np.shape(y_mid)[0]
-    X = [x_mid,y_mid]
+    data_left = h_dict['hc_l']
+    data_right = h_dict['hc_r']
+    xy_coord = make_central_coord(h_dict['xc'], h_dict['yc'])
     cfg = copy.deepcopy(config)
     if  cfg['initial_values']['E'] < 1000 : 
         cfg['initial_values']['E'] = h_dict['env_params'].item()['vepp4E']
 
     fit_method = cfg['fit_method']
-
-    eval('print("Eval print")')
-    fm = eval('FitMethod'+str(fit_method)+'(X,h_l,h_r)')
-    #if  fit_method == 1:
-    #    fm = FitMethod1(X, h_l, h_r)
-    #elif fit_method == 2:
-    #    fm = FitMethod2(X, h_l, h_r)
-    #elif fit_method == 3:
-    #    fm = FitMethod3(X, h_l, h_r)
-
+    fm = eval('FitMethod'+str(fit_method)+'(xy_coord, data_left, data_right)')
     fm.fit(cfg)
     data_fields = fm.get_fit_result(cfg)
 
     return fm, data_fields
 
-def show_res(fitres, data_fields, ax):
+
+def show_res(fitter, data_fields, ax):
     for the_ax in ax:
         the_ax.cla()
-    print_fit_results(ax[0], fitres.minuit)
+    print_fit_results(ax[0], fitter)
     data_fields['data_sum'].draw(ax[3])
     data_fields['data_diff'].draw(ax[6])
     
@@ -79,6 +67,19 @@ def show_res(fitres, data_fields, ax):
     data_fields['data_diff_px'].draw(ax[5])
     data_fields['fit_diff_px'].draw(ax[5])
     ax[5].grid()
+
+    def show(name, id):
+        try : 
+            data_fields[name].draw(ax[id]) 
+        except KeyError: 
+            pass
+
+    show('beam_shape',7)
+    show('fit_diff',8)
+    show('efficiency',9)
+    show('remains',10)
+
+
     plt.show(block=False)
     plt.pause(1)
         
@@ -122,10 +123,24 @@ def db_write(   db_obj,
     db_obj.V.error = fitres.errors['V']
     db_obj.Q.value = fitres.values['Q']
     db_obj.Q.error = fitres.errors['Q']
-    db_obj.NL.value = fitres.values['NL']
-    db_obj.NL.error = fitres.errors['NL']
-    db_obj.NR.value = fitres.values['NR']
-    db_obj.NR.error = fitres.errors['NR']
+    try:
+        db_obj.NL.value = fitres.values['NL']
+        db_obj.NL.error = fitres.errors['NL']
+        db_obj.NR.value = fitres.values['NR']
+        db_obj.NR.error = fitres.errors['NR']
+    except KeyError:
+        N = fitres.values['N']
+        DN = fitres.values['DN']
+        Ne = fitres.errors['N']
+        DNe = fitres.errors['DN']
+        NL = N * (1.0 + 0.5 * DN);
+        NR = N * (1.0 - 0.5 * DN);
+        db_obj.NL.value = NL
+        db_obj.NR.value = NR
+        db_obj.NL.error = NL*np.hypot( Ne/N, 0.5/(1.0 + 0.5*DN)*DNe )
+        db_obj.NR.error = NR*np.hypot( Ne/N, 0.5/(1.0 - 0.5*DN)*DNe )
+
+
     db_obj.askewx.value = skew[0]
     db_obj.askewy.value = skew[1]
     db_obj.version = version
@@ -164,16 +179,18 @@ def read_batch(hist_fpath, file_arr, vepp4E):
     print(''.rjust(line_size,'─'))
     buf_dict_list = []
     count  = 0 
+    vepp4E_list = []
     for file in file_arr:
             buf_dict = load_hist(hist_fpath,file)
+            E = buf_dict['env_params'].item()['vepp4E']
+            if E > 1000: vepp4E_list.append(E)
             buf_dict_list.append(buf_dict)
             print_stat(count+1, file, buf_dict)
             count+=1
 
     h_dict = buf_dict_list[0]
     env_params = h_dict['env_params'].item()
-    if env_params['vepp4E'] < 1000:
-        env_params['vepp4E'] = vepp4E
+    env_params['vepp4E'] = np.average(vepp4E_list)
 
     for bd in buf_dict_list[1:]:
         h_dict = accum_data(h_dict, bd)
@@ -277,12 +294,22 @@ def accum_data_and_make_fit(config, start_time, stop_time):
                 fitter, data_fields = make_fit(config, h_dict)
                 raw_stats = get_raw_stats(h_dict)
                 print_stats(raw_stats)
-                print_pol_stats_nik(fitter.minuit)
                 moments = get_moments(h_dict)
+                print_pol_stats(fitter)
                 show_res(fitter, data_fields, ax)
-                chi2 = fitter.minuit.fval
-                true_ndf = (fitter.ndf - fitter.minuit.npar)
-                chi2_normed = chi2/true_ndf
+
+                if config['figsave']:
+                    begin_timestamp = file_buffer[0][:-9].replace(':','-')
+                    dirname = config['savedir']
+                    filename = '{}/{}.png'.format(config['savedir'], begin_timestamp)
+                    if not os.path.exists(dirname):
+                        print('pol_fit.py: "{}" directory doesnt exists! Create new one'.format(config['savedir']))
+                        os.mkdir(dirname)
+                    if os.path.isdir(config['savedir']):
+                        fig.savefig(filename) 
+                    else:
+                        print('pol_fit.py: ERROR: Saving figure:  "{}" is not directory!'.format(config['savedir']))
+                
                 fit_counter +=1
                 is_db_write = True
                 if not config['continue']:
@@ -290,7 +317,7 @@ def accum_data_and_make_fit(config, start_time, stop_time):
                     if text!="y":
                         is_db_write=False
                 if is_db_write:
-                    db_write(db_obj, config, file_buffer[0], file_buffer[-1], fitter.minuit, chi2, true_ndf, h_dict['env_params'].item(), fit_counter, skew, config['version'])
+                    db_write(db_obj, config, file_buffer[0], file_buffer[-1], fitter.minuit, 0, 0, h_dict['env_params'].item(), fit_counter, skew, config['version'])
     except KeyboardInterrupt:
         print('\n***Exiting fit program***')
         pass
@@ -308,6 +335,9 @@ def main():
     parser.add_argument('--L', help='photon flight length', default=0)
     parser.add_argument('--N', help='Number of preprocessed files to fit', default=30)
     parser.add_argument('-i', help='Interactive mode',action='store_true')
+    parser.add_argument('--nonstop', help='Non Interactive mode',action='store_true')
+    parser.add_argument('--figsave', help='save figures into dir')
+
 
     args = parser.parse_args()
     print('Reading config file: ', os.getcwd()+'/'+args.config +'\n')
@@ -327,9 +357,14 @@ def main():
             if args.N:
                 print("Set number of preprocessed files: ", args.N)
                 config['n_files'] = args.N
+
             if args.i:
                 config['continue']=False
                 print ("Set interactive mode (continue = False)")
+
+            if args.nonstop:
+                config['continue']=True
+                print ("Set non interactive mode (continue = True)")
 
             if args.version:
                 config['version'] = args.version
@@ -340,6 +375,12 @@ def main():
             else:
                 config['offline'] = False
                 print ("Starting from  now...")
+
+            if args.figsave:
+                config['savedir'] = args.figsave
+                config['figsave'] = True
+            else:
+                config['figsave'] = False
 
 
         except yaml.YAMLError as exc:

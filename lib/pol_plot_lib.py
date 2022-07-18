@@ -7,9 +7,9 @@ from matplotlib.ticker import LinearLocator
 import matplotlib.gridspec as gridspec
 import matplotlib.ticker as ticker
 import scipy.interpolate as spint
+import scipy.stats
 
 from pol_lib import arrange_region
-from pol_fit_lib import get_fit_func
 from mapping import get_xy
 
 matplotlib.use('TkAgg')
@@ -164,11 +164,12 @@ def draw_ch_numbers(ax, config):
                             fontsize=6)
    
 def init_figure(label): 
-        fig = plt.figure(figsize=(15, 8))
+        fig = plt.figure(figsize=(20, 8))
         fig.canvas.set_window_title(label)
         fig.set_tight_layout(True)
         fig.tight_layout(rect=[0, 0, 1, 1])
-        gs0 = gridspec.GridSpec(1, 2, figure=fig)
+        #gs0 = gridspec.GridSpec(1, 2, figure=fig)
+        gs0 = gridspec.GridSpec(1, 3, figure=fig)
         
         gs00 = gridspec.GridSpecFromSubplotSpec(3, 2, subplot_spec=gs0[0], height_ratios = [1,1,1])
         ax01 = fig.add_subplot(gs00[:-1,:-1])
@@ -180,27 +181,44 @@ def init_figure(label):
         ax11 = fig.add_subplot(gs10[0,0])
         ax12 = fig.add_subplot(gs10[0,1])
         ax13 = fig.add_subplot(gs10[1, :])
+
         ax = [ax01,ax02, ax03, ax04, ax11, ax12, ax13]
+
+        gs20 = gridspec.GridSpecFromSubplotSpec(4, 1, subplot_spec=gs0[2], height_ratios = [1,1,1,1])
+        ax21 = fig.add_subplot(gs20[0,:])
+        ax22 = fig.add_subplot(gs20[1,:])
+        ax23 = fig.add_subplot(gs20[2,:])
+        ax24 = fig.add_subplot(gs20[3,:])
+
+        ax = ax + [ax21,ax22,ax23,ax24]
+
         return fig, ax
         
-def print_fit_results(ax, fitres):
-    ax.set_title('Fit results')
+def print_fit_results(ax, fitter):
+    minuit = fitter.minuit
+    ax.set_title('Fit results (fit method {})'.format(fitter.fit_method))
     ax.set(xlim=(0., 1.25), ylim=(-0.25, 1.25), xticks=[], yticks=[])
     ax.axis('off')
     par_list = ['P','V', 'Q','mx', 'my','sx', 'sy', 'NL', 'NR']
     important_pars = ['P', 'NL', 'NR']
     line_size = 0.13
     lc = 0 
-    x = 0.
-    y = 1.
-    for par in par_list:
+    x = -0.2
+    y = 1.1
+    chi2ndf = "chi2/ndf = {0:.{1}f}/{2} = {3:.{4}f}".format(fitter.chi2, 0 if fitter.chi2 > 10 else 2, fitter.ndf, fitter.chi2/fitter.ndf, 1 if fitter.chi2/fitter.ndf>10 else 2 )
+    ax.text(x, y+lc, chi2ndf, size=14, ha='left', va='center', color='black')
+    lc -= line_size
+    ax.text(x, y+lc, "prob = {:.2f}%".format(100.*scipy.stats.chi2.cdf(fitter.chi2, fitter.ndf)), size=14, ha='left', va='center', color='black')
+    lc -= line_size
+    for parname in par_list:
         try:
-            text = r'${:s} = {:1.2f} \pm {:1.2f}$'.format(par, fitres.values[par], fitres.errors[par])
-            if par in important_pars:
-                color = 'red'
-            else:
-                color = 'black'
-            ax.text(x, y+lc, text, size=14, ha='left', va='center', color=color)
-            lc -= line_size
+            if not minuit.fixed[parname]:
+                text = r'${:s} = {:1.2f} \pm {:1.2f}$'.format(parname, minuit.values[parname], minuit.errors[parname])
+                if parname in important_pars:
+                    color = 'red'
+                else:
+                    color = 'black'
+                ax.text(x, y+lc, text, size=14, ha='left', va='center', color=color)
+                lc -= line_size
         except KeyError: pass
     return ax

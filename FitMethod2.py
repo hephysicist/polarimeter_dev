@@ -9,9 +9,11 @@ from pol_plot_lib import *
 from itertools import chain
 
 
+#Fit by Crystal ball as beam shape * Compton to normalized data difference
 class FitMethod2:
 
     def __init__(self, x, z_l, z_r):
+        self.fit_method=2
         self.shift_x = 0.0
         self.shift_y = 0.0
         self.smooth_value=3
@@ -38,7 +40,6 @@ class FitMethod2:
         self.idxQ =fit_varnames.index('Q')
         self.idxV =fit_varnames.index('V')
         self.idxpsum =fit_varnames.index('psum')
-        self.ndf = np.shape(self.x[0])[0]*np.shape(self.x[1])[0]
 
 
     def ComptonPDF(self, x,y, E=4730., L=33000., P = 0., V = 0., Q=0., beta=0.):
@@ -267,9 +268,9 @@ class FitMethod2:
 
 
     def calc_beam_pdf(self):
-        self.data_diff = self.data_sum.copy()
+        #self.data_diff = self.data_sum.copy()
         self.compton_fit_sum = self.compton_fit_sum.reshape(self.shape)
-        self.is_extend = True
+        self.is_extend = False
         #self.add_shape = (40,64)
         self.add_shape = (100,100)
         D0 = self.data_sum
@@ -295,7 +296,7 @@ class FitMethod2:
 
         fB = self.shift_phase2(fB,[self.shift_y,self.shift_x])
 
-        self.data_sum = np.abs(np.fft.ifft2(fB))
+        #self.data_sum = np.abs(np.fft.ifft2(fB))
 
         if self.is_extend:
             self.data_sum  = self.shrink(self.data_sum,self.add_shape)
@@ -354,8 +355,8 @@ class FitMethod2:
         data_field_dict['data_diff'].interpolation='bicubic'
         data_field_dict['data_sum'].palette=plt.cm.magma
         #data_field_dict['data_diff'].palette=plt.cm.viridis
-        #data_field_dict['data_diff'].palette=plt.cm.seismic
-        data_field_dict['data_diff'].palette=plt.cm.magma
+        data_field_dict['data_diff'].palette=plt.cm.seismic
+        #data_field_dict['data_diff'].palette=plt.cm.magma
         #data_field_dict['data_diff'].palette=plt.cm.coolwarm
         #data_field_dict['data_diff'].palette=plt.cm.PRGn
         #data_field_dict['data_sum'].x = self.extend_grid1(grids['xc'],self.add_shape[1])
@@ -432,5 +433,7 @@ class FitMethod2:
 
         print(self.minuit)
         self.set_result()
+        self.ndf = np.shape(self.x[0])[0]*np.shape(self.x[1])[0]-self.minuit.nfit
+        self.chi2 = self.minuit.fval
         return self.minuit
 

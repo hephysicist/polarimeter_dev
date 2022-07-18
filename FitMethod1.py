@@ -8,15 +8,11 @@ from math import cos, sin
 from pol_plot_lib import *
 from pol_lib import get_coor_grid
 
-class FitResult:
-    def __init__(self, d, e, f):
-        self.data = d
-        self.error = e
-        self.fit = f
-
+#Fit by Crystal ball * Compton to data sum and data difference
 class FitMethod1:
 
     def __init__(self, x, z_l, z_r):
+        self.fit_method=1
         self.x = x
         self.z_l = z_l.flatten()
         self.z_r = z_r.flatten()
@@ -32,10 +28,9 @@ class FitMethod1:
         self.idxNR=fit_varnames.index('NR')
         self.idxQ =fit_varnames.index('Q')
         self.idxV =fit_varnames.index('V')
-        self.ndf = np.shape(self.x[0])[0]*np.shape(self.x[1])[0]
 
 
-    def get_xsec_xy(self, x,y, Ksi=0, phi_lin=0., P=0, V=0, E=4730, L=33000, alpha=0):
+    def ComptonPDF(self, x,y, Ksi=0, phi_lin=0., P=0, V=0, E=4730, L=33000, alpha=0):
         m_e = 0.511*10**6   #eV
         gamma = E/0.511 
         omega_0 = 2.35 #eV
@@ -85,7 +80,7 @@ class FitMethod1:
         y_wrapped = wrap_array(y_mid,n_sp_y)
         xx,yy = np.meshgrid(x_wrapped, y_wrapped)
 
-        x_sec = self.get_xsec_xy(xx, yy, Q, beta, P, V, E, L,alpha_d)
+        x_sec = self.ComptonPDF(xx, yy, Q, beta, P, V, E, L,alpha_d)
         core = self.crystall_ball_2d(xx, yy,  sx,  sy, alpha_x1, alpha_x2,  alpha_y1, alpha_y2, nx1, nx2, ny1, ny2, phi, p1,p2,p3)
         res = signal.fftconvolve(x_sec, core, mode = 'same')
         res = res[n_sp_y:-n_sp_y, n_sp_x:-n_sp_x]
@@ -177,6 +172,9 @@ class FitMethod1:
                                                         data_err = this_data_err_py,
                                                         label=field_name+'_py',
                                                         data_type = this_data_type)
+        data_field_dict['data_sum'].interpolation='bicubic'
+        data_field_dict['data_diff'].interpolation='bicubic'
+        data_field_dict['fit_diff'].interpolation='bicubic'
         return data_field_dict
         
     def fix(self, parlist):
@@ -211,5 +209,7 @@ class FitMethod1:
             self.minuit.migrad()
             self.minuit.hesse()
         print(self.minuit)
+        self.ndf = 2*np.shape(self.x[0])[0]*np.shape(self.x[1])[0]-self.minuit.nfit
+        self.chi2 = self.minuit.fval
         return self.minuit
 

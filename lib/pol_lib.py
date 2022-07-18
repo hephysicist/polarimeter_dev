@@ -141,17 +141,6 @@ def print_stats(stats):
     rel_diff = 2.*diff/(n_l+n_r)*100
     print('n_evt_l: {0} \tn_evt_r: {1}\tdiff: {2}\t({3:3.2f}%)'.format(n_l,n_r,diff, rel_diff))
 
-def print_pol_stats(fitres):
-    print('*** Polarization ***')
-    print('P={:>6.2f} ± {:1.2f}'.format(fitres.values['P'],fitres.errors['P']))
-    print('Q={:>6.2f} ± {:1.2f}'.format(fitres.values['Ksi'],fitres.errors['Ksi']))
-    print('V={:>6.2f} ± {:1.2f}'.format(np.sqrt(1-fitres.values['Ksi']**2),fitres.errors['Ksi']/np.sqrt(1-fitres.values['Ksi']**2)))
-
-def print_pol_stats_nik(fitres):
-    print('*** Polarization ***')
-    print('P={:>6.2f} ± {:1.2f}'.format(fitres.values['P'],fitres.errors['P']))
-    print('Q={:>6.2f} ± {:1.2f}'.format(fitres.values['Q'],fitres.errors['Q']))
-    print('V={:>6.2f} ± {:1.2f}'.format(fitres.values['V'],fitres.errors['V']))
 
 def load_hist(hist_fpath, fname):
     h_dict = dict(np.load(hist_fpath+fname, allow_pickle=True))
