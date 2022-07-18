@@ -496,9 +496,9 @@ class FitMethod3:
             self.cb0 = self.CB0.copy()#*np.amax(self.data_sum)/np.amax(self.CB0)
             self.cb1 = self.CB1.copy()
 
-       # self.minuit.fixed['k']=True
-       # for i in range(0,5):
-       #     migrad(0.1e-4)
+        self.minuit.fixed['k']=True
+        for i in range(0,5):
+            migrad(0.1e-4)
 
         self.minuit.strategy=2
         self.minuit.fixed['k']=True

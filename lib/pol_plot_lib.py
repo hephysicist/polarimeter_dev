@@ -208,8 +208,8 @@ def print_fit_results(ax, fitter):
     chi2ndf = "chi2/ndf = {0:.{1}f}/{2} = {3:.{4}f}".format(fitter.chi2, 0 if fitter.chi2 > 10 else 2, fitter.ndf, fitter.chi2/fitter.ndf, 1 if fitter.chi2/fitter.ndf>10 else 2 )
     ax.text(x, y+lc, chi2ndf, size=14, ha='left', va='center', color='black')
     lc -= line_size
-    ax.text(x, y+lc, "prob = {:.2f}%".format(100.*scipy.stats.chi2.cdf(fitter.chi2, fitter.ndf)), size=14, ha='left', va='center', color='black')
-    lc -= line_size
+    #ax.text(x, y+lc, "prob = {:.3f}%".format(100.*(1.0-scipy.stats.chi2.cdf(fitter.chi2, fitter.ndf))), size=14, ha='left', va='center', color='black')
+    #lc -= line_size
     for parname in par_list:
         try:
             if not minuit.fixed[parname]:

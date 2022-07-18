@@ -177,7 +177,7 @@ def FWHM2D(x,y,data):
 def print_pol_stats(fitter):
     print(' Fit result digest '.rjust(50,'─'))
     print("chi2/ndf = {:.3f} / {} = {:.3f}".format(fitter.chi2, fitter.ndf, fitter.chi2/fitter.ndf))
-    print("prob = ", scipy.stats.chi2.cdf(fitter.chi2, fitter.ndf))
+    print("prob = ", 1.0-scipy.stats.chi2.cdf(fitter.chi2, fitter.ndf))
     minuit = fitter.minuit
     print('P={:>6.2f} ± {:1.2f}'.format(minuit.values['P'],minuit.errors['P']))
     print('Q={:>6.2f} ± {:1.2f}'.format(minuit.values['Q'],minuit.errors['Q']))
