@@ -504,10 +504,6 @@ class FitMethod3:
         self.minuit.fixed['k']=True
         migrad(0.1e-4,0.0)
 
-        self.minuit.values['P']=1.0
-        self.minuit.errors['P']=0.5
-        migrad(0.1e-4,0.0)
-
 
         self.minuit.hesse()
 
