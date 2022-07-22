@@ -312,17 +312,17 @@ class FitMethod2:
         grids = get_coor_grid()
         coors = [grids['xc'],grids['yc']]
         shape = (np.shape(grids['yc'])[0]-1, np.shape(grids['xc'])[0]-1)
-        data_field_names = [ 'data_sum', 'data_diff', 'data_left', 'data_right',
-                        'fit_sum', 'fit_diff', 'fit_left', 'fit_right']
-        data_error_names = ['data_sum_error', 'data_diff_error', 'data_left_error', 'data_right_error']
+        data_field_names = [ 'data_sum', 'data_diff', #'data_left', 'data_right',
+                        'fit_sum', 'fit_diff']#, 'fit_left', 'fit_right']
+        data_error_names = ['data_sum_error', 'data_diff_error'] #, 'data_left_error', 'data_right_error']
         for field_name in chain(data_field_names, data_error_names):
             setattr(self, field_name, getattr(self, field_name).reshape(shape))
 
         #remove fit values when there is no data
         self.fit_sum[np.abs(self.data_sum)<1e-15]=0.0
         self.fit_diff[np.abs(self.data_sum)<1e-15]=0.0
-        self.fit_left[np.abs(self.data_sum)<1e-15]=0.0
-        self.fit_right[np.abs(self.data_sum)<1e-15]=0.0
+        #self.fit_left[np.abs(self.data_sum)<1e-15]=0.0
+        #self.fit_right[np.abs(self.data_sum)<1e-15]=0.0
 
         self.calc_beam_pdf()
 
@@ -357,9 +357,17 @@ class FitMethod2:
                                                         data_type = this_data_type)
         data_field_dict['data_sum'].interpolation='bicubic'
         data_field_dict['data_diff'].interpolation='bicubic'
+        data_field_dict['fit_sum'].interpolation='bicubic'
+        data_field_dict['fit_diff'].interpolation='bicubic'
+
+
         data_field_dict['data_sum'].palette=plt.cm.magma
-        #data_field_dict['data_diff'].palette=plt.cm.viridis
+        data_field_dict['fit_sum'].palette=plt.cm.magma
+
         data_field_dict['data_diff'].palette=plt.cm.seismic
+        data_field_dict['fit_diff'].palette=plt.cm.seismic
+
+        #data_field_dict['data_diff'].palette=plt.cm.viridis
         #data_field_dict['data_diff'].palette=plt.cm.magma
         #data_field_dict['data_diff'].palette=plt.cm.coolwarm
         #data_field_dict['data_diff'].palette=plt.cm.PRGn

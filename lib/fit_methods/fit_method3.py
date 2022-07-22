@@ -12,6 +12,8 @@ from pol_lib import get_coor_grid
 from pol_plot_lib import data_field
 from fit_method4 import *
 
+
+
 #Fit by Fourier reconstruction of beam shape * Compton to normalized data difference
 class FitMethod3:
 
@@ -21,7 +23,7 @@ class FitMethod3:
         self.data_l = z_l
         self.data_r = z_r
         self.shape = np.shape(z_l)
-        fit_varnames  = list(self.ComptonPDF.__code__.co_varnames)[3:self.ComptonPDF.__code__.co_argcount]+['N','DN','sx','sy','k','eps', 'ex','ey', 'kG', 'psum', 'xBcut']
+        fit_varnames  = list(self.ComptonPDF.__code__.co_varnames)[3:self.ComptonPDF.__code__.co_argcount]+['N','DN','sx','sy','k','eps', 'ex','ey', 'psum']
         self.inipars = dict.fromkeys(fit_varnames, 0.0)
         self.func_code = make_func_code(fit_varnames)
         self.minuit = Minuit(self, **self.inipars)
@@ -42,13 +44,9 @@ class FitMethod3:
         self.idxeps=fit_varnames.index('eps')
         self.idxex=fit_varnames.index('ex')
         self.idxey=fit_varnames.index('ey')
-        self.idxkG=fit_varnames.index('kG')
         self.idxpsum=fit_varnames.index('psum')
-        self.idxxBcut = fit_varnames.index('xBcut')
 
         self.efficiency = np.ones(self.shape)
-
-        #self.idxQ2=fit_varnames.index('Q2')
 
         def set_par(name, value, error, limits, fix):
             self.minuit.values[name] = value
@@ -70,13 +68,7 @@ class FitMethod3:
         set_par('ex'   , 1    , 0.1 , [0.   , 1e10] , True)
         set_par('k'    , 6e-4  , 0.1 , [0.   , 1.]   , True)
         set_par('eps'  , 1e-14 , 0.1 , [0.   , 1.]   , True)
-        set_par('kG'  , 1.0e-1 , 1.0e-2 , [0.   , 1.]   , True)
-        set_par('kG'  , 1.0e-1 , 1.0e-2 , [0.   , 1.]   , True)
         set_par('psum'  , 0.0 , 0.1 , [0.   , 1.]   , True)
-        set_par('xBcut'  , 0.0 , 0.1 , [0.   , 1.]   , True)
-
-        self.first_call=True
-
 
     def ComptonPDF(self, x,y, E=4730., L=33000., P = 0., V = 0., Q=0., beta=0.):
         #return np.exp( -np.power(x,2.)/24. -np.power(y,2.0)/12)
@@ -188,23 +180,21 @@ class FitMethod3:
         L  = par[self.idxL]
         P  = par[self.idxP]
         Q  = par[self.idxQ]
-        #Q2    = par[self.idxQ2]
         V  = np.sqrt(1.-Q*Q) if self.tied_VQ else par[self.idxV]
-        #V2  = np.sqrt(1.-Q2*Q2) if self.tied_VQ else par[self.idxV]
+
         beta  = par[self.idxbeta]
         eps   = par[self.idxeps]
         k     = par[self.idxk]
-        kG    = par[self.idxkG]
 
         sx = par[self.idxsx]
         sy = par[self.idxsy]
 
         xx, yy = self.extend_grid2(self.x[0], self.x[1], self.add_shape)
 
-        G = self.Gaus(xx,yy, 0.0, 0.0, sx, sy)
-        G = G/np.sum(G)
+        #G = self.Gaus(xx,yy, 0.0, 0.0, sx, sy)
+        #G = G/np.sum(G)
 
-        self.fit_left  = self.ComptonPDF(xx, yy, E, L, P, V, Q, beta)
+        self.fit_left  = self.ComptonPDF(xx, yy, E, L, P,  V,  Q, beta)
         self.fit_right = self.ComptonPDF(xx, yy, E, L, P, -V, -Q, beta)
 
         self.fit_sum = self.fit_left + self.fit_right
@@ -235,12 +225,12 @@ class FitMethod3:
         fC0  = np.fft.fft2(C0)
         fC1  = np.fft.fft2(C1)
         fD0  = np.fft.fft2(D0)
-        fG   = np.fft.fft2(G)
+        #fG   = np.fft.fft2(G)
 
         #Fourier image of the beam function
         A2 = np.sum(np.abs(fC0*fC0)) #normalization constant
         R = np.abs(fC0*fC0) / ( np.abs(fC0*fC0) + k*A2) #regularization koeff
-        RG =np.abs(fG*fG) / (np.abs(fG*fG) + kG*np.sum(np.abs(fG*fG)))
+        #RG =np.abs(fG*fG) / (np.abs(fG*fG) + kG*np.sum(np.abs(fG*fG)))
         fB = fD0/(fC0 + eps)*R 
         #fB = fB*RG/(fG + eps)
 
@@ -253,16 +243,13 @@ class FitMethod3:
         CB1 = np.real(np.fft.ifft2(fCB1))
 
         B =  np.real(np.fft.ifft2(fB))
-        Bmax = np.amax(B)
+        #Bmax = np.amax(B)
 
-        #B = self.smooth(B,5)
-        B = np.where( B > par[self.idxxBcut]*Bmax, B, 0.0)
-
-        #self.print_his(B)
+        #B = np.where( B > par[self.idxxBcut]*Bmax, B, 0.0)
 
         
-        DG0 = signal.fftconvolve(G, D0, mode = 'same')
-        DG1 = signal.fftconvolve(G, D1, mode = 'same')
+        #DG0 = signal.fftconvolve(G, D0, mode = 'same')
+        #DG1 = signal.fftconvolve(G, D1, mode = 'same')
 
         self.CB0 = CB0.copy()
         self.CB1 = CB1.copy()
@@ -270,11 +257,11 @@ class FitMethod3:
 
         D0  = self.shrink(D0, self.add_shape)
         D1  = self.shrink(D1, self.add_shape)
-        DG0 = self.shrink(DG0, self.add_shape)
-        DG1 = self.shrink(DG1, self.add_shape)
+        #DG0 = self.shrink(DG0, self.add_shape)
+        #DG1 = self.shrink(DG1, self.add_shape)
         CB1 = self.shrink(CB1, self.add_shape)
         CB0 = self.shrink(CB0, self.add_shape)
-        G   = self.shrink(G, self.add_shape)
+        #G   = self.shrink(G, self.add_shape)
         B   = self.shrink(B, self.add_shape)
         C0   = self.shrink(C0, self.add_shape)
 
@@ -294,11 +281,7 @@ class FitMethod3:
         data_diff_error2 = 4.0*( CB1**2 * (DL+DR) + CB0**2 * ( Left*DL**2 + Right*DR**2)/D0**2  - 2.0*CB1*CB0*( DL**2 * NL - DR**2 * NR)/D0 )
 
         self.data_diff_error = np.sqrt(data_diff_error2)
-        #self.print_his( self.data_diff_error-x)
 
-        
-
-        #chi2_diff  = self.calc_chi2( self.shrink(self.data_diff, (2,2)) ,  self.shrink(self.fit_diff, (2,2)) , self.shrink(self.data_diff_error, (2,2)))   
         chi2_diff  = self.calc_chi2( self.data_diff ,  self.fit_diff, self.data_diff_error)   
 
         self.fit_sum  = CB0
@@ -320,31 +303,14 @@ class FitMethod3:
         if np.isnan(chi2): chi2_sum = 1e100
 
         self.beam_shape = B
-
-        #self.data_sum = B
-        ##print("data_sum_erro shape = ", self.data_sum_error.shape[0]," ", self.data_sum_error.shape[1] ) 
-        #K = np.sum(self.data_sum_error*self.data_sum_error)
-        #self.data_sum_error = np.full(self.data_sum_error.shape, np.sqrt(K/(self.shape[0]*self.shape[1])))
-        #K2 = np.sum( 1.0/np.abs(fC0))
-        #print(K2)
-
-        #self.data_diff = D0
-        
-        #self.data_sum = self.data_sum/CB0  #To determine registration efficiency
-
-        
-        #this is to show beam function 
-        #self.data_sum = np.abs(   self.shrink(np.fft.ifft2(fB),add_shape) )
         
         x = D0/CB0
         average = np.sum(x)/(x.shape[0]*x.shape[1])
-        self.efficiency = np.where( np.abs(self.data_l + self.data_r)<1.0 , average, D0/CB0)
+        self.efficiency = np.where( np.abs(self.data_l + self.data_r)<1.0 , average, x)
 
         #self.remains  = (self.fit_diff - self.data_diff)/self.data_diff_error
-        self.remains  = C0
+        self.remains  = (self.fit_diff - self.data_diff)
         if np.isnan(chi2): return 1e100
-
-        #print(chi2)
         return chi2
 
     def perimeter_norm(self, data):
@@ -354,53 +320,40 @@ class FitMethod3:
         s+= np.sum( data[0:0, 0:] )
         s+= np.sum( data[-1:-1,0:] )
         return s
-        
+
+    def make_projection(self, axis, his, his_error):
+        return np.sum( his, axis = axis),  np.sqrt( np.sum(his_error**2, axis=axis) )
+
 
     def get_fit_result(self, cfg):
         grids = get_coor_grid()
         coors = [grids['xc'],grids['yc']]
-        shape = (np.shape(grids['yc'])[0]-1, np.shape(grids['xc'])[0]-1)
-        data_field_names = [ 'data_sum', 'data_diff', 'data_left', 'data_right',
-                        'fit_sum', 'fit_diff', 'fit_left', 'fit_right']
-        data_error_names = ['data_sum_error', 'data_diff_error', 'data_left_error', 'data_right_error']
-
-        #remove fit values when there is no data
-        #self.fit_sum[np.abs(self.data_sum)<1e-14]=0.0
-        #self.fit_diff[np.abs(self.data_sum)<1e-14]=0.0
-        #self.fit_left[np.abs(self.data_sum)<1e-14]=0.0
-        #self.fit_right[np.abs(self.data_sum)<1e-14]=0.0
-
-
-
+        data_field_names = [ 'data_sum', 'data_diff', 'fit_diff', 'fit_sum']
 
         data_field_dict = {}
 
         for field_name in data_field_names:
+            this_data = getattr(self, field_name)
+
             if 'data' in field_name:
                 this_data_type = 'dat'
                 this_data_err = getattr(self,field_name + '_error')
-                this_data_err_px = np.sqrt(np.sum(this_data_err**2, axis=0))
-                this_data_err_py = np.sqrt(np.sum(this_data_err**2, axis=1))
             else:
                 this_data_type = 'fit'
-                this_data_err = None
-                this_data_err_px = None
-                this_data_err_py = None
-            data_field_dict[field_name] = data_field(   coors,
-                                                        getattr(self, field_name),
-                                                        data_err = this_data_err,
-                                                        label=field_name,
-                                                        data_type = this_data_type)
-            data_field_dict[field_name+'_px'] = data_field(   [grids['xc'], None],
-                                                        np.sum(getattr(self, field_name), axis=0),
-                                                        data_err = this_data_err_px,
-                                                        label= field_name+'_px',
-                                                        data_type = this_data_type)
-            data_field_dict[field_name+'_py'] = data_field(   [None, grids['yc']],
-                                                        np.sum(getattr(self, field_name), axis=1),
-                                                        data_err = this_data_err_py,
-                                                        label=field_name+'_py',
-                                                        data_type = this_data_type)
+                this_data_err = np.zeros(this_data.shape)
+
+            this_data_x, this_data_x_error = self.make_projection(0, this_data, this_data_err)
+            this_data_y, this_data_y_error = self.make_projection(1, this_data, this_data_err)
+
+            data_field_dict[field_name] = data_field (coors, this_data, this_data_err, label=field_name, data_type = this_data_type)
+
+            data_field_dict[field_name+'_px'] = data_field( [grids['xc'], None], this_data_x, this_data_x_error, label= field_name+'_px', data_type = this_data_type)
+            data_field_dict[field_name+'_py'] = data_field( [None, grids['yc']], this_data_y, this_data_y_error, label= field_name+'_py', data_type = this_data_type)
+
+
+        #data_field_dict['fit_sum_px']  = data_field([grids['xc'], None], np.sum(self.fit_sum, axis=0), None, label='fit_sum_px', data_type = "fit")
+        #data_field_dict['fit_sum_py']  = data_field([None, grids['yc']], np.sum(self.fit_sum, axis=1), None, label='fit_sum_py', data_type = "fit")
+
 
         data_field_dict['beam_shape']  = data_field( coors,  self.beam_shape, data_err = None, label='Reconstructed beam shape', data_type='dat')
         data_field_dict['beam_shape'].interpolation='bicubic'
@@ -413,7 +366,7 @@ class FitMethod3:
         data_field_dict['efficiency'].palette=plt.cm.seismic
         data_field_dict['efficiency'].interpolation='bicubic'
 
-        data_field_dict['remains'] = data_field( coors,  self.remains, data_err = None, label='data diff - fit diff', data_type='dat')
+        data_field_dict['remains'] = data_field( coors,  self.remains, data_err = None, label='Remains', data_type='dat')
         data_field_dict['remains'].palette=plt.cm.seismic
         data_field_dict['remains'].interpolation='bicubic'
 
@@ -421,7 +374,11 @@ class FitMethod3:
         #interp='none'
         data_field_dict['data_sum'].interpolation=interp
         data_field_dict['data_diff'].interpolation=interp
+        data_field_dict['fit_diff'].interpolation=interp
+        data_field_dict['fit_sum'].interpolation=interp
+
         data_field_dict['data_sum'].palette=plt.cm.magma
+        data_field_dict['fit_sum'].palette=plt.cm.magma
         #data_field_dict['data_diff'].palette=plt.cm.viridis
         data_field_dict['data_diff'].palette=plt.cm.seismic
         #data_field_dict['data_diff'].palette=plt.cm.magma

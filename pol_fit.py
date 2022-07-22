@@ -50,53 +50,80 @@ def make_fit(config, h_dict):
 def show_res(fitter, data_fields, ax):
     for the_ax in ax:
         the_ax.cla()
-    print_fit_results(ax[0], fitter)
-    data_fields['data_sum'].draw(ax[3])
-    data_fields['data_diff'].draw(ax[6])
-    
-    data_fields['data_sum_py'].draw(ax[1])
-    data_fields['fit_sum_py'].draw(ax[1])
-    ax[1].grid()
-    data_fields['data_sum_px'].draw(ax[2])
-    data_fields['fit_sum_px'].draw(ax[2])
-    ax[2].grid()
-    
-    data_fields['data_diff_py'].draw(ax[4])
-    data_fields['fit_diff_py'].draw(ax[4])
-    ax[4].grid()
-    data_fields['data_diff_px'].draw(ax[5])
-    data_fields['fit_diff_px'].draw(ax[5])
-    ax[5].grid()
 
-    default_figure_list = ['data_sum', 'data_diff', 'fit_sum_py', 'fit_sum_px', 'data_sum_px', 'data_sum_py', 'fit_diff_py', 'fit_diff_px', 'data_diff_px', 'data_diff_py']
+    total_figure_list = list(data_fields.keys())
 
+    main_figure_list = []
     def show(name, id):
         try : 
             data_fields[name].draw(ax[id]) 
+            main_figure_list.append(name)
         except KeyError: 
             pass
 
-    show('beam_shape',7)
-    show('fit_diff',8)
-    show('efficiency',9)
-    show('remains',10)
+    print_fit_results(ax[0], fitter)
 
+    show('data_sum_py'  , 1)
+    show('fit_sum_py'   , 1)
+    show('data_sum_px'  , 2)
+    show('fit_sum_px'   , 2)
+    show('data_sum'     , 3)
+    show('fit_sum'      , 4)
+
+    show('data_diff_py' , 5)
+    show('fit_diff_py'  , 5)
+    show('data_diff_px' , 6)
+    show('fit_diff_px'  , 6)
+    show('data_diff'    , 7)
+    show('fit_diff'     , 8)
+
+    show('beam_shape'   , 9)
+    show('efficiency'   , 10)
+    show('remains'      , 11)
+
+    remaining_figure_list = list(set(total_figure_list).difference(set(main_figure_list)))
+
+
+    ax[1].grid()
+    ax[2].grid()
+    ax[5].grid()
+    ax[6].grid()
+
+    #data_fields['data_sum'].draw(ax[3])
+    #data_fields['data_diff'].draw(ax[6])
+    
+    #data_fields['data_sum_py'].draw(ax[1])
+    #data_fields['fit_sum_py'].draw(ax[1])
+    #ax[1].grid()
+    #data_fields['data_sum_px'].draw(ax[2])
+    #data_fields['fit_sum_px'].draw(ax[2])
+    #ax[2].grid()
+    
+    #data_fields['data_diff_py'].draw(ax[4])
+    #data_fields['fit_diff_py'].draw(ax[4])
+    #ax[4].grid()
+    #data_fields['data_diff_px'].draw(ax[5])
+    #data_fields['fit_diff_px'].draw(ax[5])
+    #ax[5].grid()
+
+
+    #main_figure_list = ['data_sum', 'data_diff', 'fit_sum_py', 'fit_sum_px', 'data_sum_px', 'data_sum_py', 'fit_diff_py', 'fit_diff_px', 'data_diff_px', 'data_diff_py', 
+    #        'beam_shape', 'fit_diff', 'efficiency', 'remains']
+
+
+    #print(remaining_figure_list)
 
     plt.show(block=False)
     plt.pause(1)
-    return default_figure_list
+    return remaining_figure_list
     
-def show_res_gen(data_fields, ax, default_figure_list=None):
+def show_res_gen(data_fields, ax, remaing_figure_list=None):
     for the_ax in ax:
         the_ax.cla()
     idx = 0
-    if default_figure_list:
-        df_keys = [s for s in data_fields.keys() if s not in default_figure_list]
-    else:
-        df_keys = data_fields.keys()
-    data_names = [s for s in df_keys if 'data' in s]
-    fit_names = [s for s in df_keys if 'fit' in s]
-    other = [s for s in df_keys if not (('fit' in s) or ('data' in s))]
+    data_names = [s for s in remaing_figure_list if 'data' in s]
+    fit_names = [s for s in remaing_figure_list if 'fit' in s]
+    other = [s for s in remaing_figure_list if not (('fit' in s) or ('data' in s))]
     for the_data_name in data_names:
         if idx < len(ax):
             data_fields[the_data_name].draw(ax[idx])
@@ -298,6 +325,7 @@ def accum_data_and_make_fit(config, start_time, stop_time):
     db_obj = Db_obj()
     fit_counter = 0
     INIT_FIGURES = False
+    INIT_ADD_FIGURES = False
     try:
         while(1):
                 file_buffer = make_file_list(hist_fpath, regex_line,  unix_start_time, unix_stop_time, n_files)
@@ -315,13 +343,19 @@ def accum_data_and_make_fit(config, start_time, stop_time):
                 raw_stats = get_raw_stats(h_dict)
                 print_stats(raw_stats)
                 moments = get_moments(h_dict)
+                print_pol_stats(fitter)
+
                 if not INIT_FIGURES:
                     INIT_FIGURES = True
                     fig, ax = init_figure('Laser Polarimeter 2D Fit')
-                    fig1, ax1 = init_figure_gen('Laser Polarimeter additional plots', data_fields)
-                print_pol_stats(fitter)
-                default_figure_list = show_res(fitter, data_fields, ax)
-                show_res_gen(data_fields, ax1, default_figure_list)
+                remaining_figure_list = show_res(fitter, data_fields, ax)
+
+                if len(remaining_figure_list)>0:
+                    if not INIT_ADD_FIGURES:
+                        INIT_ADD_FIGURES = True
+                        fig1, ax1 = init_figure_gen('Laser Polarimeter additional plots', data_fields)
+                    show_res_gen(data_fields, ax1, remaining_figure_list)
+
                 #save_png_figure(config, fig, file_buffer[0])
                 fit_counter +=1
                 is_db_write = True

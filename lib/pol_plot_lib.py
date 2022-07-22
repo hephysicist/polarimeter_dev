@@ -28,6 +28,8 @@ class data_field:
         self.interpolation = 'none'
         self.palette = plt.cm.viridis
         
+    def make_projection(self, axis, his, his_error):
+        return np.sum( his, axis = axis),  np.sqrt( np.sum(his_error**2, axis=axis) )
         
     def draw_profilex(self, ax):
         x = (self.x[1:]+self.x[:-1])/2
@@ -170,26 +172,36 @@ def init_figure(label):
         fig.set_tight_layout(True)
         fig.tight_layout(rect=[0, 0, 1, 1])
         #gs0 = gridspec.GridSpec(1, 2, figure=fig)
-        gs0 = gridspec.GridSpec(1, 3, figure=fig)
-        
-        gs00 = gridspec.GridSpecFromSubplotSpec(3, 2, subplot_spec=gs0[0], height_ratios = [1,1,1])
-        ax01 = fig.add_subplot(gs00[:-1,:-1])
-        ax02 = fig.add_subplot(gs00[0,-1])
-        ax03 = fig.add_subplot(gs00[1,-1])
-        ax04 = fig.add_subplot(gs00[-1, :])
-        
-        gs10 = gridspec.GridSpecFromSubplotSpec(2, 2, subplot_spec=gs0[1], height_ratios = [2,1])
-        ax11 = fig.add_subplot(gs10[0,0])
-        ax12 = fig.add_subplot(gs10[0,1])
-        ax13 = fig.add_subplot(gs10[1, :])
+        gs0 = gridspec.GridSpec(1, 4, figure=fig, width_ratios = [1,2,2,2])
 
-        ax = [ax01,ax02, ax03, ax04, ax11, ax12, ax13]
+        ax00 = fig.add_subplot(gs0[0]) #0
 
-        gs20 = gridspec.GridSpecFromSubplotSpec(4, 1, subplot_spec=gs0[2], height_ratios = [1,1,1,1])
-        ax21 = fig.add_subplot(gs20[0,:])
-        ax22 = fig.add_subplot(gs20[1,:])
-        ax23 = fig.add_subplot(gs20[2,:])
-        ax24 = fig.add_subplot(gs20[3,:])
+        
+        #gs00 = gridspec.GridSpecFromSubplotSpec(3, 2, subplot_spec=gs0[0], height_ratios = [1,1,1])
+        #ax01 = fig.add_subplot(gs00[:-1,:-1])
+        #ax02 = fig.add_subplot(gs00[0,-1])
+        #ax03 = fig.add_subplot(gs00[1,-1])
+        #ax04 = fig.add_subplot(gs00[-1, :])
+        
+        gs00 = gridspec.GridSpecFromSubplotSpec(3, 2, subplot_spec=gs0[1], height_ratios = [2,1,1])
+        ax01 = fig.add_subplot(gs00[0,0]) #1
+        ax02 = fig.add_subplot(gs00[0,1]) #2
+        ax03 = fig.add_subplot(gs00[1, :]) #3
+        ax04 = fig.add_subplot(gs00[2, :]) #4
+
+        gs10 = gridspec.GridSpecFromSubplotSpec(3, 2, subplot_spec=gs0[2], height_ratios = [2,1,1])
+        ax11 = fig.add_subplot(gs10[0,0]) #5
+        ax12 = fig.add_subplot(gs10[0,1]) #6
+        ax13 = fig.add_subplot(gs10[1, :]) #7
+        ax14 = fig.add_subplot(gs10[2, :]) #8
+
+        ax = [ax00, ax01,ax02, ax03, ax04, ax11, ax12, ax13, ax14]
+
+        gs20 = gridspec.GridSpecFromSubplotSpec(4, 1, subplot_spec=gs0[3], height_ratios = [1,1,1,1])
+        ax21 = fig.add_subplot(gs20[0,:]) #9
+        ax22 = fig.add_subplot(gs20[1,:]) #10
+        ax23 = fig.add_subplot(gs20[2,:]) #11
+        ax24 = fig.add_subplot(gs20[3,:]) #12
 
         ax = ax + [ax21,ax22,ax23,ax24]
 
