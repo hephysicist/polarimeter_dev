@@ -333,7 +333,7 @@ def accum_data_and_make_fit(config, start_time, stop_time):
                         fig1, ax1 = init_figure_gen('Laser Polarimeter additional plots', data_fields)
                     show_res_gen(data_fields, ax1, remaining_figure_list)
 
-                #save_png_figure(config, fig, file_buffer[0])
+                save_png_figure(config, fig, file_buffer[0])
                 fit_counter +=1
                 is_db_write = True
                 if not config['continue']:
