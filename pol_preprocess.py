@@ -191,7 +191,7 @@ def main():
     parser.add_argument('regex_line', nargs='?', help='Name of the file to start online preprocessing in regex format')
     args = parser.parse_args()
    
-    with open(os.getcwd()+'/'+str('pol_config.yml'), 'r') as conf_file:
+    with open(os.getcwd()+'/'+str('pol_preprocess.yml'), 'r') as conf_file:
         try:
             config = yaml.load(conf_file, Loader=yaml.Loader)
         except yaml.YAMLError as exc:

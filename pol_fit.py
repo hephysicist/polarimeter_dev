@@ -388,7 +388,7 @@ def main():
     parser.add_argument('--blur', help='Apply blur (general_blur, nonzero_blur), default: none', default='none')
     parser.add_argument('--version', help='Parameter to distinguish offline fits (db vesrion).',nargs='?', default=0)
     parser.add_argument('--fit_version', help='Number of the fit version', default=3)
-    parser.add_argument('--config', help='Name of the config file to use while performing fit',nargs='?', default='pol_fit_config.yml')
+    parser.add_argument('--config', help='Name of the config file to use while performing fit',nargs='?', default='pol_fit.yml')
     parser.add_argument('--E', help='vepp4 E', default=0)
     parser.add_argument('--L', help='photon flight length', default=0)
     parser.add_argument('--N', help='Number of preprocessed files to fit', default=30)
@@ -398,7 +398,7 @@ def main():
 
 
     args = parser.parse_args()
-    full_conf_fname = os.getcwd()+'/lib/fit_methods/fit_method'+args.fit_version+'.cfg'
+    full_conf_fname = os.getcwd()+'/lib/fit_methods/fit_method'+args.fit_version+'.yml'
     print('Reading config file: ', full_conf_fname+'\n')
     with open(full_conf_fname, 'r') as conf_file:
         try:
