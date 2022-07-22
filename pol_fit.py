@@ -375,7 +375,7 @@ def main():
 
 
     args = parser.parse_args()
-    full_conf_fname = os.getcwd()+'/lib/fit_methods/fit_method'+args.fit_version+'.yml'
+    full_conf_fname = os.getcwd()+'/lib/fit_methods/fit_method'+str(args.fit_version)+'.yml'
     print('Reading config file: ', full_conf_fname+'\n')
     with open(full_conf_fname, 'r') as conf_file:
         try:
