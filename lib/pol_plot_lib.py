@@ -8,6 +8,7 @@ import matplotlib.gridspec as gridspec
 import matplotlib.ticker as ticker
 import scipy.interpolate as spint
 import scipy.stats
+from math import sqrt, ceil
 
 from pol_lib import arrange_region
 from mapping import get_xy
@@ -193,6 +194,32 @@ def init_figure(label):
         ax = ax + [ax21,ax22,ax23,ax24]
 
         return fig, ax
+        
+def init_figure_gen(label, data_fields): 
+    fig = plt.figure(figsize=(16, 18))
+    fig.canvas.set_window_title(label)
+    fig.set_tight_layout(True)
+    fig.tight_layout(rect=[0, 0, 1, 1])
+    
+    other = [s for s in data_fields.keys() if not (('fit' in s) or ('data' in s))]
+    n_other = len(other)
+    n_2d_plots = 0
+    for key in data_fields.keys():
+        if len(np.shape(data_fields[key].data)) == 2: n_2d_plots +=1
+    n_plots = ceil((len(data_fields) + n_2d_plots + n_other)/2) 
+    print(n_plots, n_2d_plots, n_other, len(data_fields))
+    n_x = ceil(sqrt(n_plots))
+    n_y = ceil(n_plots/n_x)
+    
+    gs_cols = gridspec.GridSpec(1,n_x, figure=fig)
+    ax = []
+    for idx in range(n_x):
+        gs_row = gridspec.GridSpecFromSubplotSpec(n_y, 1, subplot_spec=gs_cols[idx], height_ratios = np.ones(n_y))
+        for idy in range(n_y):
+            ax.append(fig.add_subplot(gs_row[idy,:]))
+        if len(ax) >= n_plots:
+            break
+    return fig, ax
         
 def print_fit_results(ax, fitter):
     minuit = fitter.minuit

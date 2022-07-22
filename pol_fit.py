@@ -3,6 +3,7 @@ import os
 import sys
 sys.path.append('.')
 sys.path.append('./lib')
+sys.path.append('./lib/fit_methods')
 
 from iminuit import Minuit
 import numpy as np
@@ -14,17 +15,14 @@ import argparse
 import matplotlib.pyplot as plt
 import yaml
 import ciso8601 #Converts string time to timestamp
+from importlib import import_module
 
 from pol_lib import *
-from pol_fit_lib import *
+from pol_fit_lib import large_deviation_blur, make_central_coord, print_pol_stats
 from pol_plot_lib import *
 from moments import get_moments
-from lsrp_pol import *
-from my_stat import stat_calc_effect
-from FitMethod1 import *
-from FitMethod2 import *
-from FitMethod3 import *
-from pol_plot_lib import *
+from database_interface import Db_obj, db_write
+
 import copy
 
 my_timezone = '+07:00'
@@ -37,10 +35,12 @@ def make_fit(config, h_dict):
     xy_coord = make_central_coord(h_dict['xc'], h_dict['yc'])
     cfg = copy.deepcopy(config)
     if  cfg['initial_values']['E'] < 1000 : 
-        cfg['initial_values']['E'] = h_dict['env_params'].item()['vepp4E']
+        cfg['initial_values']['E'] = h_dict['env_params']['vepp4E']
 
-    fit_method = cfg['fit_method']
-    fm = eval('FitMethod'+str(fit_method)+'(xy_coord, data_left, data_right)')
+    fit_method = cfg['fit_method'] #Importing module with desired fit method
+    full_src_fname = os.getcwd()+'/lib/fit_methods/fit_method'+str(fit_method)
+    fit_method_module = import_module('fit_method'+str(fit_method), full_src_fname)
+    fm = eval('fit_method_module.FitMethod'+str(fit_method)+'(xy_coord, data_left, data_right)')
     fm.fit(cfg)
     data_fields = fm.get_fit_result(cfg)
 
@@ -82,6 +82,36 @@ def show_res(fitter, data_fields, ax):
 
     plt.show(block=False)
     plt.pause(1)
+    
+def show_res_gen(data_fields, ax):
+    for the_ax in ax:
+        the_ax.cla()
+    idx = 0
+    data_names = [s for s in data_fields.keys() if 'data' in s]
+    fit_names = [s for s in data_fields.keys() if 'fit' in s]
+    other = [s for s in data_fields.keys() if not (('fit' in s) or ('data' in s))]
+    for the_data_name in data_names:
+        if idx < len(ax):
+            data_fields[the_data_name].draw(ax[idx])
+            the_fit_name = [string for string in fit_names if  the_data_name[5:] == string[4:] ]
+            if len(the_fit_name):
+                if data_fields[the_fit_name[0]].data.size == data_fields[the_data_name].data.size:
+                    if len(np.shape(data_fields[the_fit_name[0]].data)) == 2:
+                        idx +=1
+                    data_fields[the_fit_name[0]].draw(ax[idx])
+                else:
+                    print("ERROR: found a fit plot for {:s} that has a different shape! Please correct your data_field!".format(the_data_name))
+                idx +=1
+        else:
+            print('Not enough axes for plots!')
+    for the_name in other:
+        if idx < len(ax):
+            data_fields[the_name].draw(ax[idx])
+            idx += 1
+        else:
+            print('Not enough axes for plots!')
+    plt.show(block=False)
+    plt.pause(1)
         
     
 def get_unix_time_template(fname, timezone='+07:00'):
@@ -94,110 +124,84 @@ get_unix_time = np.vectorize(get_unix_time_template)
 def get_Edep (v4E, d_freq):
     n = int(v4E/440.648)
     return (n+d_freq/818924.)*440.648*(int(d_freq) != 0)
-
-def db_write(   db_obj,
-                config,
-                first_fname,
-                last_fname,
-                fitres,
-                chi2,
-                ndf,
-                env_params, fit_counter, skew,version):
     
-    db_obj.local_id = fit_counter
-    db_obj.begintime = get_unix_time(first_fname)
-    db_obj.endtime = get_unix_time(last_fname)+10 #TODO 10 means the time in seconds for the single file. Needs to be written automatically.
-    db_obj.measuretime = db_obj.endtime - db_obj.begintime
-    
-    db_obj.Eset = env_params['vepp4E']
-    db_obj.Fdep = env_params['dfreq']
-    db_obj.Adep = env_params['att']
-    db_obj.Fspeed = env_params['fspeed']
-    db_obj.Edep = get_Edep(env_params['vepp4E'], env_params['dfreq'])
-    db_obj.H = env_params['vepp4H_nmr']
-    db_obj.chi2 = chi2
-    db_obj.ndf = ndf
-    db_obj.P.value = fitres.values['P']
-    db_obj.P.error = fitres.errors['P']
-    db_obj.V.value = fitres.values['V']
-    db_obj.V.error = fitres.errors['V']
-    db_obj.Q.value = fitres.values['Q']
-    db_obj.Q.error = fitres.errors['Q']
-    try:
-        db_obj.NL.value = fitres.values['NL']
-        db_obj.NL.error = fitres.errors['NL']
-        db_obj.NR.value = fitres.values['NR']
-        db_obj.NR.error = fitres.errors['NR']
-    except KeyError:
-        N = fitres.values['N']
-        DN = fitres.values['DN']
-        Ne = fitres.errors['N']
-        DNe = fitres.errors['DN']
-        NL = N * (1.0 + 0.5 * DN);
-        NR = N * (1.0 - 0.5 * DN);
-        db_obj.NL.value = NL
-        db_obj.NR.value = NR
-        db_obj.NL.error = NL*np.hypot( Ne/N, 0.5/(1.0 + 0.5*DN)*DNe )
-        db_obj.NR.error = NR*np.hypot( Ne/N, 0.5/(1.0 - 0.5*DN)*DNe )
+def get_env_params(h_dict):
+    env_dict_valid = False
+    if 'env_params' in h_dict:
+        env_params = h_dict['env_params'].item()
+        env_dict_valid = True
+    else:
+        print('WARNING: your data is outdated and does not contain env_params dictionary.')
+        env_params = {}
+        var_names = ['vepp4E', 'vepp4H_nmr','dfreq', 'att', 'fspeed']
+        var_units = ['MeV', 'MeV', 'Hz', 'dB', 'Hz/sec']
+        if input('Do you want to set default parameters? y/N\n') == 'y':
+            for var_name in var_names[2:]:
+                 env_params[var_name] = -1.
+            env_params['vepp4E'] = 4760.
+            env_params['vepp4H_nmr'] = 4738.
+            env_params['real_E'] = guess_real_energy(env_params['vepp4E'], env_params['vepp4H_nmr'])
+        else:
+            print('Please enter all necessary information manually:\n')
+            for var_name, var_unit in zip(var_names, var_units):
+                env_params[var_name] = float(input('Enter {:s} in {:s}\n'.format(var_name, var_unit)))
+        print('Check the env_params dictionary:\n')
+        for key in env_params.keys():
+            print('{:s} = {:4.0f}'.format(key, env_params[key]))
+    return env_params, env_dict_valid
 
+def print_batch_item_stat(count, filename, D, env_params):
+    line_size = 129
+    if count == 1:
+        print(''.rjust(line_size,'━'))
+        print('{:>5} {:^30} {:>12} {:>12} {:^15} {:>15} {:>15} {:>15}'.format(
+        '#', 'file', 'Nl', 'Nr', '(Nl-Nr)/(Nl+Nr),%',  'Eset, MeV', 'H, Gs', 'Fdep, Hz') )
+        print(''.rjust(line_size,'─'))
+    if count == '':
+        print(''.rjust(line_size,'─'))
+    nl = float(sum(sum(D['hc_l'])))
+    nr = float(sum(sum(D['hc_r'])))
+    if (nl+nr) > 0:
+        delta_n = (nl-nr)/(nl+nr)*2
+        delta_n_error = 4./(nl+nr)**2*np.sqrt(nl*nr*(nl+nr))
+    else:
+        delta_n, delta_n_error = 0.0, 0.0
 
-    db_obj.askewx.value = skew[0]
-    db_obj.askewy.value = skew[1]
-    db_obj.version = version
-    db_obj.write(dbname='test', user='nikolaev', host='127.0.0.1')
-
+    print('{:>5} {:>30} {:12.0f} {:12.0f} {:>15} {:>15.2f} {:>15.2f} {:15.3f}'.format( 
+        count, 
+        filename, 
+        nl , nr ,
+        '{:.2f} +- {:.2f}'.format( delta_n*100., delta_n_error*100.) ,
+        env_params['vepp4E'],
+        env_params['vepp4H_nmr'],
+        env_params['dfreq']))
 
 def read_batch(hist_fpath, file_arr, vepp4E):
     print('Reading ', len(file_arr), ' files: ', file_arr[0], ' ... ', file_arr[-1])
-
-    def print_stat(count, filename, D):
-        env = D['env_params'].item()
-        nl = float(sum(sum(D['hc_l'])))
-        nr = float(sum(sum(D['hc_r'])))
-        if (nl+nr) > 0:
-            delta_n = (nl-nr)/(nl+nr)*2
-            delta_n_error = 4./(nl+nr)**2*np.sqrt(nl*nr*(nl+nr))
-        else:
-            delta_n, delta_n_error = 0.0, 0.0
-
-        print('{:>5} {:>30} {:12.0f} {:12.0f} {:>15} {:>15.2f} {:>15.2f} {:15.3f}'.format( 
-            count, 
-            filename, 
-            nl , nr ,
-            '{:.2f} +- {:.2f}'.format( delta_n*100., delta_n_error*100.) ,
-            env['vepp4E'],
-            env['vepp4H_nmr'],
-            env['dfreq']
-            )
-            )
-
-    line_size = 129
-    print(''.rjust(line_size,'━'))
-    print('{:>5} {:^30} {:>12} {:>12} {:^15} {:>15} {:>15} {:>15}'.format(
-        '#', 'file', 'Nl', 'Nr', '(Nl-Nr)/(Nl+Nr),%',  'Eset, MeV', 'H, Gs', 'Fdep, Hz'
-        ) )
-    print(''.rjust(line_size,'─'))
     buf_dict_list = []
     count  = 0 
     vepp4E_list = []
+    env_dict_valid = True
+    env_params = {}
+    
     for file in file_arr:
             buf_dict = load_hist(hist_fpath,file)
-            E = buf_dict['env_params'].item()['vepp4E']
+            if env_dict_valid:
+                env_params, env_dict_valid = get_env_params(buf_dict)
+                E = env_params['vepp4E']
             if E > 1000: vepp4E_list.append(E)
             buf_dict_list.append(buf_dict)
-            print_stat(count+1, file, buf_dict)
+            print_batch_item_stat(count+1, file, buf_dict, env_params)
             count+=1
-
     h_dict = buf_dict_list[0]
-    env_params = h_dict['env_params'].item()
+    if env_dict_valid:
+        env_params = get_env_params(h_dict)
+    else:
+        h_dict['env_params'] = env_params
     env_params['vepp4E'] = np.average(vepp4E_list)
-
     for bd in buf_dict_list[1:]:
         h_dict = accum_data(h_dict, bd)
-    print(''.rjust(line_size,'─'))
-
-    print_stat('', 'all {} files'.format(len(buf_dict_list)),  h_dict)
-
+    print_batch_item_stat('', 'all {} files'.format(len(buf_dict_list)), h_dict, env_params)
     return h_dict
     
 
@@ -246,6 +250,18 @@ def get_unixtime_smart(time_string, fix_future=False):
                 exit(1)
     return datetime.timestamp(t)
 
+def save_png_figure(config, fig , timestamp):
+    if config['figsave']:
+        begin_timestamp = timestamp[:-9].replace(':','-')
+        filename = '{}/{}.png'.format(config['savedir'], begin_timestamp)
+        if not os.path.exists(config['savedir']):
+            print('pol_fit.py: "{}" directory doesnt exists! Create new one'.format(config['savedir']))
+            os.mkdir(config['savedir'])
+        if os.path.isdir(config['savedir']):
+            fig.savefig(filename) 
+        else:
+            print('pol_fit.py: ERROR: Saving figure:  "{}" is not directory!'.format(config['savedir']))
+
     
 def accum_data_and_make_fit(config, start_time, stop_time):
     vepp4E = config['initial_values']['E']
@@ -258,7 +274,6 @@ def accum_data_and_make_fit(config, start_time, stop_time):
     else: 
         file_arr = glob.glob1(hist_fpath, regex_line)
         size = len(file_arr)
-        #print("size = ", size)
         if size < n_files:
             if size == 0:
                 unix_start_time = datetime.timestamp(datetime.now())
@@ -270,11 +285,11 @@ def accum_data_and_make_fit(config, start_time, stop_time):
     unix_stop_time = get_unixtime_smart(stop_time)
     
     if config['scale_hits']:
-        scale_file = np.load(os.getcwd()+'/scale_array.npz', allow_pickle=True)
+        scale_file = np.load(os.getcwd()+'/rel_eff_array.npz', allow_pickle=True)
         scale_arr = scale_file['scale_arr']
-    fig, ax = init_figure('Laser Polarimeter 2D Fit')
-    db_obj = lsrp_pol()
+    db_obj = Db_obj()
     fit_counter = 0
+    INIT_FIGURES = False
     try:
         while(1):
                 file_buffer = make_file_list(hist_fpath, regex_line,  unix_start_time, unix_stop_time, n_files)
@@ -288,28 +303,18 @@ def accum_data_and_make_fit(config, start_time, stop_time):
                 if config['need_blur']:
                     h_dict = eval(config['blur_type']+'(h_dict)')
                 print('Performing fit...')
-                skew_l, skew_r = stat_calc_effect(h_dict)
-                skew = [skew_l[0]-skew_r[0], skew_l[1]-skew_r[1]]
-                #print('skew_ly:{:1.4f}\tskew_ry:{:1.4f} \tsly-sry:{:1.3f}'.format(skew_l[1], skew_r[1], skew_l[1]-skew_r[1]))
                 fitter, data_fields = make_fit(config, h_dict)
                 raw_stats = get_raw_stats(h_dict)
                 print_stats(raw_stats)
                 moments = get_moments(h_dict)
+                if not INIT_FIGURES:
+                    INIT_FIGURES = True
+                    fig, ax = init_figure('Laser Polarimeter 2D Fit')
+                    fig1, ax1 = init_figure_gen('Laser Polarimeter additional plots', data_fields)
                 print_pol_stats(fitter)
                 show_res(fitter, data_fields, ax)
-
-                if config['figsave']:
-                    begin_timestamp = file_buffer[0][:-9].replace(':','-')
-                    dirname = config['savedir']
-                    filename = '{}/{}.png'.format(config['savedir'], begin_timestamp)
-                    if not os.path.exists(dirname):
-                        print('pol_fit.py: "{}" directory doesnt exists! Create new one'.format(config['savedir']))
-                        os.mkdir(dirname)
-                    if os.path.isdir(config['savedir']):
-                        fig.savefig(filename) 
-                    else:
-                        print('pol_fit.py: ERROR: Saving figure:  "{}" is not directory!'.format(config['savedir']))
-                
+                show_res_gen(data_fields, ax1)
+                #save_png_figure(config, fig, file_buffer[0])
                 fit_counter +=1
                 is_db_write = True
                 if not config['continue']:
@@ -317,7 +322,17 @@ def accum_data_and_make_fit(config, start_time, stop_time):
                     if text!="y":
                         is_db_write=False
                 if is_db_write:
-                    db_write(db_obj, config, file_buffer[0], file_buffer[-1], fitter.minuit, 0, 0, h_dict['env_params'].item(), fit_counter, skew, config['version'])
+                    env_params = h_dict['env_params'].item()
+                    e_dep = get_Edep(env_params['vepp4E'], env_params['dfreq'])
+                    db_write(   db_obj,
+                                config,
+                                get_unix_time(file_buffer[0]),
+                                get_unix_time(file_buffer[-1]),
+                                fitter,
+                                env_params,
+                                e_dep,
+                                fit_counter,
+                                config['version'])
     except KeyboardInterrupt:
         print('\n***Exiting fit program***')
         pass
@@ -330,6 +345,7 @@ def main():
     parser.add_argument('stop_time', nargs='?', help='Time of the file to start offline fit in regex format', default='2100-01-01T00:00:01')
     parser.add_argument('--blur', help='Apply blur (general_blur, nonzero_blur), default: none', default='none')
     parser.add_argument('--version', help='Parameter to distinguish offline fits (db vesrion).',nargs='?', default=0)
+    parser.add_argument('--fit_version', help='Number of the fit version', default=3)
     parser.add_argument('--config', help='Name of the config file to use while performing fit',nargs='?', default='pol_fit_config.yml')
     parser.add_argument('--E', help='vepp4 E', default=0)
     parser.add_argument('--L', help='photon flight length', default=0)
@@ -340,10 +356,12 @@ def main():
 
 
     args = parser.parse_args()
-    print('Reading config file: ', os.getcwd()+'/'+args.config +'\n')
-    with open(os.getcwd()+'/'+args.config, 'r') as conf_file:
+    full_conf_fname = os.getcwd()+'/lib/fit_methods/fit_method'+args.fit_version+'.cfg'
+    print('Reading config file: ', full_conf_fname+'\n')
+    with open(full_conf_fname, 'r') as conf_file:
         try:
             config = yaml.load(conf_file, Loader=yaml.Loader)
+            
             if args.E:
                 config['initial_values']['E'] = float(args.E)
                 print ("Set default VEPP4 energy ", args.E, " MeV")
