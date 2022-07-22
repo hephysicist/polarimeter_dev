@@ -238,7 +238,8 @@ def print_fit_results(ax, fitter):
     ax.set_title('Fit results (fit method {})'.format(fitter.fit_method))
     ax.set(xlim=(0., 1.25), ylim=(-0.25, 1.25), xticks=[], yticks=[])
     ax.axis('off')
-    par_list = ['P','V', 'Q','mx', 'my','sx', 'sy', 'NL', 'NR']
+    #par_list = ['P','V', 'Q','mx', 'my','sx', 'sy', 'NL', 'NR']
+    #for i in fitter.parnames:
     important_pars = ['P', 'NL', 'NR']
     line_size = 0.13
     lc = 0 
@@ -249,7 +250,7 @@ def print_fit_results(ax, fitter):
     lc -= line_size
     #ax.text(x, y+lc, "prob = {:.3f}%".format(100.*(1.0-scipy.stats.chi2.cdf(fitter.chi2, fitter.ndf))), size=14, ha='left', va='center', color='black')
     #lc -= line_size
-    for parname in par_list:
+    for parname in fitter.parlist:
         try:
             if not minuit.fixed[parname]:
                 text = r'${:s} = {:1.2f} \pm {:1.2f}$'.format(parname, minuit.values[parname], minuit.errors[parname])

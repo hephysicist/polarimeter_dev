@@ -24,6 +24,7 @@ class FitMethod3:
         self.data_r = z_r
         self.shape = np.shape(z_l)
         fit_varnames  = list(self.ComptonPDF.__code__.co_varnames)[3:self.ComptonPDF.__code__.co_argcount]+['N','DN','sx','sy','k','eps', 'ex','ey', 'psum']
+        self.parlist = fit_varnames
         self.inipars = dict.fromkeys(fit_varnames, 0.0)
         self.func_code = make_func_code(fit_varnames)
         self.minuit = Minuit(self, **self.inipars)
@@ -359,9 +360,6 @@ class FitMethod3:
         data_field_dict['beam_shape'].interpolation='bicubic'
         data_field_dict['beam_shape'].palette=plt.cm.magma
 
-        data_field_dict['fit_diff'].palette=plt.cm.seismic
-        data_field_dict['fit_diff'].interpolation='bicubic'
-
         data_field_dict['efficiency'] = data_field( coors,  self.efficiency, data_err = None, label='Relative efficiency', data_type='dat')
         data_field_dict['efficiency'].palette=plt.cm.seismic
         data_field_dict['efficiency'].interpolation='bicubic'
@@ -381,6 +379,7 @@ class FitMethod3:
         data_field_dict['fit_sum'].palette=plt.cm.magma
         #data_field_dict['data_diff'].palette=plt.cm.viridis
         data_field_dict['data_diff'].palette=plt.cm.seismic
+        data_field_dict['fit_diff'].palette=plt.cm.seismic
         #data_field_dict['data_diff'].palette=plt.cm.magma
         #data_field_dict['data_diff'].palette=plt.cm.coolwarm
         #data_field_dict['data_diff'].palette=plt.cm.PRGn

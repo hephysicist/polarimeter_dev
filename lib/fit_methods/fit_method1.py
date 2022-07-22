@@ -9,6 +9,7 @@ sys.path.append('../lib')
 from pol_fit_lib import wrap_array
 from pol_plot_lib import data_field
 from pol_lib import get_coor_grid
+import matplotlib.pyplot as plt
 
 #Fit by Crystal ball * Compton to data sum and data difference
 class FitMethod1:
@@ -20,6 +21,7 @@ class FitMethod1:
         self.z_r = z_r.flatten()
         self.shape = np.shape(z_l)
         fit_varnames  = list(self.PDF.__code__.co_varnames)[1:self.PDF.__code__.co_argcount]+['NL','NR']
+        self.parlist = fit_varnames
         self.inipars = dict.fromkeys(fit_varnames, 0.0)
         self.func_code = make_func_code(fit_varnames)
         self.minuit = Minuit(self, **self.inipars)
@@ -177,6 +179,14 @@ class FitMethod1:
         data_field_dict['data_sum'].interpolation='bicubic'
         data_field_dict['data_diff'].interpolation='bicubic'
         data_field_dict['fit_diff'].interpolation='bicubic'
+        data_field_dict['fit_sum'].interpolation='bicubic'
+
+        data_field_dict['data_sum'].palette=plt.cm.magma
+        data_field_dict['fit_sum'].palette=plt.cm.magma
+        data_field_dict['data_diff'].palette=plt.cm.seismic
+        data_field_dict['fit_diff'].palette=plt.cm.seismic
+
+
         return data_field_dict
         
     def fix(self, parlist):

@@ -32,6 +32,7 @@ class FitMethod2:
         self.data_r = z_r.flatten()
         self.shape = np.shape(z_l)
         fit_varnames  = list(self.PDF.__code__.co_varnames)[1:self.PDF.__code__.co_argcount]+['psum', 'NL','NR']
+        self.parlist = fit_varnames
         self.inipars = dict.fromkeys(fit_varnames, 0.0)
         self.func_code = make_func_code(fit_varnames)
         self.minuit = Minuit(self, **self.inipars)
