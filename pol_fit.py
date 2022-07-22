@@ -68,6 +68,8 @@ def show_res(fitter, data_fields, ax):
     data_fields['fit_diff_px'].draw(ax[5])
     ax[5].grid()
 
+    default_figure_list = ['data_sum', 'data_diff', 'fit_sum_py', 'fit_sum_px', 'data_sum_px', 'data_sum_py', 'fit_diff_py', 'fit_diff_px', 'data_diff_px', 'data_diff_py']
+
     def show(name, id):
         try : 
             data_fields[name].draw(ax[id]) 
@@ -82,14 +84,19 @@ def show_res(fitter, data_fields, ax):
 
     plt.show(block=False)
     plt.pause(1)
+    return default_figure_list
     
-def show_res_gen(data_fields, ax):
+def show_res_gen(data_fields, ax, default_figure_list=None):
     for the_ax in ax:
         the_ax.cla()
     idx = 0
-    data_names = [s for s in data_fields.keys() if 'data' in s]
-    fit_names = [s for s in data_fields.keys() if 'fit' in s]
-    other = [s for s in data_fields.keys() if not (('fit' in s) or ('data' in s))]
+    if default_figure_list:
+        df_keys = [s for s in data_fields.keys() if s not in default_figure_list]
+    else:
+        df_keys = data_fields.keys()
+    data_names = [s for s in df_keys if 'data' in s]
+    fit_names = [s for s in df_keys if 'fit' in s]
+    other = [s for s in df_keys if not (('fit' in s) or ('data' in s))]
     for the_data_name in data_names:
         if idx < len(ax):
             data_fields[the_data_name].draw(ax[idx])
@@ -101,7 +108,7 @@ def show_res_gen(data_fields, ax):
                     data_fields[the_fit_name[0]].draw(ax[idx])
                 else:
                     print("ERROR: found a fit plot for {:s} that has a different shape! Please correct your data_field!".format(the_data_name))
-                idx +=1
+            idx +=1
         else:
             print('Not enough axes for plots!')
     for the_name in other:
@@ -194,11 +201,12 @@ def read_batch(hist_fpath, file_arr, vepp4E):
             print_batch_item_stat(count+1, file, buf_dict, env_params)
             count+=1
     h_dict = buf_dict_list[0]
-    if env_dict_valid:
-        env_params = get_env_params(h_dict)
-    else:
+    if not env_dict_valid:
         h_dict['env_params'] = env_params
-    env_params['vepp4E'] = np.average(vepp4E_list)
+    else:
+        h_dict['env_params'] = h_dict['env_params'].item() #Gryazny hak Ne nado tak.
+    E_mean = np.average(vepp4E_list)
+    h_dict['env_params']['vepp4E']
     for bd in buf_dict_list[1:]:
         h_dict = accum_data(h_dict, bd)
     print_batch_item_stat('', 'all {} files'.format(len(buf_dict_list)), h_dict, env_params)
@@ -312,8 +320,8 @@ def accum_data_and_make_fit(config, start_time, stop_time):
                     fig, ax = init_figure('Laser Polarimeter 2D Fit')
                     fig1, ax1 = init_figure_gen('Laser Polarimeter additional plots', data_fields)
                 print_pol_stats(fitter)
-                show_res(fitter, data_fields, ax)
-                show_res_gen(data_fields, ax1)
+                default_figure_list = show_res(fitter, data_fields, ax)
+                show_res_gen(data_fields, ax1, default_figure_list)
                 #save_png_figure(config, fig, file_buffer[0])
                 fit_counter +=1
                 is_db_write = True
