@@ -89,29 +89,6 @@ def show_res(fitter, data_fields, ax):
     ax[5].grid()
     ax[6].grid()
 
-    #data_fields['data_sum'].draw(ax[3])
-    #data_fields['data_diff'].draw(ax[6])
-    
-    #data_fields['data_sum_py'].draw(ax[1])
-    #data_fields['fit_sum_py'].draw(ax[1])
-    #ax[1].grid()
-    #data_fields['data_sum_px'].draw(ax[2])
-    #data_fields['fit_sum_px'].draw(ax[2])
-    #ax[2].grid()
-    
-    #data_fields['data_diff_py'].draw(ax[4])
-    #data_fields['fit_diff_py'].draw(ax[4])
-    #ax[4].grid()
-    #data_fields['data_diff_px'].draw(ax[5])
-    #data_fields['fit_diff_px'].draw(ax[5])
-    #ax[5].grid()
-
-
-    #main_figure_list = ['data_sum', 'data_diff', 'fit_sum_py', 'fit_sum_px', 'data_sum_px', 'data_sum_py', 'fit_diff_py', 'fit_diff_px', 'data_diff_px', 'data_diff_py', 
-    #        'beam_shape', 'fit_diff', 'efficiency', 'remains']
-
-
-    #print(remaining_figure_list)
 
     plt.show(block=False)
     plt.pause(1)
@@ -233,7 +210,7 @@ def read_batch(hist_fpath, file_arr, vepp4E):
     else:
         h_dict['env_params'] = h_dict['env_params'].item() #Gryazny hak Ne nado tak.
     E_mean = np.average(vepp4E_list)
-    h_dict['env_params']['vepp4E']
+    h_dict['env_params']['vepp4E'] = E_mean
     for bd in buf_dict_list[1:]:
         h_dict = accum_data(h_dict, bd)
     print_batch_item_stat('', 'all {} files'.format(len(buf_dict_list)), h_dict, env_params)
