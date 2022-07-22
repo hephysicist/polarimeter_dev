@@ -364,7 +364,7 @@ def main():
     parser.add_argument('stop_time', nargs='?', help='Time of the file to start offline fit in regex format', default='2100-01-01T00:00:01')
     parser.add_argument('--blur', help='Apply blur (general_blur, nonzero_blur), default: none', default='none')
     parser.add_argument('--version', help='Parameter to distinguish offline fits (db vesrion).',nargs='?', default=0)
-    parser.add_argument('--fit_version', help='Number of the fit version', default=3)
+    #parser.add_argument('--fit_version', help='Number of the fit version', default=3)
     parser.add_argument('--config', help='Name of the config file to use while performing fit',nargs='?', default='pol_fit.yml')
     parser.add_argument('--E', help='vepp4 E', default=0)
     parser.add_argument('--L', help='photon flight length', default=0)
@@ -375,7 +375,8 @@ def main():
 
 
     args = parser.parse_args()
-    full_conf_fname = os.getcwd()+'/lib/fit_methods/fit_method'+str(args.fit_version)+'.yml'
+    #full_conf_fname = os.getcwd()+'/lib/fit_methods/fit_method'+str(args.fit_version)+'.yml'
+    full_conf_fname = args.config
     print('Reading config file: ', full_conf_fname+'\n')
     with open(full_conf_fname, 'r') as conf_file:
         try:
@@ -421,7 +422,7 @@ def main():
 
 
         except yaml.YAMLError as exc:
-            print('Error opening pol_config.yaml file:')
+            print('Error opening ' + full_conf_fname + ' file:')
             print(exc)
         else:
             accum_data_and_make_fit(config, args.start_time, args.stop_time) 
