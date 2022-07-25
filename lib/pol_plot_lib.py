@@ -241,7 +241,7 @@ def print_fit_results(ax, fitter):
     #par_list = ['P','V', 'Q','mx', 'my','sx', 'sy', 'NL', 'NR']
     #for i in fitter.parnames:
     important_pars = ['P', 'NL', 'NR']
-    line_size = 0.13
+    line_size = 0.07
     lc = 0 
     x = -0.2
     y = 1.1
