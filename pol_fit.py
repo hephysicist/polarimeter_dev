@@ -4,6 +4,7 @@ import sys
 sys.path.append('.')
 sys.path.append('./lib')
 sys.path.append('./lib/fit_methods')
+
 from iminuit import Minuit
 import numpy as np
 np.seterr(divide='ignore', invalid='ignore')
@@ -36,12 +37,10 @@ def make_fit(config, h_dict):
     if  cfg['initial_values']['E'] < 1000 : 
         cfg['initial_values']['E'] = h_dict['env_params']['vepp4E']
 
-    fit_method_src = cfg['fit_method_src'] #Importing module with desired fit method
-    fit_method_path = cfg['fit_method_path']
-    full_src_fname = fit_method_src + fit_method_path
-    fit_method_module = import_module(fit_method_src, full_src_fname)
-    fit_method_version = cfg['fit_method']
-    fm = eval('fit_method_module.FitMethod'+str(fit_method_version)+'(xy_coord, data_left, data_right)')
+    fit_method = cfg['fit_method'] #Importing module with desired fit method
+    full_src_fname = os.getcwd()+'/lib/fit_methods/fit_method'+str(fit_method)
+    fit_method_module = import_module('fit_method'+str(fit_method), full_src_fname)
+    fm = eval('fit_method_module.FitMethod'+str(fit_method)+'(xy_coord, data_left, data_right)')
     fm.fit(cfg)
     data_fields = fm.get_fit_result(cfg)
 
@@ -51,53 +50,57 @@ def make_fit(config, h_dict):
 def show_res(fitter, data_fields, ax):
     for the_ax in ax:
         the_ax.cla()
-    print_fit_results(ax[0], fitter)
-    data_fields['data_sum'].draw(ax[3])
-    data_fields['data_diff'].draw(ax[6])
-    
-    data_fields['data_sum_py'].draw(ax[1])
-    data_fields['fit_sum_py'].draw(ax[1])
-    ax[1].grid()
-    data_fields['data_sum_px'].draw(ax[2])
-    data_fields['fit_sum_px'].draw(ax[2])
-    ax[2].grid()
-    
-    data_fields['data_diff_py'].draw(ax[4])
-    data_fields['fit_diff_py'].draw(ax[4])
-    ax[4].grid()
-    data_fields['data_diff_px'].draw(ax[5])
-    data_fields['fit_diff_px'].draw(ax[5])
-    ax[5].grid()
 
-    default_figure_list = ['data_sum', 'data_diff', 'fit_sum_py', 'fit_sum_px', 'data_sum_px', 'data_sum_py', 'fit_diff_py', 'fit_diff_px', 'data_diff_px', 'data_diff_py']
+    total_figure_list = list(data_fields.keys())
 
+    main_figure_list = []
     def show(name, id):
         try : 
             data_fields[name].draw(ax[id]) 
+            main_figure_list.append(name)
         except KeyError: 
             pass
 
-    show('beam_shape',7)
-    show('fit_diff',8)
-    show('efficiency',9)
-    show('remains',10)
+    print_fit_results(ax[0], fitter)
+
+    show('data_sum_py'  , 1)
+    show('fit_sum_py'   , 1)
+    show('data_sum_px'  , 2)
+    show('fit_sum_px'   , 2)
+    show('data_sum'     , 3)
+    show('fit_sum'      , 4)
+
+    show('data_diff_py' , 5)
+    show('fit_diff_py'  , 5)
+    show('data_diff_px' , 6)
+    show('fit_diff_px'  , 6)
+    show('data_diff'    , 7)
+    show('fit_diff'     , 8)
+
+    show('beam_shape'   , 9)
+    show('efficiency'   , 10)
+    show('remains'      , 11)
+
+    remaining_figure_list = list(set(total_figure_list).difference(set(main_figure_list)))
+
+
+    ax[1].grid()
+    ax[2].grid()
+    ax[5].grid()
+    ax[6].grid()
 
 
     plt.show(block=False)
     plt.pause(1)
-    return default_figure_list
+    return remaining_figure_list
     
-def show_res_gen(data_fields, ax, default_figure_list=None):
+def show_res_gen(data_fields, ax, remaing_figure_list=None):
     for the_ax in ax:
         the_ax.cla()
     idx = 0
-    if default_figure_list:
-        df_keys = [s for s in data_fields.keys() if s not in default_figure_list]
-    else:
-        df_keys = data_fields.keys()
-    data_names = [s for s in df_keys if 'data' in s]
-    fit_names = [s for s in df_keys if 'fit' in s]
-    other = [s for s in df_keys if not (('fit' in s) or ('data' in s))]
+    data_names = [s for s in remaing_figure_list if 'data' in s]
+    fit_names = [s for s in remaing_figure_list if 'fit' in s]
+    other = [s for s in remaing_figure_list if not (('fit' in s) or ('data' in s))]
     for the_data_name in data_names:
         if idx < len(ax):
             data_fields[the_data_name].draw(ax[idx])
@@ -207,7 +210,7 @@ def read_batch(hist_fpath, file_arr, vepp4E):
     else:
         h_dict['env_params'] = h_dict['env_params'].item() #Gryazny hak Ne nado tak.
     E_mean = np.average(vepp4E_list)
-    h_dict['env_params']['vepp4E']
+    h_dict['env_params']['vepp4E'] = E_mean
     for bd in buf_dict_list[1:]:
         h_dict = accum_data(h_dict, bd)
     print_batch_item_stat('', 'all {} files'.format(len(buf_dict_list)), h_dict, env_params)
@@ -299,6 +302,7 @@ def accum_data_and_make_fit(config, start_time, stop_time):
     db_obj = Db_obj()
     fit_counter = 0
     INIT_FIGURES = False
+    INIT_ADD_FIGURES = False
     try:
         while(1):
                 file_buffer = make_file_list(hist_fpath, regex_line,  unix_start_time, unix_stop_time, n_files)
@@ -316,14 +320,20 @@ def accum_data_and_make_fit(config, start_time, stop_time):
                 raw_stats = get_raw_stats(h_dict)
                 print_stats(raw_stats)
                 moments = get_moments(h_dict)
+                print_pol_stats(fitter)
+
                 if not INIT_FIGURES:
                     INIT_FIGURES = True
                     fig, ax = init_figure('Laser Polarimeter 2D Fit')
-                    fig1, ax1 = init_figure_gen('Laser Polarimeter additional plots', data_fields)
-                print_pol_stats(fitter)
-                default_figure_list = show_res(fitter, data_fields, ax)
-                show_res_gen(data_fields, ax1, default_figure_list)
-                #save_png_figure(config, fig, file_buffer[0])
+                remaining_figure_list = show_res(fitter, data_fields, ax)
+
+                if len(remaining_figure_list)>0:
+                    if not INIT_ADD_FIGURES:
+                        INIT_ADD_FIGURES = True
+                        fig1, ax1 = init_figure_gen('Laser Polarimeter additional plots', data_fields)
+                    show_res_gen(data_fields, ax1, remaining_figure_list)
+
+                save_png_figure(config, fig, file_buffer[0])
                 fit_counter +=1
                 is_db_write = True
                 if not config['continue']:
@@ -354,7 +364,8 @@ def main():
     parser.add_argument('stop_time', nargs='?', help='Time of the file to start offline fit in regex format', default='2100-01-01T00:00:01')
     parser.add_argument('--blur', help='Apply blur (general_blur, nonzero_blur), default: none', default='none')
     parser.add_argument('--version', help='Parameter to distinguish offline fits (db vesrion).',nargs='?', default=0)
-    parser.add_argument('--fit_config', nargs='?', help='Name of the config file', default='fit_method3.yml')
+    #parser.add_argument('--fit_version', help='Number of the fit version', default=3)
+    parser.add_argument('--config', help='Name of the config file to use while performing fit',nargs='?', default='pol_fit.yml')
     parser.add_argument('--E', help='vepp4 E', default=0)
     parser.add_argument('--L', help='photon flight length', default=0)
     parser.add_argument('--N', help='Number of preprocessed files to fit', default=30)
@@ -364,10 +375,12 @@ def main():
 
 
     args = parser.parse_args()
-    if '/' in args.fit_config:
-        full_conf_fname = args.fit_config
+    #full_conf_fname = os.getcwd()+'/lib/fit_methods/fit_method'+str(args.fit_version)+'.yml'
+    #full_conf_fname = args.config
+    if '/' in args.config:
+        full_conf_fname = args.config
     else:
-        full_conf_fname = os.getcwd()+'/lib/fit_methods/'+ args.fit_config
+        full_conf_fname = os.getcwd()+'/lib/fit_methods/'+ args.config
     print('Reading config file: ', full_conf_fname+'\n')
     with open(full_conf_fname, 'r') as conf_file:
         try:
@@ -413,7 +426,7 @@ def main():
 
 
         except yaml.YAMLError as exc:
-            print('Error opening pol_config.yaml file:')
+            print('Error opening ' + full_conf_fname + ' file:')
             print(exc)
         else:
             accum_data_and_make_fit(config, args.start_time, args.stop_time) 
