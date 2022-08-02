@@ -1,7 +1,6 @@
 hist_fpath : '/storage/hist/' #Path to store mapped event histograms
 #fitres_file : '/home/lsrp/Control/polarimeter_dev/tmp/pol_fitres.txt'
 regex_line : '*-*-*.npz'
-fit_method_path : '/home/lsrp/Control/polarimter_nik/lib/fit_methods/'
 fit_method_src : 'fit_method2'
 
 #Choose fit region (use physical coordinates and take in mind that each bin at the central region has length of 2 mm)

@@ -219,7 +219,6 @@ def init_figure_gen(label, data_fields):
     for key in data_fields.keys():
         if len(np.shape(data_fields[key].data)) == 2: n_2d_plots +=1
     n_plots = ceil((len(data_fields) + n_2d_plots + n_other)/2) 
-    print(n_plots, n_2d_plots, n_other, len(data_fields))
     n_x = ceil(sqrt(n_plots))
     n_y = ceil(n_plots/n_x)
     

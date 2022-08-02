@@ -341,7 +341,7 @@ def accum_data_and_make_fit(config, start_time, stop_time):
                     if text!="y":
                         is_db_write=False
                 if is_db_write:
-                    env_params = h_dict['env_params'].item()
+                    env_params = h_dict['env_params']
                     e_dep = get_Edep(env_params['vepp4E'], env_params['dfreq'])
                     db_write(   db_obj,
                                 config,
@@ -375,8 +375,6 @@ def main():
 
 
     args = parser.parse_args()
-    #full_conf_fname = os.getcwd()+'/lib/fit_methods/fit_method'+str(args.fit_version)+'.yml'
-    #full_conf_fname = args.config
     if '/' in args.config:
         full_conf_fname = args.config
     else:
