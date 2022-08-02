@@ -387,12 +387,13 @@ class FitMethod2:
             self.minuit.fixed[parname]=False
     
     def fit(self, cfg):
-        par_ini = cfg['initial_values']
-        par_err = cfg['par_err']
-        par_lim = cfg['par_lim']
-        par_fix = cfg['fix_par']
+        par_ini = cfg['model_params']
+        par_val = {k: par_ini[k][0] for k, v in par_ini.items() if par_ini[k][0] != '*'}
+        par_err = {k: par_ini[k][1]  for k, v in par_ini.items() if par_ini[k][1] != '*'}
+        par_lim = {k: par_ini[k][2]  for k, v in par_ini.items() if par_ini[k][2] != '*'}
+        par_fix = {k: par_ini[k][3] for k, v in par_ini.items() }
         for parname in par_ini.keys():
-            self.minuit.values[parname] = par_ini[parname]
+            self.minuit.values[parname] = par_val[parname]
             self.minuit.fixed[parname]  = par_fix[parname]
             self.minuit.errors[parname] = par_err[parname]
             self.minuit.limits[parname] = par_lim[parname]

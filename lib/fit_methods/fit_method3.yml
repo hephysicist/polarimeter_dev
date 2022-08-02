@@ -9,9 +9,9 @@ n_files : 30
 need_blur : False
 blur_type : general_blur
 scale_hits: False
-continue: True
+continue: False
 fit_method : 3
-version: 3
+version: 999
 
 mask:
     #- [-0.5,-1]
@@ -19,72 +19,88 @@ mask:
     #- [-0.5,2]
     #- [0.5,2]
 
+model_params:  
+    E       : [0.0,     0.0,    [0.0, 10000],    True] #MeV #the value will be taken from data of pol_preprocess or from command line
+    L       : [28000.0, 2000,   [0.0, 100000],  False] #mm
+    P       : [0.0,     0.0,    [-2.0, 2.0],    False]  # beam polarization degree
+    V       : [0.0,     0.0,    [-1.0, 1.0],    True]  # if V=0.0 then V is calculated from Q: V=sqrt(1-Q^2), if abs(V)>=0.00001 then V is fixed to unit: V=1
+    Q       : [0.0,     0.2,    [-1.0, 1.0],    False]  # linear polarization
+    beta    : [0.0,     -2.413, [-7.0, 7.0],    False] #polarization ellipse angle
+    N       : [1000.,   100,    [0., 10000000.],True]
+    DN      : [0.0,     0.1,    [-1.0, +1.0],   False]
+    sx      : [2.49,    1.0,    [0.1, 5.0],     True] #mm
+    sy      : [1.29,    1.0,    [0.1, 5.0],     True] #mm 
+    ey      : [32.,     1.,     [1, 1000],      True]
+    ex      : [20.,     1.,     [1, 1000],      True]
+    k       : [5.e-4,   1.0e-5, [0, 1.],        True]
+    eps     : [1.0e-12, 1.0e-12,[0, 1.],        True]
+    psum    : [0.0,     '*',    '*',              True]
+ 
+#initial_values:  
+#    E       : 0.0  #MeV #the value will be taken from data of pol_preprocess or from command line
+#    L       : 28000.0 #mm
+#    P       : 0.0  # beam polarization degree
+#    V       : 0.0  # if V=0.0 then V is calculated from Q: V=sqrt(1-Q^2), if abs(V)>=0.00001 then V is fixed to unit: V=1
+#    Q       : 0.0  # linear polarization
+#    beta    : 0.0  #polarization ellipse angle
+#    N       : 1000.
+#    DN      : 0.0
+#    sx      : 2.49 #mm
+#    sy      : 1.29 #mm
+#    ey      : 20.
+#    ex      : 32.
+#    k       : 5.e-4
+#    eps     : 1.0e-12
+#    psum    : 0.0
+#    
+#fix_par:
+#    E   : True
+#    L   : False
+#    P   : False
+#    V   : True
+#    Q   : False
+#    beta: False
+#    N   : True
+#    DN  : False
+#    sx  : True
+#    sy  : True
+#    ex  : True
+#    ey  : True
+#    k   : True
+#    eps : True
+#    psum : True
 
-initial_values:  
-    E       : 0.0  #MeV #the value will be taken from data of pol_preprocess or from command line
-    L       : 28000.0 #mm
-    P       : 0.0  # beam polarization degree
-    V       : 0.0  # if V=0.0 then V is calculated from Q: V=sqrt(1-Q^2), if abs(V)>=0.00001 then V is fixed to unit: V=1
-    Q       : 0.0  # linear polarization
-    beta    : 0.0  #polarization ellipse angle
-    N       : 1000.
-    DN      : 0.0
-    sx      : 2.49 #mm
-    sy      : 1.29 #mm
-    ey      : 20.
-    ex      : 32.
-    k       : 5.e-4
-    eps     : 1.0e-12
-    psum    : 0.0
-    
-fix_par:
-    E   : True
-    L   : False
-    P   : False
-    V   : True
-    Q   : False
-    beta: False
-    N   : True
-    DN  : False
-    sx  : True
-    sy  : True
-    ex  : True
-    ey  : True
-    k   : True
-    eps : True
-    psum : True
-
-    
-par_err:  
-    E       : 0.0  #MeV #the value will be taken from data of pol_preprocess or from command line
-    L       : 2000. #mm
-    P       : 0.0
-    V       : 0.0  # if V=0.0 then V is calculated from Q: V=sqrt(1-Q^2), if abs(V)>=0.00001 then V is fixed to unit: V=1
-    Q       : 0.2
-    beta    : -2.413
-    N       : 100
-    DN      : 0.1
-    sx      : 1.0
-    sy      : 1.0
-    ex      : 1
-    ey      : 1
-    k       : 1.0e-5
-    eps     : 1.0e-12
+#    
+#par_err:  
+#    E       : 0.0  #MeV #the value will be taken from data of pol_preprocess or from command line
+#    L       : 2000. #mm
+#    P       : 0.0
+#    V       : 0.0  # if V=0.0 then V is calculated from Q: V=sqrt(1-Q^2), if abs(V)>=0.00001 then V is fixed to unit: V=1
+#    Q       : 0.2
+#    beta    : -2.413
+#    N       : 100
+#    DN      : 0.1
+#    sx      : 1.0
+#    sy      : 1.0
+#    ex      : 1
+#    ey      : 1
+#    k       : 1.0e-5
+#    eps     : 1.0e-12
 
 
-    
-par_lim:  
-    E       : [0.0, 10000]
-    L       : [0.0, 100000]
-    P       : [-2.0, 2.0]
-    V       : [-1.0, 1.0]
-    Q       : [-1.0, 1.0]
-    beta    : [-7.0, 7.0]
-    N       : [0., 10000000.]
-    DN      : [-1.0, +1.0]
-    sx      : [0.1, 5.0]
-    sy      : [0.1, 5.0]
-    ex      : [1, 1000]
-    ey      : [1, 1000]
-    k       : [0, 1]
-    eps     : [0, 1]
+#    
+#par_lim:  
+#    E       : [0.0, 10000]
+#    L       : [0.0, 100000]
+#    P       : [-2.0, 2.0]
+#    V       : [-1.0, 1.0]
+#    Q       : [-1.0, 1.0]
+#    beta    : [-7.0, 7.0]
+#    N       : [0., 10000000.]
+#    DN      : [-1.0, +1.0]
+#    sx      : [0.1, 5.0]
+#    sy      : [0.1, 5.0]
+#    ex      : [1, 1000]
+#    ey      : [1, 1000]
+#    k       : [0, 1]
+#    eps     : [0, 1]

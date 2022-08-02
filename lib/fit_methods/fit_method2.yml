@@ -18,115 +18,140 @@ mask:
     #- [ 0.5,-1]
     #- [-0.5,2]
     #- [0.5,2]
+    
+model_params:  
+    E       : [0.0,     0.,     [0.0, 10000],   True ]
+    L       : [28000,   0.,     [0.0, 100000],  True]
+    P       : [0.0,     0.5,    [-2.0, 2.0],    False ]
+    V       : [0.0,     0.1,    [-1.0, 1.0],    True ]     #if V=0.0 then V is calculated from Q V=sqrt(1-Q^2), if abs(V)>=0.00001 then V is fixed to unit V=1
+    Q       : [0.2,     0.5,    [-1.0, 1.0],    False ]
+    beta    : [-2.413,  0.9,    [-7.0, 7.0],    False]
+    alpha_d : [0.,      0.1,    [-1.0, 1.0],    True ]
+    mx      : [0.,      1.,     [-20.0, +20.0], True]
+    my      : [0.,      1.,     [-20.0, +20.0], False]
+    sx      : [3.3,     1.5,    [0.5, 10000.0],False]
+    sy      : [3.3,     1.5,    [0.5, 10000.0],False]
+    ax      : [2,       1.,     [0.1, 10.],     False]
+    dax     : [0.,      0.,     [-10., 10.],    False]
+    ay      : [2,       1.,     [0.1, 10.],     False]
+    day     : [0.,      0.,     [-10., 10.],    False]
+    nx      : [1.0,     0.9,    [0.1, 10.],     False]
+    dnx     : [0.0,     0.,     [-10., 10.],    False]
+    ny      : [1.0,     0.9,    [0.1, 10.],    False]
+    dny     : [0.0,     0.,     [-10., 10.],    False]
+    alpha_s : [0.0,     0.1,    [-3.14,+3.14], False]
+    alpha_n : [0.0,     0.1,    [-7.,+7.],     False]
+    alpha_a : [0.0,     0.1,    [-7.,7.],      False]
+    psum    : [0.0,     0.1,    [-7.,+7.],     Ture]
+    NL      : [1000,    10,     [0., 10000000.],False]
+    NR      : [1000,    10,     [0., 10000000.],False]
 
-
-initial_values:  
-    E       : 0.0  #MeV #the value will be taken from data of pol_preprocess or from command line
-    L       : 28000 #mm
-    P       : 0.0
-    V       : 0.0  # if V=0.0 then V is calculated from Q: V=sqrt(1-Q^2), if abs(V)>=0.00001 then V is fixed to unit: V=1
-    Q       : 0.2
-    beta    : -2.413
-    alpha_d : 0.
-    mx      : 0. #mm
-    my      : 0. #mm
-    sx      : 3.3 #mm
-    sy      : 3.3 #mm
-    ax      : 2
-    dax     : 0.
-    ay      : 2
-    day     : 0.
-    nx      : 1.0
-    dnx     : 0.0
-    ny      : 1.0
-    dny     : 0.0
-    alpha_s : 0.0
-    alpha_n : 0.0
-    alpha_a : 0.0
-    psum    : 0.0
-    NL      : 1000
-    NR      : 1000
-    
-fix_par:
-    E       : True
-    L       : True
-    P       : False
-    V       : True
-    Q       : False
-    beta    : False
-    alpha_d : True
-    mx      : True
-    my      : True
-    sx      : False
-    sy      : False
-    ax      : False
-    dax     : False
-    ay      : False
-    day     : False
-    nx      : False
-    dnx     : False
-    ny      : False
-    dny     : False
-    alpha_s     : False
-    alpha_a     : False
-    alpha_n     : False
-    psum    : True
-    NL      : False
-    NR     : False
-    
-par_err:  
-    E       : 0.
-    L       : 0.
-    P       : 0.5
-    V       : 0.1
-    Q       : 0.5
-    beta    : 0.9
-    alpha_d : 0.1
-    mx      : 1.0
-    my      : 1.0
-    sx      : 1.5
-    sy      : 1.5
-    ax      : 1.0
-    dax     : 0.0
-    ay      : 1.0
-    day     : 0.0
-    nx     : 0.9
-    dnx     : 0
-    ny     : 0.9
-    dny     : 0
-    phi     : 0.9
-    alpha_s : 0.1
-    alpha_n : 0.1
-    alpha_a : 0.1
-    psum    : 0.1
-    NL      : 10.
-    NR      : 10.
-    
-par_lim:  
-    E       : [0.0, 10000]
-    L       : [0.0, 100000]
-    P       : [-2.0, 2.0]
-    V       : [-1.0, 1.0]
-    Q       : [-1.0, 1.0]
-    beta    : [-7.0, 7.0]
-    alpha_d : [-1.0, 1.0]
-    mx      : [-20.0, +20.0]
-    my      : [-20.0, +20.0]
-    sx      : [0.5, 10000.0]
-    sy      : [0.5, 10000.0]
-    ax      : [0.1, 10.]
-    dax     : [-10., 10.]
-    ay      : [0.1, 10.]
-    day     : [-10., 10.]
-    nx      : [0.1, 10.]
-    dnx     : [-10., 10.]
-    ny      : [0.1, 10.]
-    dny     : [-10., 10.]
-    alpha_s  : [-3.14,+3.14]
-    alpha_a  : [-7.,7.]
-    alpha_n  : [-7.,+7.]
-    psum     : [-7.,+7.]
-    NL      : [0., 10000000.]
-    NR      : [0., 10000000.]
+#initial_values:  
+#    E       : 0.0  #MeV #the value will be taken from data of pol_preprocess or from command line
+#    L       : 28000 #mm
+#    P       : 0.0
+#    V       : 0.0  # if V=0.0 then V is calculated from Q: V=sqrt(1-Q^2), if abs(V)>=0.00001 then V is fixed to unit: V=1
+#    Q       : 0.2
+#    beta    : -2.413
+#    alpha_d : 0.
+#    mx      : 0. #mm
+#    my      : 0. #mm
+#    sx      : 3.3 #mm
+#    sy      : 3.3 #mm
+#    ax      : 2
+#    dax     : 0.
+#    ay      : 2
+#    day     : 0.
+#    nx      : 1.0
+#    dnx     : 0.0
+#    ny      : 1.0
+#    dny     : 0.0
+#    alpha_s : 0.0
+#    alpha_n : 0.0
+#    alpha_a : 0.0
+#    psum    : 0.0
+#    NL      : 1000
+#    NR      : 1000
+#    
+#fix_par:
+#    E       : True
+#    L       : True
+#    P       : False
+#    V       : True
+#    Q       : False
+#    beta    : False
+#    alpha_d : True
+#    mx      : True
+#    my      : True
+#    sx      : False
+#    sy      : False
+#    ax      : False
+#    dax     : False
+#    ay      : False
+#    day     : False
+#    nx      : False
+#    dnx     : False
+#    ny      : False
+#    dny     : False
+#    alpha_s     : False
+#    alpha_a     : False
+#    alpha_n     : False
+#    psum    : True
+#    NL      : False
+#    NR     : False
+#    
+#par_err:  
+#    E       : 0.
+#    L       : 0.
+#    P       : 0.5
+#    V       : 0.1
+#    Q       : 0.5
+#    beta    : 0.9
+#    alpha_d : 0.1
+#    mx      : 1.0
+#    my      : 1.0
+#    sx      : 1.5
+#    sy      : 1.5
+#    ax      : 1.0
+#    dax     : 0.0
+#    ay      : 1.0
+#    day     : 0.0
+#    nx     : 0.9
+#    dnx     : 0
+#    ny     : 0.9
+#    dny     : 0
+#    alpha_s : 0.1
+#    alpha_n : 0.1
+#    alpha_a : 0.1
+#    psum    : 0.1
+#    NL      : 10.
+#    NR      : 10.
+#    
+#par_lim:  
+#    E       : [0.0, 10000]
+#    L       : [0.0, 100000]
+#    P       : [-2.0, 2.0]
+#    V       : [-1.0, 1.0]
+#    Q       : [-1.0, 1.0]
+#    beta    : [-7.0, 7.0]
+#    alpha_d : [-1.0, 1.0]
+#    mx      : [-20.0, +20.0]
+#    my      : [-20.0, +20.0]
+#    sx      : [0.5, 10000.0]
+#    sy      : [0.5, 10000.0]
+#    ax      : [0.1, 10.]
+#    dax     : [-10., 10.]
+#    ay      : [0.1, 10.]
+#    day     : [-10., 10.]
+#    nx      : [0.1, 10.]
+#    dnx     : [-10., 10.]
+#    ny      : [0.1, 10.]
+#    dny     : [-10., 10.]
+#    alpha_s  : [-3.14,+3.14]
+#    alpha_a  : [-7.,7.]
+#    alpha_n  : [-7.,+7.]
+#    psum     : [-7.,+7.]
+#    NL      : [0., 10000000.]
+#    NR      : [0., 10000000.]
 
 

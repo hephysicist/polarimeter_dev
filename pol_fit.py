@@ -34,8 +34,8 @@ def make_fit(config, h_dict):
     data_right = h_dict['hc_r']
     xy_coord = make_central_coord(h_dict['xc'], h_dict['yc'])
     cfg = copy.deepcopy(config)
-    if  cfg['initial_values']['E'] < 1000 : 
-        cfg['initial_values']['E'] = h_dict['env_params']['vepp4E']
+    if  cfg['model_params']['E'][0] < 1000 : 
+        cfg['model_params']['E'][0] = h_dict['env_params']['vepp4E']
 
     fit_method = cfg['fit_method'] #Importing module with desired fit method
     full_src_fname = os.getcwd()+'/lib/fit_methods/fit_method'+str(fit_method)
@@ -276,7 +276,7 @@ def save_png_figure(config, fig , timestamp):
 
     
 def accum_data_and_make_fit(config, start_time, stop_time):
-    vepp4E = config['initial_values']['E']
+    vepp4E = config['model_params']['E'][0]
     hist_fpath = config['hist_fpath']
     regex_line = config['regex_line']
     n_files = int(config['n_files'])
