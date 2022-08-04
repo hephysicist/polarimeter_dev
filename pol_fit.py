@@ -136,7 +136,7 @@ def get_Edep (v4E, d_freq):
     n = int(v4E/440.648)
     return (n+d_freq/818924.)*440.648*(int(d_freq) != 0)
     
-def get_env_params(h_dict):
+def get_env_params(h_dict, default_params_dict):
     env_dict_valid = False
     if 'env_params' in h_dict:
         env_params = h_dict['env_params'].item()
@@ -146,19 +146,25 @@ def get_env_params(h_dict):
         env_params = {}
         var_names = ['vepp4E', 'vepp4H_nmr','dfreq', 'att', 'fspeed']
         var_units = ['MeV', 'MeV', 'Hz', 'dB', 'Hz/sec']
-        if input('Do you want to set default parameters? y/N\n') == 'y':
-            for var_name in var_names[2:]:
-                 env_params[var_name] = -1.
-            env_params['vepp4E'] = 4760.
-            env_params['vepp4H_nmr'] = 4738.
-            env_params['real_E'] = guess_real_energy(env_params['vepp4E'], env_params['vepp4H_nmr'])
+        if not default_params_dict:
+            if input('Do you want to set default parameters? y/N\n') == 'y':
+                for var_name in var_names[2:]:
+                     env_params[var_name] = -1.
+                env_params['vepp4E'] = 4760.
+                env_params['vepp4H_nmr'] = 4738.
+                env_params['real_E'] = guess_real_energy(env_params['vepp4E'], env_params['vepp4H_nmr'])
+            else:
+                print('Please enter all necessary information manually:\n')
+                for var_name, var_unit in zip(var_names, var_units):
+                    env_params[var_name] = float(input('Enter {:s} in {:s}\n'.format(var_name, var_unit)))
+            print('Check the env_params dictionary:\n')
+            for key in env_params.keys():
+                print('{:s} = {:4.0f}'.format(key, env_params[key]))
         else:
-            print('Please enter all necessary information manually:\n')
-            for var_name, var_unit in zip(var_names, var_units):
-                env_params[var_name] = float(input('Enter {:s} in {:s}\n'.format(var_name, var_unit)))
-        print('Check the env_params dictionary:\n')
-        for key in env_params.keys():
-            print('{:s} = {:4.0f}'.format(key, env_params[key]))
+            env_params = default_params_dict
+            print('Check the env_params dictionary:\n')
+            for key in env_params.keys():
+                print('{:s} = {:4.0f}'.format(key, env_params[key]))
     return env_params, env_dict_valid
 
 def print_batch_item_stat(count, filename, D, env_params):
@@ -187,7 +193,7 @@ def print_batch_item_stat(count, filename, D, env_params):
         env_params['vepp4H_nmr'],
         env_params['dfreq']))
 
-def read_batch(hist_fpath, file_arr, vepp4E):
+def read_batch(hist_fpath, file_arr, vepp4E, default_params_dict=None):
     print('Reading ', len(file_arr), ' files: ', file_arr[0], ' ... ', file_arr[-1])
     buf_dict_list = []
     count  = 0 
@@ -198,7 +204,9 @@ def read_batch(hist_fpath, file_arr, vepp4E):
     for file in file_arr:
             buf_dict = load_hist(hist_fpath,file)
             if env_dict_valid:
-                env_params, env_dict_valid = get_env_params(buf_dict)
+                env_params, env_dict_valid = get_env_params(buf_dict, default_params_dict)
+                if not env_dict_valid:
+                    default_params_dict = env_params
                 E = env_params['vepp4E']
             if E > 1000: vepp4E_list.append(E)
             buf_dict_list.append(buf_dict)
@@ -214,7 +222,7 @@ def read_batch(hist_fpath, file_arr, vepp4E):
     for bd in buf_dict_list[1:]:
         h_dict = accum_data(h_dict, bd)
     print_batch_item_stat('', 'all {} files'.format(len(buf_dict_list)), h_dict, env_params)
-    return h_dict
+    return h_dict, default_params_dict
     
 
 def make_file_list( hist_fpath, regex_line,  unix_start_time,    unix_stop_time,    n_files=1):
@@ -301,6 +309,7 @@ def accum_data_and_make_fit(config, start_time, stop_time):
         scale_arr = scale_file['scale_arr']
     db_obj = Db_obj()
     fit_counter = 0
+    default_params_dict = {}
     INIT_FIGURES = False
     INIT_ADD_FIGURES = False
     try:
@@ -308,7 +317,7 @@ def accum_data_and_make_fit(config, start_time, stop_time):
                 file_buffer = make_file_list(hist_fpath, regex_line,  unix_start_time, unix_stop_time, n_files)
                 file_buffer = np.sort(file_buffer)
                 unix_start_time = get_unix_time(file_buffer[-1])+1
-                h_dict = read_batch(hist_fpath, file_buffer, vepp4E)
+                h_dict, default_params_dict = read_batch(hist_fpath, file_buffer, vepp4E, default_params_dict)
                 h_dict = mask_hist(config, h_dict)
                 if config['scale_hits']:
                     h_dict['hc_l'] *= scale_arr
