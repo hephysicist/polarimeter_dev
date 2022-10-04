@@ -394,7 +394,7 @@ def main():
             config = yaml.load(conf_file, Loader=yaml.Loader)
             
             if args.E:
-                config['initial_values']['E'] = float(args.E)
+                config['model_params']['E'][0] = float(args.E)
                 print ("Set default VEPP4 energy ", args.E, " MeV")
             if args.L:
                 config['initial_values']['L'] = float(args.L)
