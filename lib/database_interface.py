@@ -98,10 +98,10 @@ class Db_obj:
                 lst.append( ("dnl", "{:.4f}".format(self.NL.error)) )
                 lst.append( ("dnr", "{:.4f}".format(self.NR.error)) )
                 lst.append( ("dbeta", "{:.4f}".format(self.beta.error)) )
-                lst.append( ("askewx", "{:.4f}".format(self.askewx.value)) )
-                lst.append( ("askewy", "{:.4f}".format(self.askewy.value)) )
-                lst.append( ("daskewx", "{:.4f}".format(self.askewx.error)) )
-                lst.append( ("daskewy", "{:.4f}".format(self.askewy.error)) )
+                #lst.append( ("askewx", "{:.4f}".format(self.askewx.value)) )
+                #lst.append( ("askewy", "{:.4f}".format(self.askewy.value)) )
+                #lst.append( ("daskewx", "{:.4f}".format(self.askewx.error)) )
+                #lst.append( ("daskewy", "{:.4f}".format(self.askewy.error)) )
                 #for l in lst:
                 #    print( l[0], "         ", l[1])
 
@@ -158,4 +158,5 @@ def db_write(   db_obj,
     #db_obj.askewy.value = -1.
     db_obj.version = version
     db_obj.write(dbname='test', user='nikolaev', host='127.0.0.1')
+    #db_obj.write(dbname='calibrations', user='calibrations', host='bison-new')
 

@@ -45,8 +45,8 @@ with xmlrpc.client.ServerProxy("http://de10_nano:8080/RPC2") as proxy:
         thresholds = json.load(filehandle)
     #bad_channels300 = [0, 1, 64, 65, 128, 129, 192, 193, 256, 257, 258, 290, 320, 321, 448, 449, 641, 642, 704, 705, 769, 832, 833, 1025, 1048, 1052]
     #bad_channels = [640,258,32,834, 1025, 1026,1048,1052,672]
-    bad_channels = [833,832,192,769,193,1,641,129,1025, 672, 743, 674]
-    #bad_channels = []
+    #bad_channels = [833,832,192,769,193,1,641,129,1025, 672, 743, 674]
+    bad_channels = [1052,1051,348,347,1100,260,833,832,192,769,193,1058] #2022-1012
     for chan, threshold in enumerate([int(i) for i in thresholds]):
         chan = (chan + 640)%1280 # Legacy
         mask = (1 << SPI_RANGE[ int(chan/128) ])

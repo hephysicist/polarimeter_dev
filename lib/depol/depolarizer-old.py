@@ -15,57 +15,57 @@ class depolarizer:
     def send(self, message):
         try :
             message.timestamp = int(time.time()*1e9)
-            self.sock.send(struct.pack('L',message.ByteSize()))
+            self.sock.send(struct.pack('I',message.ByteSize()))
             self.sock.send(message.SerializeToString())
         except BrokenPipeError:
             self.connect()
-            self.sock.send(struct.pack('L',message.ByteSize()))
+            self.sock.send(struct.pack('I',message.ByteSize()))
             self.sock.send(message.SerializeToString())
 
     def receive(self):
-      data = self.sock.recv(8)
+      data = self.sock.recv(4)
       if not data:
           print("WARNING: Unable to connect")
           self.sock.close()
           self.connect();
-          data = self.sock.recv(8)
+          data = self.sock.recv(4)
           if not data:
               print(F"ERROR: Unable to connect to {self.host}:{self.port}")
-      s = struct.unpack('L',data)
+      s = struct.unpack('I',data)
       #print "message size = ",s[0]
       data = self.sock.recv(s[0])
       m = DepolarizerMessage()
-      try:
-        m.ParseFromString(data)
-      except:
-        print('depolarizer.py : Parse error: ')
-
+      m.ParseFromString(data)
       return m
 
     def send2(self, message):
         try :
             message.timestamp = int(time.time()*1e9)
-            self.sock2.send(struct.pack('L',message.ByteSize()))
+            self.sock2.send(struct.pack('I',message.ByteSize()))
             self.sock2.send(message.SerializeToString())
         except BrokenPipeError:
             self.connect()
-            self.sock2.send(struct.pack('L',message.ByteSize()))
+            self.sock2.send(struct.pack('I',message.ByteSize()))
             self.sock2.send(message.SerializeToString())
 
     def receive2(self):
-      data = self.sock2.recv(8)
+      data = self.sock2.recv(4)
       if not data:
           print("WARNING: Unable to connect")
           self.sock2.close()
           self.connect();
-          data = self.sock2.recv(8)
+          data = self.sock2.recv(4)
           if not data:
               print(F"ERROR: Unable to connect to {self.host}:{self.port}")
-      s = struct.unpack('L',data)
+      s = struct.unpack('I',data)
       #print "message size = ",s[0]
-      data = self.sock2.recv(s[0])
+      data = self.sock2.recv(s[0])#.decode(encoding = 'UTF-8',errors = 'ignore')
       m = DepolarizerMessage()
-      m.ParseFromString(data)
+      try:
+        m.ParseFromString(data)
+      except:
+        print('Parse error: ')
+        pass
       return m
     def __init__(self, host, port):
       self.host = host
@@ -95,7 +95,7 @@ class depolarizer:
       self.message_id = self.message_id + 1
       m.command = command
       self.send(m)
-      m = self.receive()
+      m = self.receive().decode(encoding = 'UTF-8',errors = 'ignore')
       return m.status == DepolarizerMessage.OK
 
     def start_scan(self):
@@ -138,11 +138,11 @@ class depolarizer:
 
     def is_on(self):
         state = self.get_state()
-        return state & 0x1 == 0x1
+        return state & 0x1
 
     def is_scan(self):
         state = self.get_state()
-        return state & 0x2 == 0x2
+        return (state>>1)&0x1
 
     def get_frequency(self):
       return self.get(DepolarizerMessage.FREQUENCY)
@@ -172,7 +172,7 @@ class depolarizer:
       return self.get(DepolarizerMessage.WIDTH)
     
     def get_fmap(self):
-      return self.fmap
+       return self.fmap
 
     def set_depolarizer(self, data):
       return self.set(DepolarizerMessage.DEPOLARIZER, data)
@@ -201,7 +201,6 @@ class depolarizer:
     def set_width(self, data):
       return self.set(DepolarizerMessage.WIDTH,data)
 
-          
     def get_fmap_in_thread(self):
         self.sock2 = socket.socket()
         self.sock2.connect((self.host, self.port))
@@ -238,54 +237,10 @@ class depolarizer:
       for [t,f] in self.fmap:
         print(t, f)
 
-if __name__ == '__main__':
-    d = depolarizer('vepp4-spin.inp.nsk.su',9090)
-    print("power {}".format("ON" if d.is_on() else "OFF"))
-    print("scan {}".format("ON" if d.is_scan() else "OFF"))
-    print("attenuation ", d.get_attenuation())
-    print("speed {:.3f} Hz".format(d.get_speed()))
-    print(" step {:.3f} Hz".format(d.get_step()))
-    print("initial frequency {:.3f} Hz".format(d.get_initial()))
-    print("harmonic number: {}".format(d.get_harmonic_number()))
-
-def scan(E, speed, attenuation):
-    # R = 2*m_e/(g-2) 
-    R = 440.64845866025958 #MeV  // PDG-2021
-    F0 = 818924.0
-    s =  speed/R*F0
-    harmonic = E//R
-    initial = (E/R-harmonic)*F0
-    d.set_harmonic_number(harmonic)
-    d.set_attenuation(attenuation)
-    d.set_speed(s)
-    d.set_initial(initial)
-    if d.start_scan():
-        print("Started scan from {:.3f} MeV {:>5}, speed {:.2f} keV/s, att. {} dB, harmonic {:d}".format(E,
-              "up" if speed>0 else "down", 1000.*speed, int(attenuation), int(harmonic)))
-
-def stop():
-    d.stop_scan()
-
-def utug(E, dE, speed, attenuation):
-    print("Start utug with central {:.3f} MeV range +-{:.3f} MeV speed {:.2f} keV/s att. {} dB".format(E,dE, speed*1000, attenuation))
-    #E - is real energy
-    # dE is amplitude of sweeping
-    T = 2*dE/speed
-    try:
-        while True:
-            #scan up
-            begin_time = time.time()
-            scan(E-dE, +abs(speed), attenuation)
-            while time.time() < begin_time + T:
-                time.sleep(1)
-            d.stop_scan()
-            #scan down
-            begin_time = time.time()
-            scan(E+dE, -abs(speed), attenuation)
-            while time.time() < begin_time + T:
-                time.sleep(1)
-            d.stop_scan()
-    except KeyboardInterrupt:
-        print("Stop utug")
-        stop()
-
+#    d = depolarizer('vepp4-spin',9090)
+#    print("Depolarizer is ", ("ON" if d.is_on() else "OFF" ))
+#    print("attenuation ", d.get_attenuation())
+#    print("speed {:.3f} Hz".format(d.get_speed()))
+#    print(" step {:.3f} Hz".format(d.get_step()))
+#    print("initial frequency {:.3f} Hz".format(d.get_initial()))
+#    print(d.get_state())
