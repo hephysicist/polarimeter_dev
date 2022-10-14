@@ -384,10 +384,7 @@ def main():
 
 
     args = parser.parse_args()
-    if '/' in args.config:
-        full_conf_fname = args.config
-    else:
-        full_conf_fname = os.getcwd()+'/lib/fit_methods/'+ args.config
+    full_conf_fname = args.config
     print('Reading config file: ', full_conf_fname+'\n')
     with open(full_conf_fname, 'r') as conf_file:
         try:
