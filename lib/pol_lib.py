@@ -85,27 +85,62 @@ def arrange_region(h_l, h_r , x, lim=[None,None]):
     buf_r = h_r[:, np.where(x==lim[0])[0][0]:np.where(x==lim[1])[0][0]]
     buf_x = x[np.where(x==lim[0])[0][0]:np.where(x==lim[1])[0][0]+1]
     return buf_l, buf_r, buf_x
-
-def get_hist_asymmetry(hist,x=None):
-    (idy,idx) = np.unravel_index(np.argmax(hist, axis=None), hist.shape)
+    
+def get_hist_asymmetry(h_dict, x_dir=None):
+    hist_l = h_dict['hc_l']
+    hist_r = h_dict['hc_r']
+    h_sum = hist_l+hist_r
+    (idy,idx) = np.unravel_index(np.argmax(h_sum, axis=None), h_sum.shape)
+    #print('max bin', idy, idx)
+    A_list = []
+    dA_list =[]
+    N_list = []
     if idy:
-        if x:
-            n_up = np.sum(np.sum(hist[idx+1:,:]))
-            n_down = np.sum(np.sum(hist[:idx:,:]))
-        else:
-            n_up = np.sum(np.sum(hist[idy+1:,:]))
-            n_down = np.sum(np.sum(hist[:idy:,:]))
-        dn_up = np.sqrt(n_up)
-        dn_down = np.sqrt(n_down)
-        A = (n_up-n_down)/(n_up + n_down + 1)
-        dfdn_up = 2*n_up/(n_up+n_down)**2
-        dfdn_down = 2*n_down/(n_up+n_down)**2
-        dA = np.sqrt((dfdn_up*dn_up)**2 + (dfdn_down*dn_down)**2)
+        for hist in [hist_l, hist_r]:
+            if x_dir:
+                n_up = np.sum(np.sum(hist[idx+1:,:]))
+                n_down = np.sum(np.sum(hist[:idx:,:]))
+            else:
+                n_up = np.sum(np.sum(hist[idy+1:,:]))
+                n_down = np.sum(np.sum(hist[:idy:,:]))
+            dn_up = np.sqrt(n_up)
+            dn_down = np.sqrt(n_down)
+            A_list.append((n_up-n_down)/(n_up + n_down+1))
+            dfdn_up = 2*n_up/(n_up+n_down)**2
+            dfdn_down = 2*n_down/(n_up+n_down)**2
+            dA_list.append(np.sqrt((dfdn_up*dn_up)**2 + (dfdn_down*dn_down)**2))
+            N_list.append(np.sum(np.sum(hist)))
+
+        A = (A_list[0]*N_list[0]-A_list[1]*N_list[1])/(N_list[0]+N_list[1])
+        #A = (A_list[0]/N_list[0]-A_list[1]/N_list[1])
+        dA = np.sqrt(dA_list[0]**2 + dA_list[1]**2)
     else:
         print('Unable to find asymmetry!')
         A=-999
         dA = -999
+
     return A, dA 
+
+#def get_hist_asymmetry(hist,x=None): #Deprecated version: isn't stable for left and right 
+#    (idy,idx) = np.unravel_index(np.argmax(hist, axis=None), hist.shape)
+#    if idy:
+#        if x:
+#            n_up = np.sum(np.sum(hist[idx+1:,:]))
+#            n_down = np.sum(np.sum(hist[:idx:,:]))
+#        else:
+#            n_up = np.sum(np.sum(hist[idy+1:,:]))
+#            n_down = np.sum(np.sum(hist[:idy:,:]))
+#        dn_up = np.sqrt(n_up)
+#        dn_down = np.sqrt(n_down)
+#        A = (n_up-n_down)/(n_up + n_down + 1)
+#        dfdn_up = 2*n_up/(n_up+n_down)**2
+#        dfdn_down = 2*n_down/(n_up+n_down)**2
+#        dA = np.sqrt((dfdn_up*dn_up)**2 + (dfdn_down*dn_down)**2)
+#    else:
+#        print('Unable to find asymmetry!')
+#        A=-999
+#        dA = -999
+#    return A, dA 
 
 
 
@@ -129,15 +164,8 @@ def get_raw_stats(h_dict):
                       'my_'+pol_type : my,
                       'sx_'+pol_type : sx,
                       'sy_'+pol_type : sy})
-    ay_l ,day_l = get_hist_asymmetry(hist_l)
-    ay_r, day_r = get_hist_asymmetry(hist_r)
-    Ay = ay_l - ay_r
-    dAy = np.sqrt(day_l**2 + day_r**2)
-    
-    ax_l ,dax_l = get_hist_asymmetry(hist_l, x=True)
-    ax_r, dax_r = get_hist_asymmetry(hist_r, x=True)
-    Ax = ax_l - ax_r
-    dAx = np.sqrt(dax_l**2 + dax_r**2)
+    Ay, dAy = get_hist_asymmetry(h_dict)
+    Ax, dAx = get_hist_asymmetry(h_dict, x_dir=True)
     stats.update({'Ay' : Ay, 'dAy' : dAy, 'Ax' : Ax, 'dAx' : dAx})
     return stats
 
