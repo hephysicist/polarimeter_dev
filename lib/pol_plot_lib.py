@@ -124,7 +124,7 @@ def plot_hist(x, y, h, ax, cax, fig, diff=False):
         #cax.set_aspect(15)
         #cbar.set_ticks([0])
         
-def plot_hitmap(fig, ax, h_dict, block=False, norm=False):
+def plot_hitmap(fig, ax, h_dict, fname, block=False, norm=False):
     hc_l = h_dict['hc_l']
     hc_r = h_dict['hc_r']
     hs_l = h_dict['hs_l']
@@ -136,7 +136,7 @@ def plot_hitmap(fig, ax, h_dict, block=False, norm=False):
     ratio = 15
     for i in range(1,3):
         exec('ax{:d}.clear()'.format(i))
-    ax1.set_title('Left')
+    ax1.set_title(fname[:19])
     ax1.set_aspect(1)
     plot_hist(xxc, yyc, hc_l, ax1, None, fig)
 
@@ -232,23 +232,21 @@ def init_figure_gen(label, data_fields):
             break
     return fig, ax
         
-def print_fit_results(ax, fitter):
+def print_fit_results(ax, fitter, time):
     minuit = fitter.minuit
     ax.set_title('Fit results (fit method {})'.format(fitter.fit_method))
     ax.set(xlim=(0., 1.25), ylim=(-0.25, 1.25), xticks=[], yticks=[])
     ax.axis('off')
-    #par_list = ['P','V', 'Q','mx', 'my','sx', 'sy', 'NL', 'NR']
-    #for i in fitter.parnames:
     important_pars = ['P', 'NL', 'NR']
     line_size = 0.07
     lc = 0 
     x = -0.2
     y = 1.1
     chi2ndf = "chi2/ndf = {0:.{1}f}/{2} = {3:.{4}f}".format(fitter.chi2, 0 if fitter.chi2 > 10 else 2, fitter.ndf, fitter.chi2/fitter.ndf, 1 if fitter.chi2/fitter.ndf>10 else 2 )
+    ax.text(x, y+lc, time[:19], size=14, ha='left', va='center', color='black')
+    lc -= line_size
     ax.text(x, y+lc, chi2ndf, size=14, ha='left', va='center', color='black')
     lc -= line_size
-    #ax.text(x, y+lc, "prob = {:.3f}%".format(100.*(1.0-scipy.stats.chi2.cdf(fitter.chi2, fitter.ndf))), size=14, ha='left', va='center', color='black')
-    #lc -= line_size
     for parname in fitter.parlist:
         try:
             if not minuit.fixed[parname]:

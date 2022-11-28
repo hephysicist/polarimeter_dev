@@ -47,7 +47,7 @@ def make_fit(config, h_dict):
     return fm, data_fields
 
 
-def show_res(fitter, data_fields, ax):
+def show_res(fitter, data_fields, ax, time):
     for the_ax in ax:
         the_ax.cla()
 
@@ -61,7 +61,7 @@ def show_res(fitter, data_fields, ax):
         except KeyError: 
             pass
 
-    print_fit_results(ax[0], fitter)
+    print_fit_results(ax[0], fitter, time)
 
     show('data_sum_py'  , 1)
     show('fit_sum_py'   , 1)
@@ -94,7 +94,7 @@ def show_res(fitter, data_fields, ax):
     plt.pause(1)
     return remaining_figure_list
     
-def show_res_gen(data_fields, ax, remaing_figure_list=None):
+def show_res_gen(data_fields, ax, remaing_figure_list=None, time=None):
     for the_ax in ax:
         the_ax.cla()
     idx = 0
@@ -328,19 +328,19 @@ def accum_data_and_make_fit(config, start_time, stop_time):
                 fitter, data_fields = make_fit(config, h_dict)
                 raw_stats = get_raw_stats(h_dict)
                 print_stats(raw_stats)
-                moments = get_moments(h_dict)
+                #moments = get_moments(h_dict)
                 print_pol_stats(fitter)
 
                 if not INIT_FIGURES:
                     INIT_FIGURES = True
                     fig, ax = init_figure('Laser Polarimeter 2D Fit')
-                remaining_figure_list = show_res(fitter, data_fields, ax)
+                remaining_figure_list = show_res(fitter, data_fields, ax, file_buffer[0])
 
                 if len(remaining_figure_list)>0:
                     if not INIT_ADD_FIGURES:
                         INIT_ADD_FIGURES = True
                         fig1, ax1 = init_figure_gen('Laser Polarimeter additional plots', data_fields)
-                    show_res_gen(data_fields, ax1, remaining_figure_list)
+                    show_res_gen(data_fields, ax1, remaining_figure_list, file_buffer[0])
 
                 save_png_figure(config, fig, file_buffer[0])
                 fit_counter +=1
@@ -352,6 +352,10 @@ def accum_data_and_make_fit(config, start_time, stop_time):
                 if is_db_write:
                     env_params = h_dict['env_params']
                     e_dep = get_Edep(env_params['vepp4E'], env_params['dfreq'])
+                    db_obj.asym_y.value = raw_stats['Ay']
+                    db_obj.asym_y.error = raw_stats['dAy']
+                    db_obj.asym_x.value = raw_stats['Ax']
+                    db_obj.asym_x.error = raw_stats['dAx']
                     db_write(   db_obj,
                                 config,
                                 get_unix_time(file_buffer[0]),

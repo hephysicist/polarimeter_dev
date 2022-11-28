@@ -114,7 +114,7 @@ def preprocess_single_file(config, f_name, env_params, fig, ax ):
                                 f_name) 
             print_stats(get_raw_stats(h_dict))
             if config['preprocess']['draw']:
-                plot_hitmap(fig, ax, h_dict, block=False, norm=False)
+                plot_hitmap(fig, ax, h_dict, f_name, block=False, norm=False)
                 draw_ch_numbers(ax[0], config)
                 fig.canvas.draw_idle()
                 plt.pause(0.1)

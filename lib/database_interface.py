@@ -49,8 +49,9 @@ class Db_obj:
     askewx = phys_val_t()
     askewy = phys_val_t()
 
-    def write(self, dbname='test', user='nikolaev', host='127.0.0.1'):
-        with closing(psycopg2.connect(dbname=dbname, user=user, host=host)) as conn:
+    def write(self, parsed_db_args):
+        print('Writing to database:'+parsed_db_args['path']+'@'+parsed_db_args['user']+'/'+parsed_db_args['host'])
+        with closing(psycopg2.connect(dbname=parsed_db_args['path'], user=parsed_db_args['user'], host=parsed_db_args['host'])) as conn:
             with closing(conn.cursor()) as cursor:
                 lst = []
                 lst.append( ("begintime", time.strftime("'%Y-%m-%d %H:%M:%S'", time.localtime(self.begintime))))
@@ -120,7 +121,20 @@ class Db_obj:
                 query += ");"
                 cursor.execute(query)
                 conn.commit()
-
+                
+def parse_db_args(db_line):
+    user_idx = db_line.find('@')
+    host_idx = db_line.find('/')
+    parsed_db_args = {}
+    if user_idx > 0 and host_idx > 0:
+        parsed_db_args['user'] = db_line[:user_idx]
+        parsed_db_args['host'] = db_line[user_idx+1:host_idx]
+        parsed_db_args['path'] = db_line[host_idx+1:]
+    else:
+        print('Error: invalid database line!')
+        print('Check your config file and use the following tebmplate: user@host/path')
+    return parsed_db_args
+    
 def db_write(   db_obj,
                 config,
                 begin_time,
@@ -150,13 +164,7 @@ def db_write(   db_obj,
     db_obj.V.error = fitres.errors['V']
     db_obj.Q.value = fitres.values['Q']
     db_obj.Q.error = fitres.errors['Q']
-    #db_obj.NL.value = fitres.values['NL'] #TODO Make this dict universal for any FitMethod
-    #db_obj.NL.error = fitres.errors['NL']
-    #db_obj.NR.value = fitres.values['NR']
-    #db_obj.NR.error = fitres.errors['NR']
-    #db_obj.askewx.value = -1.
-    #db_obj.askewy.value = -1.
     db_obj.version = version
-    db_obj.write(dbname='test', user='nikolaev', host='127.0.0.1')
+    db_obj.write(parse_db_args(config['database']))
     #db_obj.write(dbname='calibrations', user='calibrations', host='bison-new')
 
