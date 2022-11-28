@@ -125,6 +125,41 @@ def calc_asymmetry(h_dict):
     print('*** Asymmetry: {:2.2f} % ***'.format(A*100.))
     return A
 
+def get_hist_asymmetry(h_dict, x_dir=None):
+    hist_l = h_dict['hc_l']
+    hist_r = h_dict['hc_r']
+    h_sum = hist_l+hist_r
+    (idy,idx) = np.unravel_index(np.argmax(h_sum, axis=None), h_sum.shape)
+    #print('max bin', idy, idx)
+    A_list = []
+    dA_list =[]
+    N_list = []
+    if idy:
+        for hist in [hist_l, hist_r]:
+            if x_dir:
+                n_up = np.sum(np.sum(hist[idx+1:,:]))
+                n_down = np.sum(np.sum(hist[:idx:,:]))
+            else:
+                n_up = np.sum(np.sum(hist[idy+1:,:]))
+                n_down = np.sum(np.sum(hist[:idy:,:]))
+            dn_up = np.sqrt(n_up)
+            dn_down = np.sqrt(n_down)
+            A_list.append((n_up-n_down)/(n_up + n_down+1))
+            dfdn_up = 2*n_up/(n_up+n_down)**2
+            dfdn_down = 2*n_down/(n_up+n_down)**2
+            dA_list.append(np.sqrt((dfdn_up*dn_up)**2 + (dfdn_down*dn_down)**2))
+            N_list.append(np.sum(np.sum(hist)))
+        
+        A = (A_list[0]*N_list[0]-A_list[1]*N_list[1])/(N_list[0]+N_list[1])
+        #A = (A_list[0]/N_list[0]-A_list[1]/N_list[1])
+        dA = np.sqrt(dA_list[0]**2 + dA_list[1]**2)
+    else:
+        print('Unable to find asymmetry!')
+        A=-999
+        dA = -999
+        
+    return A, dA 
+
 def print_stats(stats):
     print('*** Raw stats ***')
     print('mx_l: {:2.2f}\tmx_r: {:2.2f}\tmy_l: {:2.2f}\tmy_r: {:2.2f}'.format(stats['mx_l'],
