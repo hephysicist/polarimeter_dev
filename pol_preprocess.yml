@@ -6,8 +6,8 @@ regex_line : '2022*' #Specify regex line to choose files for preprocessing
 preprocess:
     save_raw_file : False 
     amp_cut : 10 #Cut on the signal value to perform background rejection
-    draw : Draw
-    use_depolarizer  : True
+    draw : True
+    use_depolarizer  : False
     impute_broken_ch : True
 
 zone_id: 
