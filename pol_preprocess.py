@@ -112,6 +112,16 @@ def preprocess_single_file(config, f_name, env_params, fig, ax ):
                                 h_dict,
                                 env_params,
                                 f_name) 
+            #ATTENTION this is KOSTYL // Nikolaev 2022-12-17
+            file_to_remove = '/online/'+f_name
+            if os.path.exists(file_to_remove):
+                print("Removing raw file: ", file_to_remove) 
+                try:
+                    os.remove(file_to_remove)
+                except:
+                    print("Unable to remove file ", file_to_remove)
+
+
             print_stats(get_raw_stats(h_dict))
             if config['preprocess']['draw']:
                 plot_hitmap(fig, ax, h_dict, f_name, block=False, norm=False)
@@ -155,7 +165,7 @@ def preprocess(config, regex_line, offline = False):
                      env_params = { 'vepp4E':vepp4E, 
                                     'vepp4H_nmr':vepp4H_nmr,
                                     'real_E': real_E}
-                     print(env_params)
+
                 if config['preprocess']['use_depolarizer']:
                     [dtime, dfreq, att, fspeed] = get_depol_params(depol_device, f_name)
                     env_params['dfreq'] = dfreq
@@ -164,7 +174,8 @@ def preprocess(config, regex_line, offline = False):
                 else:
                     env_params['dfreq'] = 0
                     env_params['att']   = 0
-                    env_params['fspeed']   = 0
+                    env_params['fspeed']= 0
+                print(env_params)
                 preprocess_single_file(config, f_name, env_params, fig, ax)
                 f_name_old = f_name
                 attempt_count = 0
