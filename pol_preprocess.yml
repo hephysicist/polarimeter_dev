@@ -7,7 +7,7 @@ preprocess:
     save_raw_file : False 
     amp_cut : 10 #Cut on the signal value to perform background rejection
     draw : True
-    use_depolarizer  : False
+    use_depolarizer  : True
     impute_broken_ch : True
 
 zone_id: 
