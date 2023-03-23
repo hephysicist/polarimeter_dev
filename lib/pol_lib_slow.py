@@ -10,77 +10,47 @@ from mapping import get_xy
 
 @jit(nopython=True)
 def convert_val(x):
-    x += ((x&0x2000)>>13)*0xFFFFC000
+    x = x+((x&0x2000)>>13)*0xFFFFC000
     if x>>31 :
-        return int((1<<32)-x)
+        x=int((1<<32)-x)
+        return x
     else:
         return -x
 
+#@jit(nopython=True)
+#def convert_val(charge):
+#     return ((-1*(0x2000 - (charge & 0x1FFF)))  if (charge >> 13 == 1) else charge)
+
+
 @jit(nopython=True)
 def translate_word(word):
-    chip   = (word >> 27) & 0x1F
-    if chip >= 20:
-        val  = -1
-        trig = (word>>24 & 0x07)
-    else:
-        val  = convert_val(int(word & 0x3FFF))
-        trig = 0
+    buf    = int(word & 0x3FFF)
+    val    = convert_val(buf)
     ch     = (word >> 14) & 0x3F
     fr     = (word >> 20) & 0x7F
+    chip   = (word >> 27) & 0x1F
     glb_ch = (chip*64+ch + 640) % 1280
+    trig = 0
+    if chip >= 20:
+        val = -1
+        trig = (word>>24 & 0x07)
+        
     return trig, val, glb_ch, chip, fr
 
 def load_events(fname, n_evt=None):
-    word_arr = np.fromfile(fname, dtype=np.uint32)
+    data = []
+    input_file = open(fname, 'rb')
+    word_arr = np.fromfile(input_file, dtype=np.uint32)
+    curr_pol = 0
     if n_evt:
         word_arr = word_arr[:n_evt]
-    data = np.empty((word_arr.shape[0], 4), dtype=np.int32)
-    return make_events(word_arr, data)
-
-@jit(nopython=True)
-def make_events(word_arr, data):
-    curr_pol = 0
-    n = 0
-    for word in word_arr:
-        pol, val, ch, chip, fr = translate_word(word)
-        if fr < 3 and curr_pol > 0 and val>0:
-            data[n] = [curr_pol-3, val, ch, fr] #curr_pol = +2, +4 => curr_pol-3 = -1, +1
-            n += 1
-        if pol != 0:
-            curr_pol = pol
-    data = data[:n]
-    return data
-    
-#    word_arr = np.fromfile(fname, dtype=np.uint32)
-#    if n_evt:
-#        word_arr = word_arr[:n_evt]
-#    curr_pol = 0
-#
-#    ''' # 5.7 sec
-#    data = np.empty((word_arr.shape[0], 4), dtype=np.int32)
-#    n = 0
-#    for word in word_arr:
-#        pol, val, ch, chip, fr = translate_word(word)
-#        if fr < 3 and curr_pol > 0 and val>0:
-#            data[n] = [curr_pol-3, val, ch, fr] #curr_pol = +2, +4 => curr_pol-3 = -1, +1
-#            n += 1
-#        if pol != 0:
-#            curr_pol = pol
-#    data = data[:n]
-#    return data
-
-    ''' # 6.3 sec
-    data = []
     for word in word_arr:
         pol, val, ch, chip, fr = translate_word(word)
         if curr_pol > 0 and fr < 3 :
-            data.append([curr_pol-3, val, ch, fr]) #curr_pol = +2, +4 => curr_pol-3 = -1, +1
+            data.append([curr_pol-3, val, ch, fr]) #curr_pol = +2, +4 => curr_pol-4 = -1, +1
         if pol != 0:
             curr_pol = pol
-    d = np.array(data)
-    print("dtype:", d.dtype)
-    return d
-#    '''
+    return np.array(data)
 
 def mask_ch_map(hist, mask):
     buf = np.array(hist)
@@ -435,7 +405,6 @@ def mask_hist(config, h_dict):
     else:
         return h_dict
         
-@jit(nopython=True)
 def impute_ch(x, y, hc_l, hc_r):
     n_evt_center_l = 0
     n_evt_center_r = 0

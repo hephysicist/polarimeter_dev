@@ -328,7 +328,7 @@ def accum_data_and_make_fit(config, start_time, stop_time):
                 fitter, data_fields = make_fit(config, h_dict)
                 raw_stats = get_raw_stats(h_dict)
                 print_stats(raw_stats)
-                #moments = get_moments(h_dict)
+                moments = get_moments(h_dict)
                 print_pol_stats(fitter)
 
                 if not INIT_FIGURES:

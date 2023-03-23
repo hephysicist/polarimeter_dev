@@ -23,10 +23,7 @@ def get_evt_arr(in_fpath, out_fpath, f_name,amp_cut, save_raw=False):
     print("load_events time: ", time.time() - t0, "s")
     print('Uploaded '+str(np.shape(raw_evt_arr)[0])+' raw events')
     print('Preprocessing...')
-#    raw_evt_arr = raw_evt_arr[raw_evt_arr[:,1]>0,:] #get rid of trigger events
-    evt_arr = raw_evt_arr[raw_evt_arr[:,1]>amp_cut,:] # amplitude cut 5.1 sec
-
-    ''' 12 sec
+    raw_evt_arr = raw_evt_arr[raw_evt_arr[:,1]>0,:] #get rid of trigger events
     evt_list = []
     for evt in raw_evt_arr:
         if evt[1] > amp_cut:
@@ -35,9 +32,6 @@ def get_evt_arr(in_fpath, out_fpath, f_name,amp_cut, save_raw=False):
                              evt[2],  # channel
                              evt[3]]) #frame
     evt_arr = np.array(evt_list)
-    '''
-    
-#    print("evt_arr.shape =", evt_arr.shape)
     n_evt = np.shape(evt_arr)[0]
     #print(np.min(evt_arr), np.max(evt_arr))
     if  n_evt:
@@ -89,7 +83,7 @@ def map_events(evt_arr, zone_id):
                 'xc' : grid['xc'],
                 'yc' : grid['yc']}
     return h_dict
-
+    
 def save_mapped_hist(hist_fpath, h_dict, env_params, f_name):
     if env_params['dfreq'] < 0:
         print('No scan is running! Depolarizer is OFF.')
@@ -128,10 +122,19 @@ def preprocess_single_file(config, f_name, env_params, fig, ax ):
 
             print_stats(get_raw_stats(h_dict))
             if config['preprocess']['draw']:
+                t0 = time.time()
                 plot_hitmap(fig, ax, h_dict, f_name, block=False, norm=False)
                 draw_ch_numbers(ax[0], config)
                 fig.canvas.draw_idle()
                 plt.pause(0.1)
+                print("draw figure time: ", time.time() - t0, "s")
+
+            filename=config['bin_fpath']+'/'+f_name
+            print("Removing file ", filename)
+            try :
+                os.remove(filename)
+            except:
+                print("Unable to remove file: ", filename)
 
 def preprocess(config, regex_line, offline = False):
     bin_fpath = config['bin_fpath']
@@ -152,6 +155,8 @@ def preprocess(config, regex_line, offline = False):
         vepp4H_nmr = float(input('Enter VEPP4 H field [Gauss]: '))
         env_params = { 'vepp4E':vepp4E, 
                        'vepp4H_nmr':vepp4H_nmr}
+        if config['preprocess']['use_depolarizer']:
+            depol_device = init_depol()
     else:
         while len(file_arr) < 2:
             time.sleep(10)
@@ -263,8 +268,8 @@ def main():
             else:
                 regex_line = str(config['regex_line'])
 
-            preprocess(config, config['regex_line'], args.offline) 
-#            online_preprocess(config)
+            #preprocess(config, config['regex_line'], args.offline) 
+            online_preprocess(config)
 
 if __name__ == '__main__':
     main()
