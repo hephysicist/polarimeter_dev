@@ -164,6 +164,10 @@ def db_write(   db_obj,
     db_obj.V.error = fitres.errors['V']
     db_obj.Q.value = fitres.values['Q']
     db_obj.Q.error = fitres.errors['Q']
+    db_obj.NL.value = fitres.values['N']
+    db_obj.NR.value = fitres.values['N']
+    db_obj.NL.error = fitres.errors['N']
+    db_obj.NR.error = fitres.errors['N']
     db_obj.version = version
     db_obj.write(parse_db_args(config['database']))
     #db_obj.write(dbname='calibrations', user='calibrations', host='bison-new')
