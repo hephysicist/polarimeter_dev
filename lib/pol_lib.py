@@ -266,6 +266,9 @@ def print_stats(stats):
     diff = n_l - n_r
     rel_diff = 2.*diff/(n_l+n_r)*100
     print('n_evt_l: {0} \tn_evt_r: {1}\tdiff: {2}\t({3:3.2f}%)'.format(n_l,n_r,diff, rel_diff))
+    print('-------------------------------------------------')
+    print("COUNTING HIT RATE: {:.3f} kHz".format((n_l+n_r)/10.0/1000.))
+    print('-------------------------------------------------')
 
 
 def load_hist(hist_fpath, fname):
@@ -477,7 +480,7 @@ def read_vepp4_stap():
     path2stap = '/mnt/vepp4/kadrs/stap.dat'
     with open(path2stap, 'r', encoding='UTF-8') as stap:
         lines = stap.readlines()
-        if len(lines) > 0:
+        if len(lines) > 13:
             vepp4E = float(lines[13])/100.
         else:
             print('ERROR: stap file is empty!')
@@ -504,31 +507,39 @@ def init_depol():
     print("Frequency step {:.3f} Hz".format(d.get_step()))
     print("Initial frequency {:.3f} Hz".format(d.get_initial()))
     print("State: ",d.get_state())
-    d.start_fmap()
+    #d.start_fmap()
     return d
 
 def get_depol_params(device, fname):
-    ts = datetime.strptime(fname[:19], "%Y-%m-%dT%H:%M:%S").timestamp()
-    fmap = device.get_fmap()
-    
-    depol_pair = []
-    if len(fmap) > 0:
-        idx = -1
-        for i, depol_pair in enumerate(fmap):
-            #print(datetime.fromtimestamp(depol_pair[0]*1e-9), depol_pair[0]*1e-9)
-            if (depol_pair[0]*1e-9 - ts) > 0:
-                idx = i
-                break
-        if idx >= 0:
-            depol_pair = fmap[idx]
-        else:
-            print('No frequency for corresponding time found!')
-    att = float(device.get_attenuation())
-    fspeed = float(device.get_speed())
-    if len(depol_pair):
-        return [depol_pair[0], depol_pair[1], att, fspeed]
+    t = datetime.datetime.strptime(fname[:19], "%Y-%m-%dT%H:%M:%S").timestamp()
+    depol_state = device.get_frequency_by_time(t)
+    if len(depol_state) > 0:
+        state = depol_state[-1]
+        return [ (state.timestamp*1e-9), state.frequency, state.attenuation, state.speed ]
+
     else:
-        return [0, 0, fspeed, att]
+        return [0, 0, 0, 0]
+
+   # fmap = device.get_fmap()
+   # 
+   # depol_pair = []
+   # if len(fmap) > 0:
+   #     idx = -1
+   #     for i, depol_pair in enumerate(fmap):
+   #         #print(datetime.fromtimestamp(depol_pair[0]*1e-9), depol_pair[0]*1e-9)
+   #         if (depol_pair[0]*1e-9 - ts) > 0:
+   #             idx = i
+   #             break
+   #     if idx >= 0:
+   #         depol_pair = fmap[idx]
+   #     else:
+   #         print('No frequency for corresponding time found!')
+   # att = float(device.get_attenuation())
+   # fspeed = float(device.get_speed())
+   # if len(depol_pair):
+   #     return [depol_pair[0], depol_pair[1], att, fspeed]
+    #else:
+   #     return [0, 0, fspeed, att]
         
 def guess_real_energy(v4E, vepp4H_nmr):
     v4E_nmr = 1.04277*vepp4H_nmr
