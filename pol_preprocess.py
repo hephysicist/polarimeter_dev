@@ -133,76 +133,76 @@ def preprocess_single_file(config, f_name, env_params, fig, ax ):
                 fig.canvas.draw_idle()
                 plt.pause(0.1)
 
-def preprocess(config, regex_line, offline = False):
-    bin_fpath = config['bin_fpath']
-    raw_fpath = config['raw_fpath']
-    save_raw = config['preprocess']['save_raw_file']
-    amp_cut = config['preprocess']['amp_cut'] 
-    zone_id = config['zone_id'] 
-    hist_fpath = config['hist_fpath']
-    attempt_count = 0
-    fig, ax = init_monitor_figure()
-    plt.draw()
-    f_name_old = '' 
-    file_arr = np.sort(np.array(glob.glob1(bin_fpath , regex_line)))
-    print(file_arr)
-    if offline:
-        f_name = file_arr[0]
-        vepp4E = float(input('Enter VEPP4 energy [MeV]: '))
-        vepp4H_nmr = float(input('Enter VEPP4 H field [Gauss]: '))
-        env_params = { 'vepp4E':vepp4E, 
-                       'vepp4H_nmr':vepp4H_nmr}
-    else:
-        while len(file_arr) < 2:
-            time.sleep(10)
-            file_arr = np.sort(np.array(glob.glob1(bin_fpath , regex_line)))
-        f_name = file_arr[-2]
-        if config['preprocess']['use_depolarizer']:
-            depol_device = init_depol()
-    file_count = 0
-    dfreq = np.zeros(2)
-    try:
-        while (file_count < np.shape(file_arr)[0] and offline) or (not offline):
-            if(f_name_old != f_name):
-                tbegin=time.time()
-                if not offline:
-                     vepp4E = read_vepp4_stap()
-                     buf_list = get_par_from_file('/mnt/vepp4/kadrs/nmr.dat', par_id_arr = [1])
-                     vepp4H_nmr = float(buf_list[0])
-                     real_E = guess_real_energy(vepp4E, vepp4H_nmr)
-                     env_params = { 'vepp4E':vepp4E, 
-                                    'vepp4H_nmr':vepp4H_nmr,
-                                    'real_E': real_E}
-
-                if config['preprocess']['use_depolarizer']:
-                    [dtime, dfreq, att, fspeed] = get_depol_params(depol_device, f_name)
-                    env_params['dfreq'] = dfreq
-                    env_params['att']   = att
-                    env_params['fspeed']   = fspeed
-                else:
-                    env_params['dfreq'] = 0
-                    env_params['att']   = 0
-                    env_params['fspeed']= 0
-                print(env_params)
-                preprocess_single_file(config, f_name, env_params, fig, ax)
-                f_name_old = f_name
-                attempt_count = 0
-                file_count +=1
-                tend=time.time()
-                print("Time for proceeding single file is: ", tend-tbegin, " second")
-            else:
-                time.sleep(1)
-                attempt_count +=1
-                print('Waiting for the new file: {:3d} seconds passed'.format(attempt_count), end= '\r')
-           
-            file_arr = np.sort(np.array(glob.glob1(bin_fpath , regex_line)))
-            if offline:
-                f_name = file_arr[file_count]
-            else:
-                f_name = file_arr[-2]
-    except KeyboardInterrupt:
-        print('\n***Exiting online preprocessing***')
-        pass
+#def preprocess(config, regex_line, offline = False):
+#    bin_fpath = config['bin_fpath']
+#    raw_fpath = config['raw_fpath']
+#    save_raw = config['preprocess']['save_raw_file']
+#    amp_cut = config['preprocess']['amp_cut'] 
+#    zone_id = config['zone_id'] 
+#    hist_fpath = config['hist_fpath']
+#    attempt_count = 0
+#    fig, ax = init_monitor_figure()
+#    plt.draw()
+#    f_name_old = '' 
+#    file_arr = np.sort(np.array(glob.glob1(bin_fpath , regex_line)))
+#    print(file_arr)
+#    if offline:
+#        f_name = file_arr[0]
+#        vepp4E = float(input('Enter VEPP4 energy [MeV]: '))
+#        vepp4H_nmr = float(input('Enter VEPP4 H field [Gauss]: '))
+#        env_params = { 'vepp4E':vepp4E, 
+#                       'vepp4H_nmr':vepp4H_nmr}
+#    else:
+#        while len(file_arr) < 2:
+#            time.sleep(10)
+#            file_arr = np.sort(np.array(glob.glob1(bin_fpath , regex_line)))
+#        f_name = file_arr[-2]
+#        if config['preprocess']['use_depolarizer']:
+#            depol_device = init_depol()
+#    file_count = 0
+#    dfreq = np.zeros(2)
+#    try:
+#        while (file_count < np.shape(file_arr)[0] and offline) or (not offline):
+#            if(f_name_old != f_name):
+#                tbegin=time.time()
+#                if not offline:
+#                     vepp4E = read_vepp4_stap()
+#                     buf_list = get_par_from_file('/mnt/vepp4/kadrs/nmr.dat', par_id_arr = [1])
+#                     vepp4H_nmr = float(buf_list[0])
+#                     real_E = guess_real_energy(vepp4E, vepp4H_nmr)
+#                     env_params = { 'vepp4E':vepp4E, 
+#                                    'vepp4H_nmr':vepp4H_nmr,
+#                                    'real_E': real_E}
+#
+#                if config['preprocess']['use_depolarizer']:
+#                    [dtime, dfreq, att, fspeed] = get_depol_params(depol_device, f_name)
+#                    env_params['dfreq'] = dfreq
+#                    env_params['att']   = att
+#                    env_params['fspeed']   = fspeed
+#                else:
+#                    env_params['dfreq'] = 0
+#                    env_params['att']   = 0
+#                    env_params['fspeed']= 0
+#                print(env_params)
+#                preprocess_single_file(config, f_name, env_params, fig, ax)
+#                f_name_old = f_name
+#                attempt_count = 0
+#                file_count +=1
+#                tend=time.time()
+#                print("Time for proceeding single file is: ", tend-tbegin, " second")
+#            else:
+#                time.sleep(1)
+#                attempt_count +=1
+#                print('Waiting for the new file: {:3d} seconds passed'.format(attempt_count), end= '\r')
+#           
+#            file_arr = np.sort(np.array(glob.glob1(bin_fpath , regex_line)))
+#            if offline:
+#                f_name = file_arr[file_count]
+#            else:
+#                f_name = file_arr[-2]
+#    except KeyboardInterrupt:
+#        print('\n***Exiting online preprocessing***')
+#        pass
 
 
 class ProcessNewFile(pyinotify.ProcessEvent):
@@ -210,6 +210,7 @@ class ProcessNewFile(pyinotify.ProcessEvent):
         self.config = config
         self.fig, self.ax = init_monitor_figure()
         plt.draw()
+        self.proceeded_files = []
         if self.config['preprocess']['use_depolarizer']:
             self.depol_device = init_depol()
     
@@ -233,6 +234,16 @@ class ProcessNewFile(pyinotify.ProcessEvent):
             env_params['fspeed']= 0
         print(env_params)
         preprocess_single_file(self.config, f_name, env_params, self.fig, self.ax)
+        self.proceeded_files.append(self.config['bin_fpath']+f_name)
+        max_number_of_proceeded_files_keep = 100
+        for i in range(0,len(self.proceeded_files)- max_number_of_proceeded_files_keep):
+            filename = self.proceeded_files[0]
+            try:
+                print("Remove proceeded file: ", filename)
+                os.remove(filename)
+                self.proceeded_files.pop(0)
+            except:
+                print("Unable to remove file: ", filename)
 
 
 
@@ -263,8 +274,8 @@ def main():
             else:
                 regex_line = str(config['regex_line'])
 
-            preprocess(config, config['regex_line'], args.offline) 
-#            online_preprocess(config)
+#            preprocess(config, config['regex_line'], args.offline) 
+            online_preprocess(config)
 
 if __name__ == '__main__':
     main()

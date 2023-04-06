@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto2',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x18\x44\x65polarizerMessage.proto\"\xd7\x06\n\x12\x44\x65polarizerMessage\x12\n\n\x02id\x18\x01 \x02(\r\x12\x11\n\ttimestamp\x18\x02 \x02(\x03\x12\x12\n\nrespond_id\x18\x03 \x01(\r\x12\x19\n\x11respond_timestamp\x18\x04 \x01(\x03\x12,\n\x07\x63ommand\x18\x05 \x02(\x0e\x32\x1b.DepolarizerMessage.Command\x12/\n\tdata_type\x18\x06 \x01(\x0e\x32\x1c.DepolarizerMessage.DataType\x12\x0c\n\x04\x64\x61ta\x18\x07 \x01(\x01\x12\r\n\x05state\x18\x08 \x01(\r\x12\x0f\n\x07\x63omment\x18\t \x01(\t\x12.\n\x04\x66map\x18\n \x01(\x0b\x32 .DepolarizerMessage.FrequencyMap\x12\x11\n\x06status\x18\x0b \x01(\r:\x01\x30\x1aV\n\tFrequency\x12\x11\n\ttimestamp\x18\x01 \x02(\x03\x12\x11\n\tfrequency\x18\x02 \x02(\x01\x12\x0e\n\x06\x65nergy\x18\x03 \x01(\x01\x12\x13\n\x0b\x61ttenuation\x18\x04 \x01(\x01\x1a@\n\x0c\x46requencyMap\x12\x30\n\tfrequency\x18\x01 \x03(\x0b\x32\x1d.DepolarizerMessage.Frequency\"n\n\x07\x43ommand\x12\x07\n\x03GET\x10\x00\x12\x07\n\x03SET\x10\x01\x12\t\n\x05START\x10\x02\x12\x08\n\x04STOP\x10\x03\x12\t\n\x05PAUSE\x10\x04\x12\x0c\n\x08\x43ONTINUE\x10\x05\x12\x08\n\x04INFO\x10\x06\x12\x0b\n\x07TURN_ON\x10\x07\x12\x0c\n\x08TURN_OFF\x10\x08\"\xdf\x01\n\x08\x44\x61taType\x12\x0b\n\x07\x43URRENT\x10\x00\x12\x0b\n\x07INITIAL\x10\x01\x12\t\n\x05\x46INAL\x10\x02\x12\t\n\x05SPEED\x10\x03\x12\x08\n\x04STEP\x10\x04\x12\x0f\n\x0b\x41TTENUATION\x10\x05\x12\x13\n\x0fHARMONIC_NUMBER\x10\x06\x12\n\n\x06STATUS\x10\x07\x12\x18\n\x14REVOLUTION_FREQUENCY\x10\x08\x12\t\n\x05STATE\x10\t\x12\t\n\x05WIDTH\x10\n\x12\r\n\tFREQUENCY\x10\x0b\x12\x08\n\x04\x46MAP\x10\x0c\x12\r\n\tGENERATOR\x10\r\x12\x0f\n\x0b\x44\x45POLARIZER\x10\x0e\"7\n\x05\x45rror\x12\x06\n\x02OK\x10\x00\x12\x13\n\x0fUNKNOWN_COMMAND\x10\x01\x12\x11\n\rBAD_GENERATOR\x10\x02'
+  serialized_pb=b'\n\x18\x44\x65polarizerMessage.proto\"\xdc\x07\n\x12\x44\x65polarizerMessage\x12\n\n\x02id\x18\x01 \x02(\r\x12\x11\n\ttimestamp\x18\x02 \x02(\x03\x12\x12\n\nrespond_id\x18\x03 \x01(\r\x12\x19\n\x11respond_timestamp\x18\x04 \x01(\x03\x12,\n\x07\x63ommand\x18\x05 \x02(\x0e\x32\x1b.DepolarizerMessage.Command\x12/\n\tdata_type\x18\x06 \x01(\x0e\x32\x1c.DepolarizerMessage.DataType\x12\x0c\n\x04\x64\x61ta\x18\x07 \x01(\x01\x12\r\n\x05state\x18\x08 \x01(\r\x12\x0f\n\x07\x63omment\x18\t \x01(\t\x12.\n\x04\x66map\x18\n \x01(\x0b\x32 .DepolarizerMessage.FrequencyMap\x12\x11\n\x06status\x18\x0b \x01(\r:\x01\x30\x1a\xa9\x01\n\tFrequency\x12\x11\n\ttimestamp\x18\x01 \x02(\x03\x12\x0c\n\x04ison\x18\x02 \x01(\x08\x12\x0e\n\x06isscan\x18\x03 \x01(\x08\x12\x17\n\x0fharmonic_number\x18\x04 \x01(\x05\x12\x11\n\tfrequency\x18\x05 \x01(\x01\x12\r\n\x05speed\x18\x06 \x01(\x01\x12\x0c\n\x04step\x18\x07 \x01(\x01\x12\r\n\x05width\x18\x08 \x01(\x01\x12\x13\n\x0b\x61ttenuation\x18\t \x01(\x01\x1a@\n\x0c\x46requencyMap\x12\x30\n\tfrequency\x18\x01 \x03(\x0b\x32\x1d.DepolarizerMessage.Frequency\"n\n\x07\x43ommand\x12\x07\n\x03GET\x10\x00\x12\x07\n\x03SET\x10\x01\x12\t\n\x05START\x10\x02\x12\x08\n\x04STOP\x10\x03\x12\t\n\x05PAUSE\x10\x04\x12\x0c\n\x08\x43ONTINUE\x10\x05\x12\x08\n\x04INFO\x10\x06\x12\x0b\n\x07TURN_ON\x10\x07\x12\x0c\n\x08TURN_OFF\x10\x08\"\x90\x02\n\x08\x44\x61taType\x12\x0b\n\x07\x43URRENT\x10\x00\x12\x0b\n\x07INITIAL\x10\x01\x12\t\n\x05\x46INAL\x10\x02\x12\t\n\x05SPEED\x10\x03\x12\x08\n\x04STEP\x10\x04\x12\x0f\n\x0b\x41TTENUATION\x10\x05\x12\x13\n\x0fHARMONIC_NUMBER\x10\x06\x12\n\n\x06STATUS\x10\x07\x12\x18\n\x14REVOLUTION_FREQUENCY\x10\x08\x12\t\n\x05STATE\x10\t\x12\t\n\x05WIDTH\x10\n\x12\r\n\tFREQUENCY\x10\x0b\x12\x08\n\x04\x46MAP\x10\x0c\x12\r\n\tGENERATOR\x10\r\x12\x0f\n\x0b\x44\x45POLARIZER\x10\x0e\x12\t\n\x05\x44\x45LAY\x10\x0f\x12\x15\n\x11\x46REQUENCY_BY_TIME\x10\x10\x12\r\n\tLOG_LEVEL\x10\x11\"7\n\x05\x45rror\x12\x06\n\x02OK\x10\x00\x12\x13\n\x0fUNKNOWN_COMMAND\x10\x01\x12\x11\n\rBAD_GENERATOR\x10\x02'
 )
 
 
@@ -79,8 +79,8 @@ _DEPOLARIZERMESSAGE_COMMAND = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=491,
-  serialized_end=601,
+  serialized_start=575,
+  serialized_end=685,
 )
 _sym_db.RegisterEnumDescriptor(_DEPOLARIZERMESSAGE_COMMAND)
 
@@ -166,11 +166,26 @@ _DEPOLARIZERMESSAGE_DATATYPE = _descriptor.EnumDescriptor(
       serialized_options=None,
       type=None,
       create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='DELAY', index=15, number=15,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='FREQUENCY_BY_TIME', index=16, number=16,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='LOG_LEVEL', index=17, number=17,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=604,
-  serialized_end=827,
+  serialized_start=688,
+  serialized_end=960,
 )
 _sym_db.RegisterEnumDescriptor(_DEPOLARIZERMESSAGE_DATATYPE)
 
@@ -199,8 +214,8 @@ _DEPOLARIZERMESSAGE_ERROR = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=829,
-  serialized_end=884,
+  serialized_start=962,
+  serialized_end=1017,
 )
 _sym_db.RegisterEnumDescriptor(_DEPOLARIZERMESSAGE_ERROR)
 
@@ -221,22 +236,57 @@ _DEPOLARIZERMESSAGE_FREQUENCY = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
-      name='frequency', full_name='DepolarizerMessage.Frequency.frequency', index=1,
-      number=2, type=1, cpp_type=5, label=2,
+      name='ison', full_name='DepolarizerMessage.Frequency.ison', index=1,
+      number=2, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='isscan', full_name='DepolarizerMessage.Frequency.isscan', index=2,
+      number=3, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='harmonic_number', full_name='DepolarizerMessage.Frequency.harmonic_number', index=3,
+      number=4, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='frequency', full_name='DepolarizerMessage.Frequency.frequency', index=4,
+      number=5, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
-      name='energy', full_name='DepolarizerMessage.Frequency.energy', index=2,
-      number=3, type=1, cpp_type=5, label=1,
+      name='speed', full_name='DepolarizerMessage.Frequency.speed', index=5,
+      number=6, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
-      name='attenuation', full_name='DepolarizerMessage.Frequency.attenuation', index=3,
-      number=4, type=1, cpp_type=5, label=1,
+      name='step', full_name='DepolarizerMessage.Frequency.step', index=6,
+      number=7, type=1, cpp_type=5, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='width', full_name='DepolarizerMessage.Frequency.width', index=7,
+      number=8, type=1, cpp_type=5, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='attenuation', full_name='DepolarizerMessage.Frequency.attenuation', index=8,
+      number=9, type=1, cpp_type=5, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -253,8 +303,8 @@ _DEPOLARIZERMESSAGE_FREQUENCY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=337,
-  serialized_end=423,
+  serialized_start=338,
+  serialized_end=507,
 )
 
 _DEPOLARIZERMESSAGE_FREQUENCYMAP = _descriptor.Descriptor(
@@ -284,8 +334,8 @@ _DEPOLARIZERMESSAGE_FREQUENCYMAP = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=425,
-  serialized_end=489,
+  serialized_start=509,
+  serialized_end=573,
 )
 
 _DEPOLARIZERMESSAGE = _descriptor.Descriptor(
@@ -389,7 +439,7 @@ _DEPOLARIZERMESSAGE = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=29,
-  serialized_end=884,
+  serialized_end=1017,
 )
 
 _DEPOLARIZERMESSAGE_FREQUENCY.containing_type = _DEPOLARIZERMESSAGE
