@@ -463,7 +463,7 @@ class FitMethod3:
 
         self.minuit.strategy=2
         self.minuit.fixed['k']=True
-        migrad(0.1e-4,0.0)
+        migrad(0.2e-4,0.0)
 
 
         self.minuit.hesse()
