@@ -22,7 +22,7 @@ mask:
 
 model_params:  
     E       : [0.0,     0.0,    [0.0, 10000],    True] #MeV #the value will be taken from data of pol_preprocess or from command line
-    L       : [38300.0, 2000,   [0.0, 100000],  False] #mm
+    L       : [29900.0, 2000,   [0.0, 100000],  False] #mm
     P       : [0.0,     0.0,    [-2.0, 2.0],    False]  # beam polarization degree
     V       : [0.0,     0.0,    [-1.0, 1.0],    True]  # if V=0.0 then V is calculated from Q: V=sqrt(1-Q^2), if abs(V)>=0.00001 then V is fixed to unit: V=1
     Q       : [0.0,     0.2,    [-1.0, 1.0],    False]  # linear polarization
@@ -33,7 +33,7 @@ model_params:
     sy      : [1.29,    1.0,    [0.1, 5.0],     True] #mm 
     ey      : [32.,     1.,     [1, 1000],      True]
     ex      : [20.,     1.,     [1, 1000],      True]
-    k       : [5.e-4,   1.0e-5, [0, 1.],        True]
+    k       : [7.e-4,   1.0e-5, [0, 1.],        True]
     eps     : [1.0e-12, 1.0e-12,[0, 1.],        True]
     psum    : [0.0,     '*',    '*',              True]
  
