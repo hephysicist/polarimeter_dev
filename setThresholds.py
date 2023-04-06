@@ -48,7 +48,7 @@ with xmlrpc.client.ServerProxy("http://de10_nano:8080/RPC2") as proxy:
     #bad_channels = [640,258,32,834, 1025, 1026,1048,1052,672]
     #bad_channels = [833,832,192,769,193,1,641,129,1025, 672, 743, 674]
     #bad_channels = [1052,1051,348,347,1100,260,833,832,192,769,193,1058] #2022-1012
-    bad_channels = [1052,1051,1100,347,348,260,832, 833,192,193,769,1,129] #2023-03-09
+    bad_channels = [1052,1051,1100,347,348,260,832, 833,192,193,769,1,129,899,898,386] #2023-03-09
     for chan, threshold in enumerate([int(i) for i in thresholds]):
         chan = (chan + 640)%1280 # Legacy
         mask = (1 << SPI_RANGE[ int(chan/128) ])
