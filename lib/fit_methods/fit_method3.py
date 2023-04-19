@@ -279,9 +279,21 @@ class FitMethod3:
         DL = self.data_left/NL
         DR = self.data_right/NR
 
-        data_diff_error2 = 4.0*( CB1**2 * (DL+DR) + CB0**2 * ( Left*DL**2 + Right*DR**2)/D0**2  - 2.0*CB1*CB0*( DL**2 * NL - DR**2 * NR)/D0 )
+        data_diff_error2 = np.abs(4.0*( CB1**2 * (DL+DR) + CB0**2 * ( Left*DL**2 + Right*DR**2)/D0**2  - 2.0*CB1*CB0*( DL**2 * NL - DR**2 * NR)/D0 ))
 
-        self.data_diff_error = np.sqrt(data_diff_error2)
+        #print( "D0=", D0)
+        #print( "DL=", DL)
+        #print( "DR=", DR)
+        #print( "CB1=", CB1)
+        #print( "CB0=", CB0)
+        #print( "Left=", Left)
+        #print( "Right=", Right)
+        #print( "data_diff_error2=", data_diff_error2)
+
+
+
+        #self.data_diff_error = np.sqrt(data_diff_error2)
+        self.data_diff_error = x
 
         chi2_diff  = self.calc_chi2( self.data_diff ,  self.fit_diff, self.data_diff_error)   
 
@@ -379,6 +391,7 @@ class FitMethod3:
         #data_field_dict['data_diff'].palette=plt.cm.magma
         #data_field_dict['data_diff'].palette=plt.cm.coolwarm
         #data_field_dict['data_diff'].palette=plt.cm.PRGn
+        print ( data_field_dict['data_diff_py'].data_err )
         return data_field_dict
 
     def fixpar(self, parname, value):
