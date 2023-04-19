@@ -252,6 +252,7 @@ def online_preprocess(config):
     wm.add_watch(config['bin_fpath'], pyinotify.IN_CLOSE_WRITE, rec=True)
     new_file_handler = ProcessNewFile(config)
     notifier = pyinotify.Notifier(wm, new_file_handler)
+    print("Waiting new data files in ", config['bin_fpath'], '...')
     notifier.loop()
 
 def main():
@@ -274,7 +275,6 @@ def main():
             else:
                 regex_line = str(config['regex_line'])
 
-#            preprocess(config, config['regex_line'], args.offline) 
             online_preprocess(config)
 
 if __name__ == '__main__':

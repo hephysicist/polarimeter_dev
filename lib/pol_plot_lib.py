@@ -167,12 +167,12 @@ def draw_ch_numbers(ax, config):
                             fontsize=6)
    
 def init_figure(label): 
-        fig = plt.figure(figsize=(20, 8))
+        fig = plt.figure(figsize=(16, 8))
         fig.canvas.set_window_title(label)
         fig.set_tight_layout(True)
         fig.tight_layout(rect=[0, 0, 1, 1])
         #gs0 = gridspec.GridSpec(1, 2, figure=fig)
-        gs0 = gridspec.GridSpec(1, 4, figure=fig, width_ratios = [1,2,2,2])
+        gs0 = gridspec.GridSpec(1, 3, figure=fig, width_ratios = [1,2,2])
 
         ax00 = fig.add_subplot(gs0[0]) #0
 
@@ -197,13 +197,13 @@ def init_figure(label):
 
         ax = [ax00, ax01,ax02, ax03, ax04, ax11, ax12, ax13, ax14]
 
-        gs20 = gridspec.GridSpecFromSubplotSpec(4, 1, subplot_spec=gs0[3], height_ratios = [1,1,1,1])
-        ax21 = fig.add_subplot(gs20[0,:]) #9
-        ax22 = fig.add_subplot(gs20[1,:]) #10
-        ax23 = fig.add_subplot(gs20[2,:]) #11
-        ax24 = fig.add_subplot(gs20[3,:]) #12
+        #gs20 = gridspec.GridSpecFromSubplotSpec(4, 1, subplot_spec=gs0[3], height_ratios = [1,1,1,1])
+        #ax21 = fig.add_subplot(gs20[0,:]) #9
+        #ax22 = fig.add_subplot(gs20[1,:]) #10
+        #ax23 = fig.add_subplot(gs20[2,:]) #11
+        #ax24 = fig.add_subplot(gs20[3,:]) #12
 
-        ax = ax + [ax21,ax22,ax23,ax24]
+        #ax = ax + [ax21,ax22,ax23,ax24]
 
         return fig, ax
         

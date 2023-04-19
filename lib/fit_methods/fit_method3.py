@@ -352,10 +352,6 @@ class FitMethod3:
             data_field_dict[field_name+'_py'] = data_field( [None, grids['yc']], this_data_y, this_data_y_error, label= field_name+'_py', data_type = this_data_type)
 
 
-        #data_field_dict['fit_sum_px']  = data_field([grids['xc'], None], np.sum(self.fit_sum, axis=0), None, label='fit_sum_px', data_type = "fit")
-        #data_field_dict['fit_sum_py']  = data_field([None, grids['yc']], np.sum(self.fit_sum, axis=1), None, label='fit_sum_py', data_type = "fit")
-
-
         data_field_dict['beam_shape']  = data_field( coors,  self.beam_shape, data_err = None, label='Reconstructed beam shape', data_type='dat')
         data_field_dict['beam_shape'].interpolation='bicubic'
         data_field_dict['beam_shape'].palette=plt.cm.magma

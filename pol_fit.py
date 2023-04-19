@@ -77,9 +77,9 @@ def show_res(fitter, data_fields, ax, time):
     show('data_diff'    , 7)
     show('fit_diff'     , 8)
 
-    show('beam_shape'   , 9)
-    show('efficiency'   , 10)
-    show('remains'      , 11)
+    #show('beam_shape'   , 9)
+    #show('efficiency'   , 10)
+    #show('remains'      , 11)
 
     remaining_figure_list = list(set(total_figure_list).difference(set(main_figure_list)))
 
@@ -260,7 +260,7 @@ def get_unixtime_smart(time_string, fix_future=False):
 
     for time_format in ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d", "%H:%M:%S", "%H:%M"]:
         try:
-            t = datetime.strptime(time_string, time_format)
+            t = datetime.datetime.strptime(time_string, time_format)
             if time_format ==  "%H:%M:%S" or time_format == "%H:%M":
                 t = from_today(t)
             break
@@ -268,7 +268,7 @@ def get_unixtime_smart(time_string, fix_future=False):
             if time_format == "%H:%M":
                 print("pol_fit: ERROR: Unable to parse time: ", time_string)
                 exit(1)
-    return datetime.timestamp(t)
+    return datetime.datetime.timestamp(t)
 
 def save_png_figure(config, fig , timestamp):
     if config['figsave']:
@@ -336,7 +336,8 @@ def accum_data_and_make_fit(config, start_time, stop_time):
                     fig, ax = init_figure('Laser Polarimeter 2D Fit')
                 remaining_figure_list = show_res(fitter, data_fields, ax, file_buffer[0])
 
-                if len(remaining_figure_list)>0:
+
+                if config['draw_additional_figures'] and len(remaining_figure_list)>0:
                     if not INIT_ADD_FIGURES:
                         INIT_ADD_FIGURES = True
                         fig1, ax1 = init_figure_gen('Laser Polarimeter additional plots', data_fields)
@@ -385,6 +386,7 @@ def main():
     parser.add_argument('-i', help='Interactive mode',action='store_true')
     parser.add_argument('--nonstop', help='Non Interactive mode',action='store_true')
     parser.add_argument('--figsave', help='save figures into dir')
+    parser.add_argument('--draw-additional-figures', help='Draw additional figures', action='store_true')
 
 
     args = parser.parse_args()
@@ -431,6 +433,11 @@ def main():
                 config['figsave'] = True
             else:
                 config['figsave'] = False
+
+            if args.draw_additional_figures:
+                config['draw_additional_figures'] = True
+            else:
+                config['draw_additional_figures'] = False
 
 
         except yaml.YAMLError as exc:
