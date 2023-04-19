@@ -232,7 +232,7 @@ def init_figure_gen(label, data_fields):
             break
     return fig, ax
         
-def print_fit_results(ax, fitter, time):
+def print_fit_results(ax, fitter, begintime, endtime):
     minuit = fitter.minuit
     ax.set_title('Fit results (fit method {})'.format(fitter.fit_method))
     ax.set(xlim=(0., 1.25), ylim=(-0.25, 1.25), xticks=[], yticks=[])
@@ -243,7 +243,10 @@ def print_fit_results(ax, fitter, time):
     x = -0.2
     y = 1.1
     chi2ndf = "chi2/ndf = {0:.{1}f}/{2} = {3:.{4}f}".format(fitter.chi2, 0 if fitter.chi2 > 10 else 2, fitter.ndf, fitter.chi2/fitter.ndf, 1 if fitter.chi2/fitter.ndf>10 else 2 )
-    ax.text(x, y+lc, time[:19], size=14, ha='left', va='center', color='black')
+    #ax.text(x, y+lc, time[:19], size=14, ha='left', va='center', color='black')
+    ax.text(x, y+lc, "{:<6} {:21}".format("begin:", begintime), size=14, ha='left', va='center', color='black')
+    lc -= line_size
+    ax.text(x, y+lc, "{:<6} {:21}".format("end:", endtime), size=14, ha='left', va='center', color='black')
     lc -= line_size
     ax.text(x, y+lc, chi2ndf, size=14, ha='left', va='center', color='black')
     lc -= line_size

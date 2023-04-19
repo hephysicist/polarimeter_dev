@@ -47,7 +47,7 @@ def make_fit(config, h_dict):
     return fm, data_fields
 
 
-def show_res(fitter, data_fields, ax, time):
+def show_res(fitter, data_fields, ax, begintime,endtime):
     for the_ax in ax:
         the_ax.cla()
 
@@ -61,7 +61,7 @@ def show_res(fitter, data_fields, ax, time):
         except KeyError: 
             pass
 
-    print_fit_results(ax[0], fitter, time)
+    print_fit_results(ax[0], fitter, begintime,endtime)
 
     show('data_sum_py'  , 1)
     show('fit_sum_py'   , 1)
@@ -283,6 +283,9 @@ def save_png_figure(config, fig , timestamp):
             print('pol_fit.py: ERROR: Saving figure:  "{}" is not directory!'.format(config['savedir']))
 
     
+def unx2str(unixtime):
+    return datetime.datetime.fromtimestamp(unixtime).strftime('%Y-%m-%d %H:%M:%S')
+
 def accum_data_and_make_fit(config, start_time, stop_time):
     vepp4E = config['model_params']['E'][0]
     hist_fpath = config['hist_fpath']
@@ -334,7 +337,9 @@ def accum_data_and_make_fit(config, start_time, stop_time):
                 if not INIT_FIGURES:
                     INIT_FIGURES = True
                     fig, ax = init_figure('Laser Polarimeter 2D Fit')
-                remaining_figure_list = show_res(fitter, data_fields, ax, file_buffer[0])
+                begintime=get_unix_time(file_buffer[0])
+                endtime=get_unix_time(file_buffer[-1])
+                remaining_figure_list = show_res(fitter, data_fields, ax, unx2str(begintime),unx2str(endtime) )
 
 
                 if config['draw_additional_figures'] and len(remaining_figure_list)>0:
