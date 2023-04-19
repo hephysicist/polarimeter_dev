@@ -58,8 +58,8 @@ class Db_obj:
                 lst.append( ("endtime", time.strftime("'%Y-%m-%d %H:%M:%S'", time.localtime(self.endtime)) ))
                 lst.append( ("measuretime", "{:4f}".format(self.measuretime)) )
                 lst.append( ("eset", "{:.2f}".format(self.Eset)) )
-                lst.append( ("fdep", "{:.6f}".format(self.Fdep)) )
-                lst.append( ("edep", "{:.6f}".format(self.Edep)) )
+                lst.append( ("fdep", "{:.9f}".format(self.Fdep)) )
+                lst.append( ("edep", "{:.9f}".format(self.Edep)) )
                 lst.append( ("adep", "{:.1f}".format(self.Adep)) )
                 lst.append( ("fspeed", "{:.6f}".format(self.Fspeed)) )
                 lst.append( ("h", "{:.6f}".format(self.H)) )
@@ -113,7 +113,7 @@ class Db_obj:
                     if i < len(lst) - 1: query +=","
                 query += ") VALUES ("
                 for i in range(0, len(lst) ):
-                    if lst[i][1] != 'nan':
+                    if lst[i][1] != 'nan' and  lst[i][1] != 'NAN':
                         query += lst[i][1]
                     else:
                         query += "-9999"
