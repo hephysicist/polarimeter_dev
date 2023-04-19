@@ -28,8 +28,8 @@ class data_field:
         self.interpolation = 'none'
         self.palette = plt.cm.viridis
         
-    def make_projection(self, axis, his, his_error):
-        return np.sum( his, axis = axis),  np.sqrt( np.sum(his_error**2, axis=axis) )
+    #def make_projection(self, axis, his, his_error):
+    #    return np.sum( his, axis = axis),  np.sqrt( np.sum(his_error**2, axis=axis) )
         
     def draw_profilex(self, ax):
         x = (self.x[1:]+self.x[:-1])/2
