@@ -17,12 +17,12 @@ from pol_plot_lib import init_monitor_figure, plot_hitmap, draw_ch_numbers
 import pyinotify
 
 def get_evt_arr(in_fpath, out_fpath, f_name,amp_cut, save_raw=False):
-    print('Reading file: ', f_name,'...')
     t0 = time.time()
+    print('Reading file: ', f_name,'...', end=' ')
     raw_evt_arr = load_events(in_fpath+f_name)
-    print("load_events time: ", time.time() - t0, "s")
-    print('Uploaded '+str(np.shape(raw_evt_arr)[0])+' raw events')
-    print('Preprocessing...')
+    print(" ({:.3f}ms) ".format((time.time() - t0)*1000))
+    print('Uploaded '+str(np.shape(raw_evt_arr)[0])+' words')
+    print('Applying amplitude cut > {} ... '.format(amp_cut), end=' ')
 #    raw_evt_arr = raw_evt_arr[raw_evt_arr[:,1]>0,:] #get rid of trigger events
     evt_arr = raw_evt_arr[raw_evt_arr[:,1]>amp_cut,:] # amplitude cut 5.1 sec
 
@@ -41,15 +41,16 @@ def get_evt_arr(in_fpath, out_fpath, f_name,amp_cut, save_raw=False):
     n_evt = np.shape(evt_arr)[0]
     #print(np.min(evt_arr), np.max(evt_arr))
     if  n_evt:
-        print('Preprocessed '+str(n_evt)+' raw events')
+        print('selected '+str(n_evt)+' hits')
         if save_raw:
             np.savez(out_fpath+f_name[:19], evt_arr = evt_arr)
-            print('Saved raw events to file: ' + str(f_name[:19])+'.npz')
+            print('Saved hits to file: ' + str(f_name[:19])+'.npz')
     else:
         print('No events found after preselection!\t'+str(f_name[:19])+'.npz')        
     return evt_arr
 
 def map_events(evt_arr, zone_id):
+    t0 = time.time()
     max_ch = 0
     max_val = -1
     cut = evt_arr[:,3]==2 #Choose only second frame 
@@ -78,7 +79,7 @@ def map_events(evt_arr, zone_id):
             if max_val < (ch_id_hist_l[ch_id_c] + ch_id_hist_r[ch_id_c])/2.:
                 max_val = (ch_id_hist_l[ch_id_c] + ch_id_hist_r[ch_id_c])/2.
                 max_ch = ch_id_c
-    print('Channel with maximal load: ch={:4d}  n_evt={:5d}\n'.format(int((max_ch + 640)%1280),int(max_val)))
+    #print('Channel with maximal load: ch={:4d}  n_evt={:5d}'.format(int((max_ch + 640)%1280),int(max_val)))
     grid = get_coor_grid()
     h_dict = { 'hc_l': hist_c_l,
                 'hc_r' : hist_c_r,
@@ -88,9 +89,11 @@ def map_events(evt_arr, zone_id):
                 'ys' : grid['ys'],
                 'xc' : grid['xc'],
                 'yc' : grid['yc']}
+    print("map_events time: {:.3f}ms".format( time.time() - t0))
     return h_dict
 
 def save_mapped_hist(hist_fpath, h_dict, env_params, f_name):
+    t0 = time.time()
     if env_params['dfreq'] < 0:
         print('No scan is running! Depolarizer is OFF.')
     np.savez(hist_fpath+f_name[:19]+'_hist',
@@ -104,8 +107,9 @@ def save_mapped_hist(hist_fpath, h_dict, env_params, f_name):
             yc = h_dict['yc'],
             env_params=env_params)
 
-    print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
-    print('Saved mapped hist to the file: '+f_name[:19]+'_hist.npz\n')
+    #print('Evt l: ',sum(sum(h_dict['hc_l'])), 'Evt r: ', sum(sum(h_dict['hc_r'])))
+    print('{:─^95}'.format(''))
+    print('Saved mapped hist to the file: '+f_name[:19]+'_hist.npz', ' ( {:>.3f}ms )'.format( (time.time() - t0)*1e3))
 
 def preprocess_single_file(config, f_name, env_params, fig, ax ):
         t0 = time.time()
@@ -114,24 +118,26 @@ def preprocess_single_file(config, f_name, env_params, fig, ax ):
                                       f_name,
                                       config['preprocess']['amp_cut'],
                                       config['preprocess']['save_raw_file'] )
-        print("get_evt_arr time: ", time.time() - t0, "s")
+        print("get_evt_arr time: {:.3f}ms ".format( (time.time() - t0)*1e3))
         if np.shape(evt_arr)[0] != 0:
-            t0 = time.time()
             h_dict = map_events(evt_arr, config['zone_id'])
-            print("map_events time: ", time.time() - t0, "s")
             if config['preprocess']['impute_broken_ch']:
                 h_dict = impute_hist(config, h_dict)
+            print_stats(get_raw_stats(h_dict,1))
             save_mapped_hist(  config['hist_fpath'],
                                 h_dict,
                                 env_params,
                                 f_name) 
 
-            print_stats(get_raw_stats(h_dict))
             if config['preprocess']['draw']:
+                print("Drawing... ", end= '', flush = True)
+                t1 = time.time()
                 plot_hitmap(fig, ax, h_dict, f_name, block=False, norm=False)
                 draw_ch_numbers(ax[0], config)
                 fig.canvas.draw_idle()
                 plt.pause(0.1)
+                print("( {:.3f}ms )".format((time.time() - t1)*1e3))
+
 
 #def preprocess(config, regex_line, offline = False):
 #    bin_fpath = config['bin_fpath']
@@ -216,7 +222,7 @@ class ProcessNewFile(pyinotify.ProcessEvent):
     
     def process_IN_CLOSE_WRITE(self, event):
         f_name = os.path.basename(event.pathname)
-        print("CLOSE_WRITE event:", f_name)
+        #print("CLOSE_WRITE event:", f_name)
         vepp4E = read_vepp4_stap()
         buf_list = get_par_from_file('/mnt/vepp4/kadrs/nmr.dat', par_id_arr = [1])
         vepp4H_nmr = float(buf_list[0])
@@ -237,13 +243,13 @@ class ProcessNewFile(pyinotify.ProcessEvent):
         self.proceeded_files.append(self.config['bin_fpath']+f_name)
         max_number_of_proceeded_files_keep = 100
         for i in range(0,len(self.proceeded_files)- max_number_of_proceeded_files_keep):
-            filename = self.proceeded_files[0]
+            filename = self.proceeded_files.pop(0)
             try:
-                print("Remove proceeded file: ", filename)
+                #print("Remove proceeded file: ", filename)
                 os.remove(filename)
-                self.proceeded_files.pop(0)
             except:
                 print("Unable to remove file: ", filename)
+        print("Waiting new data files in ", self.config['bin_fpath'], '...')
 
 
 

@@ -261,7 +261,8 @@ def print_stats(stats):
     print('{:─^95}'.format("") )
     print('{:<20} {:>7} ± {:<7} {:^17} {:^17} {:^17}'.format("Event number", int(nl-nr), int(math.sqrt(nl+nr)), int(nl), int(nr), int(nl+nr) ))
     print('{:<20} {:>7.3} ± {:<7.3}%'.format("", (nl-nr)*2.0/(nl+nr)*100., math.sqrt(nl+nr)*2.0/(nl+nr)*100. ))
-    print('{:<20} {:>7.3f} ± {:<7.3f} {:>7.3f} ± {:<7.3f} {:>7.3f} ± {:<7.3f} kHz'.format("Hit rate [kHz]", 
+    print('{:<20} {:>7.3f} ± {:<7.3f} {:>7.3f} ± {:<7.3f} {:>7.3f} ± {:<7.3f} {:>7.3f} ± {:<7.3f} kHz'.format("Hit rate [kHz]", 
+                                                                                          (nl-nr)/T*1e-3, math.sqrt(nl+nr)/T*1e-3,
                                                                                           nl/T*1e-3, math.sqrt(nl)/T*1e-3, 
                                                                                           nr/T*1e-3, math.sqrt(nr)/T*1e-3, 
                                                                                           (nl+nr)/T*1e-3, math.sqrt(nl+nr)/T*1e-3

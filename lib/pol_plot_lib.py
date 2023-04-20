@@ -9,6 +9,7 @@ import matplotlib.ticker as ticker
 import scipy.interpolate as spint
 import scipy.stats
 from math import sqrt, ceil
+import math
 
 from pol_lib import arrange_region
 from mapping import get_xy
@@ -48,6 +49,25 @@ class data_field:
         ax.grid(zorder=0)
         ax.set_xlabel(r'x [mm]')
         #ax.legend()
+
+#    def draw_profile(self, ax):
+#        x = (self.y[1:]+self.y[:-1])/2
+#        y = self.data 
+#        ax.bar(x, 
+#                   y,
+#                   yerr=self.data_err,
+#                   color='white',
+#                   edgecolor='white',
+#                   linewidth=1,
+#               #height=1,
+#                   zorder=1)
+#        if self.data_type == 'dat':
+#            ax.plot(x, y, marker="o", markersize=5, linestyle="", alpha=0.8, color="blue",zorder=3, label = self.label)
+#        else:
+#            ax.plot(x,y, color = 'red', zorder=4, label = self.label)
+#        ax.grid(zorder=0)
+#        ax.set_xlabel(r'y [mm]')
+#        #ax.legend()
     
     def draw_profiley(self, ax):
         y = (self.y[1:]+self.y[:-1])/2
@@ -242,23 +262,35 @@ def print_fit_results(ax, fitter, begintime, endtime):
     lc = 0 
     x = -0.2
     y = 1.1
-    chi2ndf = "chi2/ndf = {0:.{1}f}/{2} = {3:.{4}f}".format(fitter.chi2, 0 if fitter.chi2 > 10 else 2, fitter.ndf, fitter.chi2/fitter.ndf, 1 if fitter.chi2/fitter.ndf>10 else 2 )
     #ax.text(x, y+lc, time[:19], size=14, ha='left', va='center', color='black')
     ax.text(x, y+lc, "{:<6} {:21}".format("begin:", begintime), size=14, ha='left', va='center', color='black')
     lc -= line_size
     ax.text(x, y+lc, "{:<6} {:21}".format("end:", endtime), size=14, ha='left', va='center', color='black')
     lc -= line_size
+    chi2ndf = r'$\chi^2/ndf = {0:.{1}f}/{2} = {3:.{4}f}$'.format(fitter.chi2, 0 if fitter.chi2 > 10 else 2, fitter.ndf, fitter.chi2/fitter.ndf, 1 if fitter.chi2/fitter.ndf>10 else 2 )
     ax.text(x, y+lc, chi2ndf, size=14, ha='left', va='center', color='black')
+    lc -= line_size
+    prob = (1.0-scipy.stats.chi2.cdf(fitter.chi2, fitter.ndf))
+    prob_txt = r'$prob(\chi^2) = {:.4f}%$'.format(prob) if prob>0.01 else  r'$prob(\chi^2) = {:.2E}%$'.format(prob)
+    ax.text(x, y+lc, prob_txt, size=14, ha='left', va='center', color='black')
     lc -= line_size
     for parname in fitter.parlist:
         try:
-            if not minuit.fixed[parname]:
-                text = r'${:s} = {:1.2f} \pm {:1.2f}$'.format(parname, minuit.values[parname], minuit.errors[parname])
-                if parname in important_pars:
-                    color = 'red'
-                else:
-                    color = 'black'
-                ax.text(x, y+lc, text, size=14, ha='left', va='center', color=color)
-                lc -= line_size
+            if parname=='L':
+                    text = r'${:s} = {:1.2f} \pm {:1.2f}$ m'.format(parname, minuit.values[parname]*1e-3, minuit.errors[parname]*1e-3)
+                    ax.text(x, y+lc, text, size=14, ha='left', va='center', color='black')
+                    lc -= line_size
+            else:
+                if not minuit.fixed[parname]:
+                    if  parname == 'beta':
+                        text = r'$\beta = {:.2f} \pm {:.2f}^\circ$'.format(minuit.values[parname]*180./math.pi, minuit.errors[parname]*180/math.pi)
+                    else:
+                        text = r'${:s} = {:1.3f} \pm {:1.3f}$'.format(parname, minuit.values[parname], minuit.errors[parname])
+                    if parname in important_pars:
+                        color = 'red'
+                    else:
+                        color = 'black'
+                    ax.text(x, y+lc, text, size=14, ha='left', va='center', color=color)
+                    lc -= line_size
         except KeyError: pass
     return ax
