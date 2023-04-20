@@ -391,7 +391,6 @@ class FitMethod3:
         #data_field_dict['data_diff'].palette=plt.cm.magma
         #data_field_dict['data_diff'].palette=plt.cm.coolwarm
         #data_field_dict['data_diff'].palette=plt.cm.PRGn
-        print ( data_field_dict['data_diff_py'].data_err )
         return data_field_dict
 
     def fixpar(self, parname, value):
