@@ -4,6 +4,7 @@ import psycopg2
 import time
 from datetime import datetime
 from contextlib import closing
+import re
 
 
 class phys_val_t:
@@ -108,15 +109,16 @@ class Db_obj:
 
                 query = "insert into lsrp_pol ("
                 for i in range(0, len(lst) ):
-                    
                     query += lst[i][0]
                     if i < len(lst) - 1: query +=","
                 query += ") VALUES ("
                 for i in range(0, len(lst) ):
-                    if lst[i][1] != 'nan' and  lst[i][1] != 'NAN':
-                        query += lst[i][1]
+                    #print( '{}: "{}"'.format(lst[i][0], lst[i][1]) )
+                    if re.match("\s*nan", lst[i][1] ):
+                        query += "-999999"
+                        #print("found nan: ", lst[i][0], lst[i][1])
                     else:
-                        query += "-9999"
+                        query += lst[i][1]
                     if i < len(lst) - 1: query +=","
                 query += ");"
                 cursor.execute(query)
