@@ -47,7 +47,7 @@ class data_field:
             ax.plot(x, y, color = 'red', zorder=4, label = self.label)
         ax.grid(zorder=0)
         ax.set_xlabel(r'x [mm]')
-        ax.legend()
+        #ax.legend()
     
     def draw_profiley(self, ax):
         y = (self.y[1:]+self.y[:-1])/2
@@ -66,7 +66,7 @@ class data_field:
             ax.plot(x,y, color = 'red', zorder=4, label = self.label)
         ax.grid(zorder=0)
         ax.set_ylabel(r'y [mm]')
-        ax.legend()
+        #ax.legend()
         
     def draw_2d_plot(self, ax):
         im_dat = ax.imshow( self.data, 
