@@ -29,15 +29,12 @@ def get_moments(h_dict):
     conv = sg.convolve(gauss, heatmap["sum"], mode="same")
 
     y_max, x_max = np.unravel_index(conv.argmax(), conv.shape)
-#    print("x_0, y_0 by convolution:", xc[x_max], yc[y_max])
-#    print("Sum:", conv[y_max-5:y_max+6,x_max-5:x_max+6].sum())
 
     if conv[y_max-5:y_max+6,x_max-5:x_max+6].sum() < 2e6:
         return {k : 0 for k in ["dip_amp",  "dip_ang", "quad_amp",  "quad_ang",
                                 "fft1_amp", "fft1_ang", "fft2_amp", "fft2_ang",
                                 "gross_moments", "gross_moments_err"]}
 
-#    print(conv[y_max-5:y_max+6,x_max-5:x_max+6].sum())
     spline = interp.bisplrep(yc[y_max-5:y_max+6].repeat(5+6),
                              np.concatenate((xc[x_max-5:x_max+6],)*(5+6)),
                              conv[y_max-5:y_max+6,x_max-5:x_max+6],
@@ -47,14 +44,14 @@ def get_moments(h_dict):
                        options={'rhobeg' : 0.4, 'disp': False})
 
     xy_0 = res.x
-    print("x_0, y_0 by conv. after opt.:", xy_0[1], xy_0[0])
+    #print("x_0, y_0 by conv. after opt.:", xy_0[1], xy_0[0])
 
     charge = 0.
     total = heatmap["sum"].sum()
     #print(heatmap["diff"].sum())
     r_max = min(abs(xy_0[1] - xc[0]), abs(xy_0[1] - xc[-1]),
                 abs(xy_0[0] - yc[0]), abs(xy_0[0] - yc[-1]))
-    print("r_max:", r_max)
+    #print("r_max:", r_max)
 
     it = np.nditer(heatmap["diff"], flags=['multi_index'])
     n = 0
@@ -116,8 +113,7 @@ def get_moments(h_dict):
     h_diff = np.absolute(hc_l-hc_r)
     gross_moments = np.sum(np.sum(h_diff))/np.sum(np.sum(hc_l+hc_r))
     gross_moments_err = 2./np.sqrt(np.sum(np.sum(hc_l+hc_r)))
-    print("Gross moments:")
-    print('\tM={:>1.4f} ± {:1.4f}'.format(gross_moments, gross_moments_err))
+    print('Gross moments:\n \tM={:>1.4f} ± {:1.4f}'.format(gross_moments, gross_moments_err))
 
     return {"dip_amp" : dipole_amp, 
            "dip_ang"  : dipole_ang/pi*180,

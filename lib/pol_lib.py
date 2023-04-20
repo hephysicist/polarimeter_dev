@@ -7,6 +7,7 @@ import time
 from datetime import datetime
 from depol.depolarizer import *
 from mapping import get_xy
+import math
 
 @jit(nopython=True)
 def convert_val(x):
@@ -174,13 +175,12 @@ def get_hist_asymmetry(h_dict, x_dir=None):
 
 
 
-def get_raw_stats(h_dict):
-
+def get_raw_stats(h_dict, t, stats={}):
+    stats.update({'count_time' : t})
     hist_l = h_dict['hc_l']
     hist_r = h_dict['hc_r']
     xc = h_dict['xc']
     yc = h_dict['yc']
-    stats = {}
     for hist, pol_type in zip([hist_l, hist_r],['l','r']):
         hprof_x = np.sum(hist, axis=0)
         hprof_y = np.sum(hist, axis=1)
@@ -252,24 +252,39 @@ def get_hist_asymmetry(h_dict, x_dir=None):
     return A, dA 
 
 def print_stats(stats):
-    print('*** Raw stats ***')
-    print('mx_l: {:2.2f}\tmx_r: {:2.2f}\tmy_l: {:2.2f}\tmy_r: {:2.2f}'.format(stats['mx_l'],
-                                                                              stats['mx_r'],
-                                                                              stats['my_l'], 
-                                                                              stats['my_r']))
-    print('sx_l: {:2.2f}\tsx_r: {:2.2f}\tsy_l: {:2.2f}\t sy_r: {:2.2f}'.format(stats['sx_l'],
-                                                                              stats['sx_r'],
-                                                                              stats['sy_l'], 
-                                                                              stats['sy_r']))
-    n_l = stats['n_evt_l']
-    n_r = stats['n_evt_r']
-    diff = n_l - n_r
-    rel_diff = 2.*diff/(n_l+n_r)*100
-    print('n_evt_l: {0} \tn_evt_r: {1}\tdiff: {2}\t({3:3.2f}%)'.format(n_l,n_r,diff, rel_diff))
-    print('-------------------------------------------------')
-    print("COUNTING HIT RATE: {:.3f} kHz".format((n_l+n_r)/10.0/1000.))
-    print('-------------------------------------------------')
+    nl = stats['n_evt_l']
+    nr = stats['n_evt_r']
+    T = stats['count_time']
+    print('{:─^95}'.format("") )
+    print('{:<20} {:^17.1f} seconds'.format("Count time:", T))
+    print('{:<20} {:^17} {:^17} {:^17} {:^17}'.format("Raw stats", "DIFF", "LEFT", "RIGHT", "SUM"))
+    print('{:─^95}'.format("") )
+    print('{:<20} {:>7} ± {:<7} {:^17} {:^17} {:^17}'.format("Event number", int(nl-nr), int(math.sqrt(nl+nr)), int(nl), int(nr), int(nl+nr) ))
+    print('{:<20} {:>7.3} ± {:<7.3}%'.format("", (nl-nr)*2.0/(nl+nr)*100., math.sqrt(nl+nr)*2.0/(nl+nr)*100. ))
+    print('{:<20} {:>7.3f} ± {:<7.3f} {:>7.3f} ± {:<7.3f} {:>7.3f} ± {:<7.3f} kHz'.format("Hit rate [kHz]", 
+                                                                                          nl/T*1e-3, math.sqrt(nl)/T*1e-3, 
+                                                                                          nr/T*1e-3, math.sqrt(nr)/T*1e-3, 
+                                                                                          (nl+nr)/T*1e-3, math.sqrt(nl+nr)/T*1e-3
+                                                                                          ))
+    print('{:<20} {:>7.3f} ± {:<7.3f} {:>7.3f} ± {:<7.3f} {:>7.3f} ± {:<7.3f} {:>7.3f} ± {:<7.3f}'.
+          format("<x> [mm]", 
+                 0.5*(stats['mx_l']-stats['mx_r']), math.hypot(stats['sx_r']/math.sqrt(nr), stats['sx_l']/math.sqrt(nl) )/math.sqrt(2.0),
+                 stats['mx_l'], stats['sx_l']/math.sqrt(nl),
+                 stats['mx_r'], stats['sx_r']/math.sqrt(nr),
+                 0.5*(stats['mx_r']+stats['mx_l']), math.hypot(stats['sx_r']/math.sqrt(nr), stats['sx_l']/math.sqrt(nl) )/math.sqrt(2.0)
+            )
+          )
+    print('{:<20} {:>7.3f} ± {:<7.3f} {:>7.3f} ± {:<7.3f} {:>7.3f} ± {:<7.3f} {:>7.3f} ± {:<7.3f}'.
+          format("<y> [mm]", 
+                 0.5*(stats['my_l']-stats['my_r']), math.hypot(stats['sy_r']/math.sqrt(nr), stats['sy_l']/math.sqrt(nl) )/math.sqrt(2.0),
+                 stats['my_l'], stats['sy_l']/math.sqrt(nl),
+                 stats['my_r'], stats['sy_r']/math.sqrt(nr),
+                 0.5*(stats['my_r']+stats['my_l']), math.hypot(stats['sy_r']/math.sqrt(nr), stats['sy_l']/math.sqrt(nl) )/math.sqrt(2.0)
+            )
+          )
 
+    print('{:<20} {:>7.3f} ± {:<7.3f}%'. format("Asym x", stats['Ax']*100, stats['dAx']*100))
+    print('{:<20} {:>7.3f} ± {:<7.3f}%'. format("Asym y", stats['Ay']*100, stats['dAy']*100))
 
 def load_hist(hist_fpath, fname):
     h_dict = dict(np.load(hist_fpath+fname, allow_pickle=True))

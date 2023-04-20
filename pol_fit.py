@@ -327,18 +327,22 @@ def accum_data_and_make_fit(config, start_time, stop_time):
                     h_dict['hc_r'] *= scale_arr
                 if config['need_blur']:
                     h_dict = eval(config['blur_type']+'(h_dict)')
+
+                begintime=get_unix_time(file_buffer[0])
+                endtime=get_unix_time(file_buffer[-1])
+                file_count_time = 10.0 if len(file_buffer)==1 else (endtime-begintime)/(len(file_buffer)-1)
+                endtime = endtime+file_count_time
+
                 print('Performing fit...')
                 fitter, data_fields = make_fit(config, h_dict)
-                raw_stats = get_raw_stats(h_dict)
-                print_stats(raw_stats)
                 moments = get_moments(h_dict)
+                raw_stats = get_raw_stats(h_dict, endtime-begintime, moments)
+                print_stats(raw_stats)
                 print_pol_stats(fitter)
 
                 if not INIT_FIGURES:
                     INIT_FIGURES = True
                     fig, ax = init_figure('Laser Polarimeter 2D Fit')
-                begintime=get_unix_time(file_buffer[0])
-                endtime=get_unix_time(file_buffer[-1])
                 remaining_figure_list = show_res(fitter, data_fields, ax, unx2str(begintime),unx2str(endtime) )
 
 

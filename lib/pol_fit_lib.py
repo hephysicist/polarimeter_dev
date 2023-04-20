@@ -175,11 +175,15 @@ def FWHM2D(x,y,data):
     return ( FWHM(x,px), FWHM(y,py) )
 
 def print_pol_stats(fitter):
-    print(' Fit result digest '.rjust(50,'─'))
-    print("chi2/ndf = {:.3f} / {} = {:.3f}".format(fitter.chi2, fitter.ndf, fitter.chi2/fitter.ndf))
-    print("prob = ", 1.0-scipy.stats.chi2.cdf(fitter.chi2, fitter.ndf))
+    print('{:─^95}'.format("  Fit result  "))
+    print("chi2/ndf = {:.3f} / {} = {:.3f} ".format(fitter.chi2, fitter.ndf, fitter.chi2/fitter.ndf), end='')
+    prob = (1.0-scipy.stats.chi2.cdf(fitter.chi2, fitter.ndf))
+    if  prob<1e-4 :
+        print("{:>20} = {:<.5e}".format('prob(chi2,dnf)', prob))
+    else:
+        print("{:>20} = {:<.5f}".format('prob(chi2,dnf)',prob))
     minuit = fitter.minuit
-    print('P={:>6.2f} ± {:1.2f}'.format(minuit.values['P'],minuit.errors['P']))
-    print('Q={:>6.2f} ± {:1.2f}'.format(minuit.values['Q'],minuit.errors['Q']))
-    print('V={:>6.2f} ± {:1.2f}'.format(minuit.values['V'],minuit.errors['V']))
-    print(''.rjust(50,'─'))
+    print(' P ={:>7.3f} ± {:1.3f}'.format(minuit.values['P'],minuit.errors['P']))
+    print(' Q ={:>7.3f} ± {:1.3f}'.format(minuit.values['Q'],minuit.errors['Q']))
+    print(' V ={:>7.3f} ± {:1.3f}'.format(minuit.values['V'],minuit.errors['V']))
+    print(''.rjust(95,'─'))

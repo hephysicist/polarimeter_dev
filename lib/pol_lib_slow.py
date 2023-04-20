@@ -121,27 +121,6 @@ def get_hist_asymmetry(h_dict, x_dir=None):
 
     return A, dA 
 
-#def get_hist_asymmetry(hist,x=None): #Deprecated version: isn't stable for left and right 
-#    (idy,idx) = np.unravel_index(np.argmax(hist, axis=None), hist.shape)
-#    if idy:
-#        if x:
-#            n_up = np.sum(np.sum(hist[idx+1:,:]))
-#            n_down = np.sum(np.sum(hist[:idx:,:]))
-#        else:
-#            n_up = np.sum(np.sum(hist[idy+1:,:]))
-#            n_down = np.sum(np.sum(hist[:idy:,:]))
-#        dn_up = np.sqrt(n_up)
-#        dn_down = np.sqrt(n_down)
-#        A = (n_up-n_down)/(n_up + n_down + 1)
-#        dfdn_up = 2*n_up/(n_up+n_down)**2
-#        dfdn_down = 2*n_down/(n_up+n_down)**2
-#        dA = np.sqrt((dfdn_up*dn_up)**2 + (dfdn_down*dn_down)**2)
-#    else:
-#        print('Unable to find asymmetry!')
-#        A=-999
-#        dA = -999
-#    return A, dA 
-
 
 
 def get_raw_stats(h_dict):
@@ -222,7 +201,15 @@ def get_hist_asymmetry(h_dict, x_dir=None):
     return A, dA 
 
 def print_stats(stats):
-    print('*** Raw stats ***')
+    n_l = stats['n_evt_l']
+    n_r = stats['n_evt_r']
+    diff = n_l - n_r
+    rel_diff = 2.*diff/(n_l+n_r)*100
+    print('──────────── Raw stats ───────────')
+    print('{:10} {:10} {:10} {:10} {:10}'.format("field", "left", "right", "sum", "diff"))
+    print('{:10} {:10} {:10} {:10} {:10}'.format("event number", n_l, n_r, n_l+n_r, n_l-n_r))
+
+    print('n_evt_l: {0} \tn_evt_r: {1}\tdiff: {2}\t({3:3.2f}%)'.format(n_l,n_r,diff, rel_diff))
     print('mx_l: {:2.2f}\tmx_r: {:2.2f}\tmy_l: {:2.2f}\tmy_r: {:2.2f}'.format(stats['mx_l'],
                                                                               stats['mx_r'],
                                                                               stats['my_l'], 
@@ -231,11 +218,6 @@ def print_stats(stats):
                                                                               stats['sx_r'],
                                                                               stats['sy_l'], 
                                                                               stats['sy_r']))
-    n_l = stats['n_evt_l']
-    n_r = stats['n_evt_r']
-    diff = n_l - n_r
-    rel_diff = 2.*diff/(n_l+n_r)*100
-    print('n_evt_l: {0} \tn_evt_r: {1}\tdiff: {2}\t({3:3.2f}%)'.format(n_l,n_r,diff, rel_diff))
 
 
 def load_hist(hist_fpath, fname):
